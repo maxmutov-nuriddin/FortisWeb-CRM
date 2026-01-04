@@ -49,7 +49,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                               await updateUserStatus(user.data.user._id, false)
                            }
 
-                           localStorage.clear()
+                           document.cookie
+                              .split(";")
+                              .forEach((c) => {
+                                 document.cookie = c
+                                    .replace(/^ +/, "")
+                                    .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
+                              });
                            closeToast()
                            navigate('/login')
                         } catch (e) {
