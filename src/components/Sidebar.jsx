@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth.store';
 import PageLoader from './loader/PageLoader';
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
+import { useUserStore } from '../store/user.store';
 
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -20,6 +21,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
    };
 
    const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
+   const { updateUserStatus } = useUserStore();
+
 
    // HandelLogOut
 
