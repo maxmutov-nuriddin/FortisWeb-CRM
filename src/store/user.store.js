@@ -61,9 +61,9 @@ export const useUserStore = create((set) => ({
    updateUserStatus: async (id, status) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await usersApi.updateStatus(id, status);
+         const response = await usersApi.updateStatus(id, { isActive: status });
          set((state) => ({
-            users: state.users.map((u) => (u.id === id ? { ...u, status } : u)), // Optimistic or response based
+            users: state.users.map(u => u.id === id ? { ...u, isActive: status } : u),
             isLoading: false,
          }));
          // If response returns full object:
