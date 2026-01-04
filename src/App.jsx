@@ -10,6 +10,7 @@ import Payments from './pages/Payments';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
+import TestApi from './TestApi';
 
 const Placeholder = ({ title }) => (
   <div className="p-8">
@@ -22,6 +23,8 @@ function App() {
   return (
     <Router>
       <Routes>
+
+        <Route path="/test" element={<TestApi />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="*" element={<NotFound />} />
