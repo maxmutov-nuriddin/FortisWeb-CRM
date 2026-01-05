@@ -274,7 +274,7 @@ const Orders = () => {
                         <i className="fa-solid fa-inbox text-purple-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 class="text-white font-medium">Messages</h4>
+                        <h4 className="text-white font-medium">Messages</h4>
                      </div>
                   </div>
                   <p className="text-2xl font-bold text-white mb-1">1,247</p>
