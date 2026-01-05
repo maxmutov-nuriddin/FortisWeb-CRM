@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Plot from 'react-plotly.js';
+import { useCompanyStore } from '../store/company.store';
+import { useProjectStore } from '../store/project.store';
+import { usePaymentStore } from '../store/payment.store';
 
 const Orders = () => {
    const statusData = [{
@@ -45,6 +48,80 @@ const Orders = () => {
       hovermode: 'x unified'
    };
 
+   const { companies } = useCompanyStore();
+   const { projects, getProjectsByCompany, isLoading } = useProjectStore();
+   const { payments, getPaymentsByCompany } = usePaymentStore();
+
+   const companyId = companies?.data?.companies?.[0]?._id;
+
+   useEffect(() => {
+      if (companyId) {
+         getProjectsByCompany(companyId);
+         getPaymentsByCompany(companyId);
+      }
+   }, [companyId, getProjectsByCompany, getPaymentsByCompany]);
+
+   const getPendingOrders = (projects = []) =>
+      projects.filter(project => project.status === 'pending');
+
+   const getInProgressOrders = (projects = []) =>
+      projects.filter(project =>
+         ['in_progress', 'review', 'revision'].includes(project.status)
+      );
+
+   const getCompletedOrders = (projects = []) =>
+      projects.filter(project => project.status === 'completed');
+
+   const getCancelledOrders = (projects = []) =>
+      projects.filter(project => project.status === 'cancelled');
+
+   const projectsList = projects?.data?.projects || [];
+   const paymentsList = payments?.data?.payments || [];
+
+   /* --- существующие --- */
+   const pendingOrders = useMemo(
+      () => getPendingOrders(projectsList),
+      [projectsList]
+   );
+
+   const inProgressOrders = useMemo(
+      () => getInProgressOrders(projectsList),
+      [projectsList]
+   );
+
+   const completedOrders = useMemo(
+      () => getCompletedOrders(projectsList),
+      [projectsList]
+   );
+
+   const cancelledOrders = useMemo(
+      () => getCancelledOrders(projectsList),
+      [projectsList]
+   );
+
+   /* --- Assigned (Completed + Paid) --- */
+   const assignedOrders = useMemo(() => {
+      const paymentsMap = new Map();
+
+      paymentsList.forEach(payment => {
+         if (payment.project?._id) {
+            paymentsMap.set(payment.project._id, payment);
+         }
+      });
+
+      return projectsList.filter(project => {
+         const payment = paymentsMap.get(project._id);
+
+         return (
+            project.status === 'completed' &&
+            payment &&
+            payment.status === 'completed'
+         );
+      });
+   }, [projectsList, paymentsList]);
+
+   if (isLoading) return null;
+
    return (
       <div className="p-8 space-y-8">
          <div id="orders-header-section">
@@ -78,7 +155,7 @@ const Orders = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Pending</h3>
-               <p className="text-2xl font-bold text-white">12</p>
+               <p className="text-2xl font-bold text-white">{pendingOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -86,8 +163,8 @@ const Orders = () => {
                      <i className="fa-solid fa-user-check text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Assigned</h3>
-               <p className="text-2xl font-bold text-white">8</p>
+               <h3 className="text-gray-400 text-xs mb-1">Completed & Paid</h3>
+               <p className="text-2xl font-bold text-white">{assignedOrders.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -96,7 +173,7 @@ const Orders = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">In Progress</h3>
-               <p className="text-2xl font-bold text-white">24</p>
+               <p className="text-2xl font-bold text-white">{inProgressOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -105,7 +182,7 @@ const Orders = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Completed</h3>
-               <p className="text-2xl font-bold text-white">156</p>
+               <p className="text-2xl font-bold text-white">{completedOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -114,7 +191,7 @@ const Orders = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Cancelled</h3>
-               <p className="text-2xl font-bold text-white">7</p>
+               <p className="text-2xl font-bold text-white">{cancelledOrders?.length || 0}</p>
             </div>
          </div>
 
