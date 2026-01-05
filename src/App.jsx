@@ -29,9 +29,6 @@ function App() {
   const { user, error: authError, getMe } = useAuthStore();
   const { updateUserStatus } = useUserStore();
 
-  console.log(user);
-  
-
   // ===================== AUTH =====================
   useEffect(() => {
     getMe()
