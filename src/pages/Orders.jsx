@@ -262,7 +262,7 @@ const Orders = () => {
                         <i className="fa-brands fa-telegram text-blue-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 class="text-white font-medium">Bot Status</h4>
+                        <h4 className="text-white font-medium">Bot Status</h4>
                      </div>
                   </div>
                   <p className="text-2xl font-bold text-white mb-1">Active</p>

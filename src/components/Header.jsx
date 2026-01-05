@@ -2,19 +2,49 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import PageLoader from './loader/PageLoader';
+import { useProjectStore } from '../store/project.store';
+import { useChatStore } from '../store/chat.store';
 
 const Header = ({ toggleSidebar }) => {
    const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
+   const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
+   const { chats, error: chatsError } = useChatStore();
+
+   const currentUserId = user?._id;
+
+   // ===================== COUNTS =====================
+   const newChatsCount =
+      chats?.data?.chats?.filter((chat) => {
+         const readBy = chat?.lastMessage?.readBy || [];
+         return !readBy.includes(currentUserId);
+      }).length || 0;
+
+   const newOrdersCount =
+      projects?.data?.projects?.filter(
+         (project) => project.status === 'pending'
+      ).length || 0;
 
    // ===================== AUTH =====================
    useEffect(() => {
-      getMe()
-   }, [])
+      getMe();
+   }, []);
+
+   // ===================== PROJECTS =====================
+   useEffect(() => {
+      const companyId = user?.data?.user?.company?._id;
+      if (!companyId) return;
+      getProjectsByCompany(companyId);
+   }, [user?.data?.user?.company?._id]);
 
    // ===================== ERRORS =====================
    useEffect(() => {
-      if (authError) console.error(authError)
-   }, [authError])
+      if (authError) console.error(authError);
+      if (projectsError) console.error(projectsError);
+      if (chatsError) console.error(chatsError);
+   }, [authError, projectsError, chatsError]);
+
+   // ===================== RENDER =====================
+   // if (!newChatsCount && !newOrdersCount) return null;
 
    return (
       <>
@@ -48,11 +78,15 @@ const Header = ({ toggleSidebar }) => {
                      <div className="flex items-center space-x-3 md:space-x-6">
                         <Link to="/orders" className="relative text-gray-400 hover:text-white transition">
                            <i className="fa-solid fa-envelope text-xl"></i>
-                           <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">3</span>
+                           {newOrdersCount > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount}</span>
+                           )}
                         </Link>
                         <Link to="/team-chats" className="relative text-gray-400 hover:text-white transition">
                            <i className="fa-solid fa-bell text-xl"></i>
-                           <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">7</span>
+                           {newChatsCount > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newChatsCount}</span>
+                           )}
                         </Link>
                         <div className="h-8 w-px bg-gray-700 hidden md:block"></div>
 
