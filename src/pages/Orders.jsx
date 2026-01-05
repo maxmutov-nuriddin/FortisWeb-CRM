@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
 import { usePaymentStore } from '../store/payment.store';
 
 const Orders = () => {
+   const [statusFilter, setStatusFilter] = useState('All Statuses');
+   const [dateFilter, setDateFilter] = useState('All Time');
+   const [amountFilter, setAmountFilter] = useState('All Amounts');
+   const [searchQuery, setSearchQuery] = useState('');
    const statusData = [{
       type: 'pie',
       labels: ['Pending', 'Assigned', 'In Progress', 'Completed', 'Cancelled'],
@@ -61,12 +65,75 @@ const Orders = () => {
       }
    }, [companyId, getProjectsByCompany, getPaymentsByCompany]);
 
+   const projectsList = projects?.data?.projects || [];
+   const paymentsList = payments?.data?.payments || [];
+
+   const filteredOrders = useMemo(() => {
+      let result = [...projectsList];
+
+      // 1. Status Filter
+      if (statusFilter !== 'All Statuses') {
+         result = result.filter(project => {
+            if (statusFilter === 'Pending') return project.status === 'pending';
+            if (statusFilter === 'In Progress') return ['in_progress', 'assigned'].includes(project.status);
+            if (statusFilter === 'Review') return project.status === 'review';
+            if (statusFilter === 'Revision') return project.status === 'revision';
+            if (statusFilter === 'Completed') return project.status === 'completed';
+            if (statusFilter === 'Cancelled') return project.status === 'cancelled';
+            return true;
+         });
+      }
+
+      // 2. Date Filter
+      if (dateFilter !== 'All Time') {
+         const now = new Date();
+         const projectDate = (project) => new Date(project.createdAt);
+
+         if (dateFilter === 'Last 7 Days') {
+            const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+            result = result.filter(p => projectDate(p) >= sevenDaysAgo);
+         } else if (dateFilter === 'Last 30 Days') {
+            const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+            result = result.filter(p => projectDate(p) >= thirtyDaysAgo);
+         } else if (dateFilter === 'Last 3 Months') {
+            const threeMonthsAgo = new Date(now.setMonth(now.getMonth() - 3));
+            result = result.filter(p => projectDate(p) >= threeMonthsAgo);
+         }
+      }
+
+      // 3. Amount Filter
+      if (amountFilter !== 'All Amounts') {
+         result = result.filter(project => {
+            const amount = project.budget || 0;
+            if (amountFilter === '$0 - $1,000') return amount <= 1000;
+            if (amountFilter === '$1,000 - $5,000') return amount > 1000 && amount <= 5000;
+            if (amountFilter === '$5,000 - $10,000') return amount > 5000 && amount <= 10000;
+            if (amountFilter === '$10,000+') return amount > 10000;
+            return true;
+         });
+      }
+
+      // 4. Search Query (Name/Title)
+      if (searchQuery) {
+         const query = searchQuery.toLowerCase();
+         result = result.filter(project =>
+            (project.title && project.title.toLowerCase().includes(query)) ||
+            (project.client?.name && project.client.name.toLowerCase().includes(query)) ||
+            (project.description && project.description.toLowerCase().includes(query)) ||
+            (project._id && project._id.toLowerCase().includes(query))
+         );
+      }
+
+      return result;
+   }, [projectsList, statusFilter, dateFilter, amountFilter, searchQuery]);
+
+   /* --- существующие helpers helpers used for stats --- */
    const getPendingOrders = (projects = []) =>
       projects.filter(project => project.status === 'pending');
 
    const getInProgressOrders = (projects = []) =>
       projects.filter(project =>
-         ['in_progress', 'review', 'revision'].includes(project.status)
+         ['in_progress', 'review', 'revision', 'assigned'].includes(project.status)
       );
 
    const getCompletedOrders = (projects = []) =>
@@ -75,29 +142,11 @@ const Orders = () => {
    const getCancelledOrders = (projects = []) =>
       projects.filter(project => project.status === 'cancelled');
 
-   const projectsList = projects?.data?.projects || [];
-   const paymentsList = payments?.data?.payments || [];
-
-   /* --- существующие --- */
-   const pendingOrders = useMemo(
-      () => getPendingOrders(projectsList),
-      [projectsList]
-   );
-
-   const inProgressOrders = useMemo(
-      () => getInProgressOrders(projectsList),
-      [projectsList]
-   );
-
-   const completedOrders = useMemo(
-      () => getCompletedOrders(projectsList),
-      [projectsList]
-   );
-
-   const cancelledOrders = useMemo(
-      () => getCancelledOrders(projectsList),
-      [projectsList]
-   );
+   /* --- Stats --- */
+   const pendingOrders = useMemo(() => getPendingOrders(projectsList), [projectsList]);
+   const inProgressOrders = useMemo(() => getInProgressOrders(projectsList), [projectsList]);
+   const completedOrders = useMemo(() => getCompletedOrders(projectsList), [projectsList]);
+   const cancelledOrders = useMemo(() => getCancelledOrders(projectsList), [projectsList]);
 
    /* --- Assigned (Completed + Paid) --- */
    const assignedOrders = useMemo(() => {
@@ -119,6 +168,9 @@ const Orders = () => {
          );
       });
    }, [projectsList, paymentsList]);
+
+   console.log(filteredOrders);
+
 
    if (isLoading) return null;
 
@@ -197,10 +249,27 @@ const Orders = () => {
 
          <div id="orders-filters-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap">
+               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap w-full">
+                  <div className="w-full sm:w-auto flex-grow max-w-md">
+                     <label className="text-xs text-gray-400 mb-1 block">Search</label>
+                     <div className="relative">
+                        <input
+                           type="text"
+                           placeholder="Search by ID, Client, or Title..."
+                           className="bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
+                           value={searchQuery}
+                           onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        <i className="fa-solid fa-search absolute left-3 top-2.5 text-gray-500"></i>
+                     </div>
+                  </div>
                   <div>
                      <label className="text-xs text-gray-400 mb-1 block">Status</label>
-                     <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto">
+                     <select
+                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                     >
                         <option>All Statuses</option>
                         <option>Pending</option>
                         <option>In Progress</option>
@@ -213,16 +282,24 @@ const Orders = () => {
                   {/* Other filters */}
                   <div>
                      <label className="text-xs text-gray-400 mb-1 block">Date Range</label>
-                     <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto">
+                     <select
+                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                     >
+                        <option>All Time</option>
                         <option>Last 7 Days</option>
                         <option>Last 30 Days</option>
                         <option>Last 3 Months</option>
-                        <option>All Time</option>
                      </select>
                   </div>
                   <div>
                      <label className="text-xs text-gray-400 mb-1 block">Amount Range</label>
-                     <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto">
+                     <select
+                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        value={amountFilter}
+                        onChange={(e) => setAmountFilter(e.target.value)}
+                     >
                         <option>All Amounts</option>
                         <option>$0 - $1,000</option>
                         <option>$1,000 - $5,000</option>
@@ -230,16 +307,16 @@ const Orders = () => {
                         <option>$10,000+</option>
                      </select>
                   </div>
-                  <div>
-                     <label className="text-xs text-gray-400 mb-1 block">Source</label>
-                     <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto">
-                        <option>All Sources</option>
-                        <option>Telegram Bot</option>
-                        <option>Manual Entry</option>
-                     </select>
-                  </div>
                </div>
-               <button className="text-dark-accent hover:text-red-600 text-sm font-medium transition self-start lg:self-center">Clear Filters</button>
+               <button
+                  className="text-dark-accent hover:text-red-600 text-sm font-medium transition self-start lg:self-center whitespace-nowrap"
+                  onClick={() => {
+                     setStatusFilter('All Statuses');
+                     setDateFilter('All Time');
+                     setAmountFilter('All Amounts');
+                     setSearchQuery('');
+                  }}
+               >Clear Filters</button>
             </div>
          </div>
 
@@ -248,7 +325,6 @@ const Orders = () => {
                <table className="w-full">
                   <thead className="bg-dark-tertiary">
                      <tr>
-                        <th className="px-6 py-4 text-left"><input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-dark-tertiary text-dark-accent focus:ring-0" /></th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Order ID</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date & Time</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Client</th>
@@ -260,30 +336,88 @@ const Orders = () => {
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800">
-                     {/* Row 1 */}
-                     <tr className="hover:bg-dark-tertiary transition">
-                        <td className="px-6 py-4"><input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-dark-tertiary text-dark-accent focus:ring-0" /></td>
-                        <td className="px-6 py-4 text-sm text-white font-medium">#ORD-1247</td>
-                        <td className="px-6 py-4 text-sm text-gray-400"><div>Jan 15, 2024</div><div className="text-xs text-gray-500">10:32 AM</div></td>
-                        <td className="px-6 py-4"><div className="flex items-center space-x-3"><img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Client" className="w-9 h-9 rounded-full" /><div><div className="text-sm text-white font-medium">Michael Chen</div><div className="text-xs text-gray-500">@mchen_tech</div></div></div></td>
-                        <td className="px-6 py-4 text-sm text-gray-400">E-commerce Platform Development</td>
-                        <td className="px-6 py-4 text-sm text-white font-semibold">$8,500</td>
-                        <td className="px-6 py-4"><span className="flex items-center space-x-1 text-xs"><i className="fa-brands fa-telegram text-blue-500"></i><span className="text-gray-400">Bot</span></span></td>
-                        <td className="px-6 py-4"><span className="px-3 py-1 bg-yellow-500 bg-opacity-20 text-yellow-500 rounded-full text-xs font-medium">Pending</span></td>
-                        <td className="px-6 py-4"><div className="flex items-center space-x-2"><button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">Accept</button><button className="bg-dark-tertiary hover:bg-gray-700 text-gray-400 hover:text-white px-3 py-1.5 rounded text-xs font-medium transition">Reject</button><button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button></div></td>
-                     </tr>
-                     {/* Row 2 */}
-                     <tr className="hover:bg-dark-tertiary transition">
-                        <td className="px-6 py-4"><input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-dark-tertiary text-dark-accent focus:ring-0" /></td>
-                        <td className="px-6 py-4 text-sm text-white font-medium">#ORD-1246</td>
-                        <td className="px-6 py-4 text-sm text-gray-400"><div>Jan 15, 2024</div><div className="text-xs text-gray-500">09:15 AM</div></td>
-                        <td className="px-6 py-4"><div className="flex items-center space-x-3"><img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Client" className="w-9 h-9 rounded-full" /><div><div className="text-sm text-white font-medium">Sarah Williams</div><div className="text-xs text-gray-500">@swilliams_design</div></div></div></td>
-                        <td className="px-6 py-4 text-sm text-gray-400">Landing Page Design & Development</td>
-                        <td className="px-6 py-4 text-sm text-white font-semibold">$2,800</td>
-                        <td className="px-6 py-4"><span className="flex items-center space-x-1 text-xs"><i className="fa-brands fa-telegram text-blue-500"></i><span className="text-gray-400">Bot</span></span></td>
-                        <td className="px-6 py-4"><span className="px-3 py-1 bg-blue-500 bg-opacity-20 text-blue-500 rounded-full text-xs font-medium">Assigned</span></td>
-                        <td className="px-6 py-4"><div className="flex items-center space-x-2"><button className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">View Details</button><button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button></div></td>
-                     </tr>
+                     {filteredOrders.length > 0 ? (
+                        filteredOrders.map((order) => (
+                           <tr key={order._id} className="hover:bg-dark-tertiary transition">
+                              <td className="px-6 py-4 text-sm text-white font-medium">#{order._id.substring(order._id.length - 8).toUpperCase()}</td>
+                              <td className="px-6 py-4 text-sm text-gray-400">
+                                 <div>{new Date(order.createdAt).toLocaleDateString()}</div>
+                                 <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                 <div className="flex items-center space-x-3">
+                                    <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white">
+                                       {order.client?.name ? order.client.name.charAt(0).toUpperCase() : '?'}
+                                    </div>
+                                    <div>
+                                       <div className="text-sm text-white font-medium">{order.client?.name || 'Unknown Client'}</div>
+                                       <div className="text-xs text-gray-500">{order.client?.username || 'No username'}</div>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-400 max-w-xs truncate" title={order.description}>
+                                 {order.title || order.description || 'No description'}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-white font-semibold">
+                                 ${(order.budget || 0).toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <span className="flex items-center space-x-1 text-xs">
+                                    <span className="text-gray-400">{order?.source}</span>
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                 {(() => {
+                                    let statusColor = 'text-gray-500 bg-gray-500';
+                                    let statusText = order.status;
+
+                                    switch (order.status) {
+                                       case 'pending':
+                                          statusColor = 'text-yellow-500 bg-yellow-500';
+                                          break;
+                                       case 'assigned':
+                                       case 'in_progress':
+                                          statusColor = 'text-blue-500 bg-blue-500';
+                                          statusText = 'In Progress';
+                                          break;
+                                       case 'completed':
+                                          statusColor = 'text-green-500 bg-green-500';
+                                          break;
+                                       case 'cancelled':
+                                          statusColor = 'text-red-500 bg-red-500';
+                                          break;
+                                       case 'review':
+                                          statusColor = 'text-purple-500 bg-purple-500';
+                                          break;
+                                       default:
+                                          statusColor = 'text-gray-400 bg-gray-400';
+                                    }
+
+                                    return (
+                                       <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium ${statusColor}`}>
+                                          {statusText ? statusText.charAt(0).toUpperCase() + statusText.slice(1).replace('_', ' ') : 'Unknown'}
+                                       </span>
+                                    );
+                                 })()}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <div className="flex items-center space-x-2">
+                                    {order.status === 'pending' && (
+                                       <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">Accept</button>
+                                    )}
+                                    <button className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">View Details</button>
+                                 </div>
+                              </td>
+                           </tr>
+                        ))
+                     ) : (
+                        <tr>
+                           <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                              <i className="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
+                              <p>No orders found matching your filters</p>
+                           </td>
+                        </tr>
+                     )}
                   </tbody>
                </table>
             </div>
