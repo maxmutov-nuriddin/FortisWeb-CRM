@@ -4,11 +4,15 @@ import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
 import { usePaymentStore } from '../store/payment.store';
 
+
 const Orders = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
    const [dateFilter, setDateFilter] = useState('All Time');
    const [amountFilter, setAmountFilter] = useState('All Amounts');
    const [searchQuery, setSearchQuery] = useState('');
+   const [selectedOrder, setSelectedOrder] = useState(null);
+   const [isModalOpen, setIsModalOpen] = useState(false);
+
    const statusData = [{
       type: 'pie',
       labels: ['Pending', 'Assigned', 'In Progress', 'Completed', 'Cancelled'],
@@ -53,8 +57,9 @@ const Orders = () => {
    };
 
    const { companies } = useCompanyStore();
-   const { projects, getProjectsByCompany, isLoading } = useProjectStore();
+   const { projects, getProjectsByCompany, isLoading, } = useProjectStore();
    const { payments, getPaymentsByCompany } = usePaymentStore();
+
 
    const companyId = companies?.data?.companies?.[0]?._id;
 
@@ -168,6 +173,22 @@ const Orders = () => {
          );
       });
    }, [projectsList, paymentsList]);
+
+   const handleAccept = async () => {
+
+   };
+
+   const handleViewDetails = (e, order) => {
+      e.stopPropagation();
+      setSelectedOrder(order);
+      setIsModalOpen(true);
+   };
+
+   const closeModal = () => {
+      setIsModalOpen(false);
+      setSelectedOrder(null);
+   };
+
 
    console.log(filteredOrders);
 
@@ -403,9 +424,19 @@ const Orders = () => {
                               <td className="px-6 py-4">
                                  <div className="flex items-center space-x-2">
                                     {order.status === 'pending' && (
-                                       <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">Accept</button>
+                                       <button
+                                          onClick={(e) => handleAccept(e, order._id)}
+                                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       >
+                                          Accept
+                                       </button>
                                     )}
-                                    <button className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition">View Details</button>
+                                    <button
+                                       onClick={(e) => handleViewDetails(e, order)}
+                                       className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                    >
+                                       View Details
+                                    </button>
                                  </div>
                               </td>
                            </tr>
@@ -495,6 +526,89 @@ const Orders = () => {
                {/* ... other stats ... */}
             </div>
          </div>
+         {/* Order Details Modal */}
+         {isModalOpen && selectedOrder && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+               <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
+                     <h2 className="text-xl font-bold text-white">Order Details</h2>
+                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
+                        <i className="fa-solid fa-times text-xl"></i>
+                     </button>
+                  </div>
+
+                  <div className="p-6 space-y-6">
+                     <div className="flex flex-col sm:flex-row justify-between gap-4">
+                        <div>
+                           <span className="text-xs text-gray-500 block mb-1">Order ID</span>
+                           <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
+                              #{selectedOrder._id}
+                           </span>
+                        </div>
+                        <div>
+                           <span className="text-xs text-gray-500 block mb-1">Status</span>
+                           <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
+                              ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
+                                 selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
+                                    selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
+                              {selectedOrder.status.toUpperCase().replace('_', ' ')}
+                           </span>
+                        </div>
+                     </div>
+
+                     <div>
+                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
+                        <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
+                           <div>
+                              <span className="text-xs text-gray-500 block">Title</span>
+                              <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
+                           </div>
+                           <div>
+                              <span className="text-xs text-gray-500 block">Description</span>
+                              <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                 <span className="text-xs text-gray-500 block">Budget/Amount</span>
+                                 <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                              </div>
+                              <div>
+                                 <span className="text-xs text-gray-500 block">Date</span>
+                                 <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div>
+                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                        <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                           <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                              {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                           </div>
+                           <div>
+                              <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                              <p className="text-gray-500 text-sm">{selectedOrder.client?.username || 'No username'}</p>
+                              <p className="text-gray-500 text-xs mt-1">ID: {selectedOrder.client?._id}</p>
+                           </div>
+                        </div>
+                     </div>
+
+                     {selectedOrder.status === 'pending' && (
+                        <div className="flex justify-end pt-4 border-t border-gray-800">
+                           <button
+                              onClick={(e) => handleAccept(e, selectedOrder._id)}
+                              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                           >
+                              <i className="fa-solid fa-check"></i>
+                              <span>Accept Order</span>
+                           </button>
+                        </div>
+                     )}
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };
