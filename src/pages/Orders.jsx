@@ -203,8 +203,9 @@ const Orders = () => {
                      <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto">
                         <option>All Statuses</option>
                         <option>Pending</option>
-                        <option>Assigned</option>
                         <option>In Progress</option>
+                        <option>Review</option>
+                        <option>Revision</option>
                         <option>Completed</option>
                         <option>Cancelled</option>
                      </select>
