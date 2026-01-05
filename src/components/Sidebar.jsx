@@ -6,11 +6,52 @@ import PageLoader from './loader/PageLoader';
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/user.store';
+import { useChatStore } from '../store/chat.store';
+import { useProjectStore } from '../store/project.store';
 
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
    const navigate = useNavigate()
    const location = useLocation();
+
+   const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
+   const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
+   const { chats, error: chatsError } = useChatStore();
+   const { updateUserStatus } = useUserStore();
+
+
+   const currentUserId = user?._id;
+
+   // ===================== COUNTS =====================
+   const newChatsCount =
+      chats?.data?.chats?.filter((chat) => {
+         const readBy = chat?.lastMessage?.readBy || [];
+         return !readBy.includes(currentUserId);
+      }).length || 0;
+
+   const newOrdersCount =
+      projects?.data?.projects?.filter(
+         (project) => project.status === 'pending'
+      ).length || 0;
+
+   // ===================== AUTH =====================
+   useEffect(() => {
+      getMe();
+   }, []);
+
+   // ===================== PROJECTS =====================
+   useEffect(() => {
+      const companyId = user?.data?.user?.company?._id;
+      if (!companyId) return;
+      getProjectsByCompany(companyId);
+   }, [user?.data?.user?.company?._id]);
+
+   // ===================== ERRORS =====================
+   useEffect(() => {
+      if (authError) console.error(authError);
+      if (projectsError) console.error(projectsError);
+      if (chatsError) console.error(chatsError);
+   }, [authError, projectsError, chatsError]);
 
    // Check if link is active, including sub-routes or specific matches
    const isActive = (path) => {
@@ -19,10 +60,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          ? 'bg-dark-accent text-white'
          : 'text-gray-400 hover:bg-dark-tertiary hover:text-white';
    };
-
-   const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
-   const { updateUserStatus } = useUserStore();
-
 
    // HandelLogOut
 
@@ -120,7 +157,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                         <Link to="/orders" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/orders')}`}>
                            <i className="fa-brands fa-telegram w-5"></i>
                            <span className="font-medium">Orders</span>
-                           <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">12</span>
+                           {newOrdersCount > 0 && (
+                              <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">{newOrdersCount}</span>
+                           )}
                         </Link>
                         <Link to="/profiles" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/profiles')}`}>
                            <i className="fa-solid fa-users w-5"></i>
@@ -133,7 +172,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                         <Link to="/team-chats" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/team')}`}>
                            <i className="fa-solid fa-comments w-5"></i>
                            <span className="font-medium">Team Chats</span>
-                           <span className="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full">5</span>
+                           {newChatsCount > 0 && (
+                              <span className="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full">{newChatsCount}</span>
+                           )}
                         </Link>
                         <Link to="/payments" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/payments')}`}>
                            <i className="fa-solid fa-credit-card w-5"></i>

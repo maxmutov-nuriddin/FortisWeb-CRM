@@ -43,9 +43,6 @@ const Header = ({ toggleSidebar }) => {
       if (chatsError) console.error(chatsError);
    }, [authError, projectsError, chatsError]);
 
-   // ===================== RENDER =====================
-   // if (!newChatsCount && !newOrdersCount) return null;
-
    return (
       <>
          {
