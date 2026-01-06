@@ -307,8 +307,8 @@ const Company = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-800">
                      {filteredCompanies.length > 0 ? (
-                        filteredCompanies.map((company) => (
-                           <tr key={company._id} className="hover:bg-dark-tertiary transition">
+                        filteredCompanies.map((company, index) => (
+                           <tr key={index} className="hover:bg-dark-tertiary transition">
                               <td className="px-6 py-4 text-sm text-white font-medium">
                                  #{company._id ? company._id.substring(company._id.length - 8).toUpperCase() : 'N/A'}
                               </td>
