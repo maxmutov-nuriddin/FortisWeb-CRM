@@ -17,6 +17,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import { useAuthStore } from './store/auth.store';
 import { useUserStore } from './store/user.store';
 import PageLoader from './components/loader/PageLoader';
+import Company from './pages/Company';
 
 const Placeholder = ({ title }) => (
   <div className="p-8">
@@ -80,6 +81,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="company" element={<Company />} />
             <Route path="orders" element={<Orders />} />
             <Route path="profiles" element={<Profiles />} />
             <Route path="tasks" element={<Tasks />} />

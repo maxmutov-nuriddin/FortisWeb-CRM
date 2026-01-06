@@ -11,7 +11,19 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await companiesApi.create(data);
-         set((state) => ({ companies: [...state.companies, response.data], isLoading: false }));
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: [...currentCompanies, response.data.data]
+                  }
+               },
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create company', isLoading: false });
@@ -100,5 +112,28 @@ export const useCompanyStore = create((set) => ({
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add team member', isLoading: false });
       }
-   }
+   },
+   deleteCompany: async (companyId) => {
+      set({ isLoading: true, error: null });
+      try {
+         await companiesApi.delete(companyId);
+
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: currentCompanies.filter(c => c._id !== companyId)
+                  }
+               },
+               isLoading: false
+            };
+         });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete company', isLoading: false });
+         throw error;
+      }
+   },
 }));

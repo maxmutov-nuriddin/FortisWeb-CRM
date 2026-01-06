@@ -4,6 +4,8 @@ export const companiesApi = {
    create: (data) => api.post('/api/companies', data),
    getAll: () => api.get('/api/companies'),
    getById: (id) => api.get(`/api/companies/${id}`),
+   // Удалить компанию
+   delete: (id) => api.delete(`api/companies/${id}`),
    update: (id, data) => api.put(`/api/companies/${id}`, data),
    updateStatus: (id, status) => api.patch(`/api/companies/${id}/status`, { status }),
    addTeam: (id, data) => api.post(`/api/companies/${id}/teams`, data),
