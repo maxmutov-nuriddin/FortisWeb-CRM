@@ -435,12 +435,19 @@ const Company = () => {
                         </div>
                         <div>
                            <span className="text-xs text-gray-500 block mb-1">Status</span>
-                           <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
-                              ${selectedCompany.status === 'active' ? 'text-green-500 bg-green-500' :
-                                 selectedCompany.status === 'inactive' ? 'text-red-500 bg-red-500' :
-                                    'text-yellow-500 bg-yellow-500'}`}>
-                              {selectedCompany.status?.toUpperCase() || 'UNKNOWN'}
+                           <span
+                              className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
+    ${selectedCompany.isActive === true ? 'text-green-500 bg-green-500' :
+                                    selectedCompany.isActive === false ? 'text-red-500 bg-red-500' :
+                                       'text-yellow-500 bg-yellow-500'}`}
+                           >
+                              {selectedCompany.isActive === true
+                                 ? 'Active'
+                                 : selectedCompany.isActive === false
+                                    ? 'Inactive'
+                                    : 'UNKNOWN'}
                            </span>
+
                         </div>
                      </div>
 
