@@ -18,6 +18,7 @@ import { useAuthStore } from './store/auth.store';
 import { useUserStore } from './store/user.store';
 import PageLoader from './components/loader/PageLoader';
 import Company from './pages/Company';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const Placeholder = ({ title }) => (
   <div className="p-8">
@@ -79,16 +80,18 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="*" element={<NotFound />} />
-          <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="company" element={<Company />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="profiles" element={<Profiles />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="team-chats" element={<Placeholder title="Team Chats" />} />
-            <Route path="projects" element={<Placeholder title="Projects" />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="company" element={<Company />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="profiles" element={<Profiles />} />
+              <Route path="tasks" element={<Tasks />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="team-chats" element={<Placeholder title="Team Chats" />} />
+              <Route path="projects" element={<Placeholder title="Projects" />} />
+            </Route>
           </Route>
         </Routes>
       </Router>

@@ -1,13 +1,100 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
+import { toast } from 'react-toastify';
+import { useAuthStore } from '../store/auth.store';
+import { usePaymentStore } from '../store/payment.store';
+import { useCompanyStore } from '../store/company.store';
+import PageLoader from '../components/loader/PageLoader';
 
 const Payments = () => {
    const [projectAmount, setProjectAmount] = useState(10000);
+   const [isSubmitting, setIsSubmitting] = useState(false);
+   const [statusFilter, setStatusFilter] = useState('All Statuses');
+   const [viewCompanyId, setViewCompanyId] = useState('all');
+
+   const { user } = useAuthStore();
+   const { companies, getCompanies } = useCompanyStore();
+   const { payments, getAllPayments, getPaymentsByCompany, confirmPayment, completePayment, isLoading } = usePaymentStore();
+
+   const userData = user?.data?.user || user?.user || user;
+   const isSuperAdmin = userData?.role === 'super_admin';
+
+   // Get companies for filter
+   const allCompanies = companies?.data?.companies || companies?.companies || [];
+
+   const activeCompanyId = useMemo(() => {
+      if (isSuperAdmin) return viewCompanyId;
+      return userData?.company?._id || userData?.company || '';
+   }, [isSuperAdmin, viewCompanyId, userData]);
+
+   useEffect(() => {
+      if (isSuperAdmin) {
+         getCompanies();
+      }
+   }, [isSuperAdmin, getCompanies]);
+
+   const fetchData = async () => {
+      try {
+         if (isSuperAdmin && viewCompanyId === 'all') {
+            if (allCompanies.length > 0) {
+               const ids = allCompanies.map(c => c._id);
+               await getAllPayments(ids);
+            }
+         } else if (activeCompanyId && activeCompanyId !== 'all') {
+            await getPaymentsByCompany(activeCompanyId);
+         }
+      } catch (error) {
+         console.error('Error fetching payments:', error);
+         toast.error('Failed to load payments', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
+      }
+   };
+
+   useEffect(() => {
+      fetchData();
+   }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
+
+   const paymentsList = useMemo(() => {
+      return payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
+   }, [payments]);
+
+
+   const filteredPayments = useMemo(() => {
+      let result = [...paymentsList];
+      if (statusFilter !== 'All Statuses') {
+         result = result.filter(p => p.status === statusFilter.toLowerCase());
+      }
+      return result;
+   }, [paymentsList, statusFilter]);
+
+   // Statistics Calculation
+   const stats = useMemo(() => {
+      const totalRevenue = paymentsList.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const pendingPayments = paymentsList.filter(p => p.status === 'pending');
+      const pendingAmount = pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      const now = new Date();
+      const thisMonthPayments = paymentsList.filter(p => {
+         const d = new Date(p.createdAt);
+         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+      const thisMonthAmount = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      const teamPayouts = totalRevenue * 0.70; // 70% rule
+
+      return { totalRevenue, pendingAmount, pendingCount: pendingPayments.length, thisMonthAmount, teamPayouts };
+   }, [paymentsList]);
+
 
    const distributionData = [{
       type: 'pie',
       labels: ['Team Members (70%)', 'Main Admin (10%)', 'Admin (10%)', 'Company (10%)'],
-      values: [7000, 1000, 1000, 1000],
+      values: [stats.totalRevenue * 0.7, stats.totalRevenue * 0.1, stats.totalRevenue * 0.1, stats.totalRevenue * 0.1],
       marker: {
          colors: ['#10B981', '#FF0000', '#3B82F6', '#F59E0B']
       },
@@ -24,11 +111,12 @@ const Payments = () => {
       showlegend: false
    };
 
+   // Revenue Trend (Mock logic based on real counts per month could be added, simplifying for now)
    const revenueData = [{
       type: 'scatter',
       mode: 'lines',
-      x: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
-      y: [32000, 38000, 35000, 42000, 45000, 48250],
+      x: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'], // Fixed for now, can be dynamic
+      y: [32000, 38000, 35000, 42000, 45000, stats.totalRevenue || 48250],
       line: { color: '#10B981', width: 3 },
       fill: 'tozeroy',
       fillcolor: 'rgba(16, 185, 129, 0.1)'
@@ -48,6 +136,58 @@ const Payments = () => {
       showlegend: false
    };
 
+   const handleConfirm = async (id) => {
+      setIsSubmitting(true);
+      try {
+         await confirmPayment(id);
+         toast.success('Payment confirmed successfully!', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
+      } catch (error) {
+         console.error(error);
+         toast.error('Failed to confirm payment', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
+   const handleComplete = async (id) => {
+      setIsSubmitting(true);
+      try {
+         await completePayment(id);
+         toast.success('Payment marked as paid!', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
+      } catch (error) {
+         console.error(error);
+         toast.error('Failed to complete payment', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
+   if (isLoading && paymentsList.length === 0) return <PageLoader />;
+
    return (
       <div className="p-8 space-y-8">
          <div id="payments-header-section">
@@ -57,17 +197,21 @@ const Payments = () => {
                   <p className="text-gray-400">Confirm payments and manage automatic salary distribution</p>
                </div>
                <div className="flex flex-wrap items-center gap-3">
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
-                     <i className="fa-solid fa-filter"></i>
-                     <span>Filter</span>
-                  </button>
+                  {isSuperAdmin && (
+                     <select
+                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-dark-accent"
+                        value={viewCompanyId}
+                        onChange={(e) => setViewCompanyId(e.target.value)}
+                     >
+                        <option value="all">All Companies</option>
+                        {allCompanies.map(c => (
+                           <option key={c._id} value={c._id}>{c.name}</option>
+                        ))}
+                     </select>
+                  )}
                   <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
                      <i className="fa-solid fa-download"></i>
                      <span>Export Report</span>
-                  </button>
-                  <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
-                     <i className="fa-solid fa-plus"></i>
-                     <span>New Payment</span>
                   </button>
                </div>
             </div>
@@ -79,10 +223,9 @@ const Payments = () => {
                   <div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
                   </div>
-                  <span className="text-xs text-green-500 font-medium">+12.5%</span>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Total Revenue</h3>
-               <p className="text-2xl font-bold text-white">$245,680</p>
+               <p className="text-2xl font-bold text-white">${stats.totalRevenue.toLocaleString()}</p>
                <p className="text-xs text-gray-500 mt-1">All time earnings</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-yellow-500 transition">
@@ -90,10 +233,10 @@ const Payments = () => {
                   <div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-clock text-yellow-500 text-xl"></i>
                   </div>
-                  <span className="text-xs text-yellow-500 font-medium">8 pending</span>
+                  <span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} pending</span>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Pending Payments</h3>
-               <p className="text-2xl font-bold text-white">$32,450</p>
+               <p className="text-2xl font-bold text-white">${stats.pendingAmount.toLocaleString()}</p>
                <p className="text-xs text-gray-500 mt-1">Awaiting confirmation</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-blue-500 transition">
@@ -101,21 +244,19 @@ const Payments = () => {
                   <div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-calendar text-blue-500 text-xl"></i>
                   </div>
-                  <span className="text-xs text-blue-500 font-medium">+8.3%</span>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">This Month</h3>
-               <p className="text-2xl font-bold text-white">$48,250</p>
-               <p className="text-xs text-gray-500 mt-1">January 2024</p>
+               <p className="text-2xl font-bold text-white">${stats.thisMonthAmount.toLocaleString()}</p>
+               <p className="text-xs text-gray-500 mt-1">Current Month</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-purple-500 transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-users text-purple-500 text-xl"></i>
                   </div>
-                  <span className="text-xs text-purple-500 font-medium">24 members</span>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Team Payouts</h3>
-               <p className="text-2xl font-bold text-white">$171,360</p>
+               <p className="text-2xl font-bold text-white">${stats.teamPayouts.toLocaleString()}</p>
                <p className="text-xs text-gray-500 mt-1">70% of revenue</p>
             </div>
          </div>
@@ -127,14 +268,11 @@ const Payments = () => {
                      <h3 className="text-lg font-semibold text-white mb-1">Payment Distribution Calculator</h3>
                      <p className="text-sm text-gray-400">Automatic salary split based on project revenue</p>
                   </div>
-                  <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                     <i className="fa-solid fa-calculator mr-2"></i>Calculate
-                  </button>
                </div>
 
                <div className="bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-700">
-                  <label className="text-sm text-gray-400 mb-2 block">Project Total Amount ($)</label>
-                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(e.target.value)} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
+                  <label className="text-sm text-gray-400 mb-2 block">Calculator Amount ($)</label>
+                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(Number(e.target.value))} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
                </div>
 
                <div className="space-y-4">
@@ -232,16 +370,20 @@ const Payments = () => {
          <div id="pending-payments-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6 mb-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Pending Payment Confirmations</h3>
-                  <p className="text-sm text-gray-400">Review and approve incoming payments</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">All Payments</h3>
+                  <p className="text-sm text-gray-400">Manage all transactions</p>
                </div>
                <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition flex-1 sm:flex-none">
-                     <i className="fa-solid fa-sort"></i>
-                  </button>
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition flex-1 sm:flex-none">
-                     <i className="fa-solid fa-filter"></i>
-                  </button>
+                  <select
+                     className="bg-dark-tertiary border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
+                     value={statusFilter}
+                     onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                     <option>All Statuses</option>
+                     <option value="pending">Pending</option>
+                     <option value="confirmed">Confirmed</option>
+                     <option value="completed">Completed</option>
+                  </select>
                </div>
             </div>
             <div className="overflow-x-auto">
@@ -249,7 +391,7 @@ const Payments = () => {
                   <thead>
                      <tr className="border-b border-gray-800">
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Date</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Project</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Description</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Client</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Amount</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Method</th>
@@ -258,33 +400,72 @@ const Payments = () => {
                      </tr>
                   </thead>
                   <tbody>
-                     <tr className="border-b border-gray-800 hover:bg-dark-tertiary transition">
-                        <td className="py-4 px-4"><p className="text-sm text-white">Jan 15, 2024</p><p className="text-xs text-gray-400">10:30 AM</p></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-medium">E-commerce Platform</p><p className="text-xs text-gray-400">#PRJ-2024-001</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Client" className="w-8 h-8 rounded-full" /><div><p className="text-sm text-white">TechCorp Inc.</p><p className="text-xs text-gray-400">Sarah Miller</p></div></div></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-semibold">$12,500</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><i className="fa-brands fa-cc-visa text-blue-500"></i><span className="text-sm text-gray-300">Credit Card</span></div></td>
-                        <td className="py-4 px-4"><span className="px-2 py-1 bg-yellow-500 bg-opacity-20 text-yellow-500 rounded text-xs font-medium">Pending</span></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-check mr-1"></i>Confirm</button><button className="bg-dark-tertiary hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-eye"></i></button></div></td>
-                     </tr>
-                     <tr className="border-b border-gray-800 hover:bg-dark-tertiary transition">
-                        <td className="py-4 px-4"><p className="text-sm text-white">Jan 14, 2024</p><p className="text-xs text-gray-400">3:45 PM</p></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-medium">Mobile App Development</p><p className="text-xs text-gray-400">#PRJ-2024-002</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="Client" className="w-8 h-8 rounded-full" /><div><p className="text-sm text-white">StartupXYZ</p><p className="text-xs text-gray-400">John Davis</p></div></div></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-semibold">$8,750</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><i className="fa-brands fa-paypal text-blue-600"></i><span className="text-sm text-gray-300">PayPal</span></div></td>
-                        <td className="py-4 px-4"><span className="px-2 py-1 bg-yellow-500 bg-opacity-20 text-yellow-500 rounded text-xs font-medium">Pending</span></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-check mr-1"></i>Confirm</button><button className="bg-dark-tertiary hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-eye"></i></button></div></td>
-                     </tr>
-                     <tr className="border-b border-gray-800 hover:bg-dark-tertiary transition">
-                        <td className="py-4 px-4"><p className="text-sm text-white">Jan 14, 2024</p><p className="text-xs text-gray-400">11:20 AM</p></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-medium">Website Redesign</p><p className="text-xs text-gray-400">#PRJ-2024-003</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Client" className="w-8 h-8 rounded-full" /><div><p className="text-sm text-white">Digital Agency</p><p className="text-xs text-gray-400">Emma Wilson</p></div></div></td>
-                        <td className="py-4 px-4"><p className="text-sm text-white font-semibold">$6,200</p></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><i className="fa-solid fa-building-columns text-green-500"></i><span className="text-sm text-gray-300">Bank Transfer</span></div></td>
-                        <td className="py-4 px-4"><span className="px-2 py-1 bg-yellow-500 bg-opacity-20 text-yellow-500 rounded text-xs font-medium">Pending</span></td>
-                        <td className="py-4 px-4"><div className="flex items-center space-x-2"><button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-check mr-1"></i>Confirm</button><button className="bg-dark-tertiary hover:bg-gray-700 text-white px-3 py-1.5 rounded text-xs font-medium transition"><i className="fa-solid fa-eye"></i></button></div></td>
-                     </tr>
+                     {filteredPayments.length > 0 ? (
+                        filteredPayments.map(payment => (
+                           <tr key={payment._id} className="border-b border-gray-800 hover:bg-dark-tertiary transition">
+                              <td className="py-4 px-4">
+                                 <p className="text-sm text-white">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                                 <p className="text-xs text-gray-400">{new Date(payment.createdAt).toLocaleTimeString()}</p>
+                              </td>
+                              <td className="py-4 px-4">
+                                 <p className="text-sm text-white font-medium">{payment.description || 'No Description'}</p>
+                                 <p className="text-xs text-gray-400">ID: {payment._id.slice(-8)}</p>
+                              </td>
+                              <td className="py-4 px-4">
+                                 <div className="flex items-center space-x-2">
+                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white">
+                                       {payment.client?.name ? payment.client.name.charAt(0) : '?'}
+                                    </div>
+                                    <div>
+                                       <p className="text-sm text-white">{payment.client?.name || 'Unknown'}</p>
+                                    </div>
+                                 </div>
+                              </td>
+                              <td className="py-4 px-4"><p className="text-sm text-white font-semibold">${(payment.amount || 0).toLocaleString()}</p></td>
+                              <td className="py-4 px-4">
+                                 <div className="flex items-center space-x-2">
+                                    <i className="fa-solid fa-wallet text-gray-400"></i>
+                                    <span className="text-sm text-gray-300 capitalize">{payment.paymentMethod || 'manual'}</span>
+                                 </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                 <span className={`px-2 py-1 rounded text-xs font-medium uppercase
+                                        ${payment.status === 'pending' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
+                                       payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                          payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
+                                             'bg-gray-500 bg-opacity-20 text-gray-500'}`}>
+                                    {payment.status}
+                                 </span>
+                              </td>
+                              <td className="py-4 px-4">
+                                 <div className="flex items-center space-x-2">
+                                    {payment.status === 'pending' && (
+                                       <button
+                                          onClick={() => handleConfirm(payment._id)}
+                                          disabled={isSubmitting}
+                                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-50"
+                                       >
+                                          <i className="fa-solid fa-check mr-1"></i>Confirm
+                                       </button>
+                                    )}
+                                    {isSuperAdmin && payment.status !== 'completed' && (
+                                       <button
+                                          onClick={() => handleComplete(payment._id)}
+                                          disabled={isSubmitting}
+                                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-50"
+                                       >
+                                          <i className="fa-solid fa-flag-checkered mr-1"></i>Paid
+                                       </button>
+                                    )}
+                                 </div>
+                              </td>
+                           </tr>
+                        ))
+                     ) : (
+                        <tr>
+                           <td colSpan="7" className="text-center py-8 text-gray-500">No payments found</td>
+                        </tr>
+                     )}
                   </tbody>
                </table>
             </div>
@@ -292,53 +473,38 @@ const Payments = () => {
 
          <div id="payment-history-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
-               <div className="flex items-center justify-between mb-6">
-                  <div>
-                     <h3 className="text-lg font-semibold text-white mb-1">Payment History</h3>
-                     <p className="text-sm text-gray-400">Recent confirmed transactions</p>
-                  </div>
-                  <button className="text-dark-accent hover:text-red-600 text-sm font-medium transition">View All →</button>
+               <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-1">Recent Completed</h3>
+                  <p className="text-sm text-gray-400">Latest finished transactions</p>
                </div>
-
                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-dark-tertiary rounded-lg border border-gray-700 hover:border-green-500 transition">
-                     <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                           <i className="fa-solid fa-check text-green-500"></i>
+                  {paymentsList.filter(p => p.status === 'completed').slice(0, 5).map(payment => (
+                     <div key={payment._id} className="flex items-center justify-between p-4 bg-dark-tertiary rounded-lg border border-gray-700 hover:border-green-500 transition">
+                        <div className="flex items-center space-x-4">
+                           <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                              <i className="fa-solid fa-check text-green-500"></i>
+                           </div>
+                           <div>
+                              <p className="text-sm text-white font-medium">{payment.description || 'Payment'}</p>
+                              <p className="text-xs text-gray-400">Confirmed on {new Date(payment.updatedAt || payment.createdAt).toLocaleDateString()}</p>
+                           </div>
                         </div>
-                        <div>
-                           <p className="text-sm text-white font-medium">E-commerce Platform</p>
-                           <p className="text-xs text-gray-400">Confirmed on Jan 13, 2024</p>
-                        </div>
-                     </div>
-                     <div className="text-right">
-                        <p className="text-sm text-white font-semibold">$15,000</p>
-                        <p className="text-xs text-green-500">Distributed</p>
-                     </div>
-                  </div>
-                  {/* More Items */}
-                  <div className="flex items-center justify-between p-4 bg-dark-tertiary rounded-lg border border-gray-700 hover:border-green-500 transition">
-                     <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                           <i className="fa-solid fa-check text-green-500"></i>
-                        </div>
-                        <div>
-                           <p className="text-sm text-white font-medium">CRM System Integration</p>
-                           <p className="text-xs text-gray-400">Confirmed on Jan 12, 2024</p>
+                        <div className="text-right">
+                           <p className="text-sm text-white font-semibold">${(payment.amount || 0).toLocaleString()}</p>
+                           <p className="text-xs text-green-500">Distributed</p>
                         </div>
                      </div>
-                     <div className="text-right">
-                        <p className="text-sm text-white font-semibold">$9,500</p>
-                        <p className="text-xs text-green-500">Distributed</p>
-                     </div>
-                  </div>
+                  ))}
+                  {paymentsList.filter(p => p.status === 'completed').length === 0 && (
+                     <p className="text-gray-500 text-center py-4">No completed payments yet.</p>
+                  )}
                </div>
             </div>
 
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
                   <h3 className="text-lg font-semibold text-white mb-1">Revenue Trends</h3>
-                  <p className="text-sm text-gray-400">Last 6 months</p>
+                  <p className="text-sm text-gray-400">Past 6 months</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -348,24 +514,6 @@ const Payments = () => {
                      style={{ width: "100%", height: "100%" }}
                      config={{ displayModeBar: false }}
                   />
-               </div>
-
-               <div className="mt-6 pt-6 border-t border-gray-800">
-                  <h4 className="text-sm font-semibold text-white mb-4">Quick Stats</h4>
-                  <div className="space-y-3">
-                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Avg. Project Value</span>
-                        <span className="text-sm text-white font-semibold">$10,236</span>
-                     </div>
-                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Total Projects</span>
-                        <span className="text-sm text-white font-semibold">24</span>
-                     </div>
-                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Success Rate</span>
-                        <span className="text-sm text-green-500 font-semibold">98.5%</span>
-                     </div>
-                  </div>
                </div>
             </div>
          </div>

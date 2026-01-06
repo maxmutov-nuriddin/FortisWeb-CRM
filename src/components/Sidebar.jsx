@@ -107,7 +107,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          ),
          {
             position: 'top-right',
-            autoClose: false,
+            autoClose: 5000,
             closeOnClick: false,
             draggable: false,
             theme: 'dark',

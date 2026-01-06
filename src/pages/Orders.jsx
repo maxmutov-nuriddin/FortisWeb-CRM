@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-dupe-keys */
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
@@ -18,6 +19,7 @@ const Orders = () => {
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [isEditMode, setIsEditMode] = useState(false);
    const [isCreateMode, setIsCreateMode] = useState(false);
+   const [isSubmitting, setIsSubmitting] = useState(false);
    const [paymentFormData, setPaymentFormData] = useState({
       paymentMethod: 'bank_transfer',
       status: 'pending'
@@ -272,12 +274,20 @@ const Orders = () => {
 
    const handleSubmit = async (e) => {
       e.preventDefault();
+      setIsSubmitting(true);
 
       try {
          if (isCreateMode) {
             // Обязательные поля для создания
             if (!formData.title || !formData.budget) {
-               alert('Title and Budget are required!');
+               toast.error('Title and Budget are required!', {
+                  position: 'top-right',
+                  autoClose: 5000,
+                  closeOnClick: false,
+                  draggable: false,
+                  theme: 'dark',
+               });
+               setIsSubmitting(false);
                return;
             }
 
@@ -302,15 +312,19 @@ const Orders = () => {
             };
 
             await createProject(createData);
-            alert('Order created successfully!');
-
-            await fetchData();
-
+            toast.success('Order created successfully!');
             closeModal();
          }
          else if (isEditMode && selectedOrder) {
             if (!formData.title || !formData.budget) {
-               alert('Title and Budget are required!');
+               toast.error('Title and Budget are required!', {
+                  position: 'top-right',
+                  autoClose: 5000,
+                  closeOnClick: false,
+                  draggable: false,
+                  theme: 'dark',
+               });
+               setIsSubmitting(false);
                return;
             }
 
@@ -337,15 +351,26 @@ const Orders = () => {
             };
 
             await updateProject(selectedOrder._id, updateData);
-            alert('Order updated successfully!');
-
-            await fetchData();
-
+            toast.success('Order updated successfully!', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
             closeModal();
          }
       } catch (error) {
          console.error('Error saving order:', error);
-         alert('Failed to save order: ' + (error.response?.data?.message || error.message));
+         toast.error('Failed to save order: ', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         } + (error.response?.data?.message || error.message));
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -420,25 +445,50 @@ const Orders = () => {
       if (window.confirm('Are you sure you want to delete this order?')) {
          try {
             await deleteProject(orderId);
-            alert('Order deleted successfully!');
-            await fetchData();
+            toast.success('Order deleted successfully!', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          } catch (error) {
             console.error('Error deleting order:', error);
-            alert('Failed to delete order: ' + (error.response?.data?.message || error.message));
+            toast.error('Failed to delete order: ', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            } + (error.response?.data?.message || error.message));
          }
       }
    };
 
    const handleAccept = async (e, orderId) => {
       e.stopPropagation();
+      setIsSubmitting(true);
       try {
          await updateProject(orderId, { status: 'in_progress' });
-         alert('Order accepted successfully!');
-         await fetchData();
+         toast.success('Order accepted successfully!', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          closeModal();
       } catch (error) {
          console.error('Error accepting order:', error);
-         alert('Failed to accept order: ' + (error.response?.data?.message || error.message));
+         toast.error('Failed to accept order: ', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         } + (error.response?.data?.message || error.message));
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -452,11 +502,22 @@ const Orders = () => {
             status: 'pending',
             paymentMethod: paymentFormData.paymentMethod || 'bank_transfer'
          });
-         alert('Payment created successfully!');
-         await fetchData();
+         toast.success('Payment created successfully!', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       } catch (error) {
          console.error('Error creating payment:', error);
-         alert('Failed to create payment: ' + (error.response?.data?.message || error.message));
+         toast.error('Failed to create payment: ', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         } + (error.response?.data?.message || error.message));
       }
    };
 
@@ -1162,9 +1223,10 @@ const Orders = () => {
                                  </button>
                                  <button
                                     type="submit"
-                                    className="bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition"
+                                    disabled={isSubmitting}
+                                    className={`bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                  >
-                                    {isCreateMode ? 'Create Order' : 'Save Changes'}
+                                    {isSubmitting ? 'Processing...' : (isCreateMode ? 'Create Order' : 'Save Changes')}
                                  </button>
                               </div>
                            </form>
@@ -1357,19 +1419,34 @@ const Orders = () => {
                                              {payment.status === 'pending' && (
                                                 <button
                                                    type="button"
+                                                   disabled={isSubmitting}
                                                    onClick={async () => {
+                                                      setIsSubmitting(true);
                                                       try {
                                                          await confirmPayment(payment._id || payment.id);
-                                                         await fetchData();
-                                                         alert('Payment confirmed successfully!');
+                                                         toast.success('Payment confirmed successfully!', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         });
                                                       } catch (err) {
-                                                         alert('Failed to confirm: ' + err.message);
+                                                         toast.error('Failed to confirm: ', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         } + err.message);
+                                                      } finally {
+                                                         setIsSubmitting(false);
                                                       }
                                                    }}
-                                                   className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center"
+                                                   className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
-                                                   <i className="fa-solid fa-check-double mr-1"></i>
-                                                   Confirm Receipt (Money Received)
+                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
+                                                   {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
                                                 </button>
                                              )}
 
@@ -1377,19 +1454,34 @@ const Orders = () => {
                                              {isSuperAdmin && payment.status !== 'completed' && (
                                                 <button
                                                    type="button"
+                                                   disabled={isSubmitting}
                                                    onClick={async () => {
+                                                      setIsSubmitting(true);
                                                       try {
                                                          await completePayment(payment._id || payment.id);
-                                                         await fetchData();
-                                                         alert('Payment marked as paid!');
+                                                         toast.success('Payment marked as paid!', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         });
                                                       } catch (err) {
-                                                         alert('Failed to complete: ' + err.message);
+                                                         toast.error('Failed to complete: ', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         } + err.message);
+                                                      } finally {
+                                                         setIsSubmitting(false);
                                                       }
                                                    }}
-                                                   className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center`}
+                                                   className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
-                                                   <i className="fa-solid fa-flag-checkered mr-1"></i>
-                                                   {payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)'}
+                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-flag-checkered'} mr-1`}></i>
+                                                   {isSubmitting ? 'Processing...' : (payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)')}
                                                 </button>
                                              )}
                                           </div>
@@ -1430,10 +1522,11 @@ const Orders = () => {
                                     {selectedOrder.status === 'pending' && (
                                        <button
                                           onClick={(e) => handleAccept(e, selectedOrder._id)}
-                                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                          disabled={isSubmitting}
+                                          className={`bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                        >
-                                          <i className="fa-solid fa-check"></i>
-                                          <span>Accept Order</span>
+                                          <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
+                                          <span>{isSubmitting ? 'Accepting...' : 'Accept Order'}</span>
                                        </button>
                                     )}
                                  </div>
