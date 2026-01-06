@@ -1,12 +1,22 @@
 import React from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '../store/auth.store';
 
 const DashboardLayout = () => {
    const [isSidebarOpen, setSidebarOpen] = React.useState(false);
-
+   const { user, isLoading } = useAuthStore()
    const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
+
+
+   // пока проверяем токен
+   if (isLoading) return <PageLoader />
+
+   // если НЕ авторизован → логин
+   if (!user?.data?.user?._id) {
+      return <Navigate to="/signin" replace />
+   }
 
    return (
       <div id="dashboard-layout" className="flex h-screen overflow-hidden bg-dark-primary text-gray-300 font-sans">
