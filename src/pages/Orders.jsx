@@ -49,7 +49,7 @@ const Orders = () => {
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
-   const { companies, getCompanies, isLoading: companiesLoading } = useCompanyStore();
+   const { companies, getCompanies, getCompanyById, selectedCompany, isLoading: companiesLoading } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, assignProject, isLoading: projectsLoading } = useProjectStore();
    const { users, getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
@@ -60,7 +60,15 @@ const Orders = () => {
       return userData?.company?._id || userData?.company || '';
    }, [isSuperAdmin, viewCompanyId, userData]);
 
-   const allCompanies = companies?.data?.companies || companies?.companies || [];
+   const allCompanies = useMemo(() => {
+      const list = companies?.data?.companies || companies?.companies || [];
+      const selected = selectedCompany?.data || selectedCompany;
+
+      if (selected && selected._id && !list.find(c => String(c._id) === String(selected._id))) {
+         return [...list, selected];
+      }
+      return list;
+   }, [companies, selectedCompany]);
 
    useEffect(() => {
       if (isSuperAdmin && viewCompanyId === 'all') {
@@ -70,8 +78,11 @@ const Orders = () => {
                getAllUsers(companyList.map(c => c._id).filter(Boolean));
             }
          });
+      } else if (activeCompanyId && activeCompanyId !== 'all') {
+         // Если это обычный админ компании, загружаем данные ЕГО компании (с командами)
+         getCompanyById(activeCompanyId);
       }
-   }, [isSuperAdmin, viewCompanyId, getCompanies, getAllUsers]);
+   }, [isSuperAdmin, viewCompanyId, activeCompanyId, getCompanies, getCompanyById, getAllUsers]);
 
    const fetchData = async () => {
       if (isSuperAdmin && viewCompanyId === 'all') {
@@ -103,18 +114,16 @@ const Orders = () => {
       return aggregated;
    }, [allCompanies]);
 
+   // ГЛОБАЛЬНЫЙ список команд для всех компаний (для резолва имен в модальном окне)
    const allTeams = useMemo(() => {
-      const companyList = allCompanies;
-      if (!activeCompanyId || activeCompanyId === 'all') {
-         let teams = [];
-         companyList.forEach(c => {
-            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyId: c._id }))];
-         });
-         return teams;
-      }
-      const company = companyList.find(c => c._id === activeCompanyId);
-      return company?.teams?.map(t => ({ ...t, companyId: company._id })) || [];
-   }, [activeCompanyId, allCompanies]);
+      let teams = [];
+      allCompanies.forEach(c => {
+         if (c.teams) {
+            teams = [...teams, ...c.teams.map(t => ({ ...t, companyId: c._id }))];
+         }
+      });
+      return teams;
+   }, [allCompanies]);
 
    // ИСПРАВЛЕНО: Team Leads фильтруются по выбранной компании
    const availableLeads = useMemo(() => {
@@ -452,7 +461,11 @@ const Orders = () => {
                try {
                   const assignmentData = {
                      teamLeadId: formData.teamLead || undefined,
-                     memberIds: formData.assignedMembers || []
+                     assignedMembers: formData.assignedMembers?.map(userId => {
+                        const member = availableMembers.find(m => String(m.id) === String(userId));
+                        return { user: userId, role: member?.role || 'member' };
+                     }) || [],
+                     assignedTeamId: formData.assignedTeam || undefined
                   };
                   await assignProject(selectedOrder._id, assignmentData);
                } catch (assignError) {
@@ -626,10 +639,14 @@ const Orders = () => {
       e.stopPropagation();
       setIsSubmitting(true);
       try {
-         // Подготавливаем данные для специального эндпоинта (бэкенд ждет teamLeadId и memberIds)
+         // Подготавливаем данные для специального эндпоинта (бэкенд ждет teamLeadId, memberIds и assignedTeamId)
          const assignmentData = {
             teamLeadId: formData.teamLead || undefined,
-            memberIds: formData.assignedMembers || []
+            assignedMembers: formData.assignedMembers?.map(userId => {
+               const member = availableMembers.find(m => String(m.id) === String(userId));
+               return { user: userId, role: member?.role || 'member' };
+            }) || [],
+            assignedTeamId: formData.assignedTeam || undefined
          };
 
          // Сначала пытаемся через специальный эндпоинт
@@ -1463,23 +1480,46 @@ const Orders = () => {
                                        <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
                                     </div>
                                     <div>
+                                       <span className="text-xs text-gray-500 block mb-1">Time Remaining</span>
+                                       {(() => {
+                                          const now = new Date();
+                                          const deadline = new Date(selectedOrder.deadline);
+                                          const diff = deadline - now;
+                                          if (diff < 0) return <span className="text-red-500 text-xs font-bold uppercase">Overdue</span>;
+
+                                          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+                                          if (days > 0) return <p className="text-green-500 text-sm font-bold">{days}d {hours}h left</p>;
+                                          return <p className="text-yellow-500 text-sm font-bold">{hours}h left</p>;
+                                       })()}
+                                    </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Date Created</span>
+                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Deadline</span>
+                                       <p className="text-white text-sm font-medium">{new Date(selectedOrder.deadline).toLocaleDateString()}</p>
+                                    </div>
+                                 </div>
+
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Source</span>
+                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
+                                    </div>
+                                    <div>
                                        <span className="text-xs text-gray-500 block">Priority</span>
                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
-                                        ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
+                                         ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
                                              selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
                                                 'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
                                           {selectedOrder.priority || 'Medium'}
                                        </span>
-                                    </div>
-                                 </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Date Created</span>
-                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Source</span>
-                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
                                     </div>
                                  </div>
                               </div>
@@ -1507,9 +1547,11 @@ const Orders = () => {
                                        <div className="flex items-center space-x-2">
                                           <p className="text-white text-sm font-medium">
                                              {(() => {
-                                                const teamId = selectedOrder.assignedTeam?._id || selectedOrder.assignedTeam;
-                                                const teamFound = allTeams.find(t => String(t._id) === String(teamId));
-                                                return teamFound?.name || selectedOrder.assignedTeam?.name || 'No Team';
+                                                const team = selectedOrder.assignedTeam;
+                                                if (!team) return 'No Team';
+                                                const teamId = String(team?._id || team?.id || team);
+                                                const teamFound = allTeams.find(t => String(t._id || t.id) === teamId);
+                                                return teamFound?.name || team?.name || (typeof team === 'object' ? team.name : 'Unknown Team');
                                              })()}
                                           </p>
                                           <span className="text-gray-600">•</span>
@@ -1533,13 +1575,15 @@ const Orders = () => {
                                        <div className="grid grid-cols-1 gap-2">
                                           {selectedOrder.assignedMembers?.length > 0 ? (
                                              selectedOrder.assignedMembers.map((m, i) => {
-                                                const uId = String(m._id || m.user?._id || m.user || m);
+                                                const userRef = m.user || m;
+                                                const uId = String(userRef?._id || userRef?.id || userRef);
+
                                                 const companyId = String(selectedOrder.company?._id || selectedOrder.company || '');
                                                 const company = allCompanies.find(c => String(c._id) === companyId);
-                                                const empFound = (company?.employees || allUsers).find(e => String(e._id) === uId);
+                                                const empFound = (company?.employees || allUsers).find(e => String(e._id || e.id) === uId);
 
-                                                const userName = empFound?.name || m.name || m.user?.name || 'Unknown Member';
-                                                const userRole = empFound?.role || m.role || m.user?.role || 'Member';
+                                                const userName = empFound?.name || userRef?.name || m.name || 'Unknown Member';
+                                                const userRole = empFound?.role || userRef?.role || m.role || 'Member';
                                                 return (
                                                    <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md">
                                                       <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
