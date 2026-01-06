@@ -36,6 +36,7 @@ export const useCompanyStore = create((set) => ({
       try {
          const response = await companiesApi.getAll();
          set({ companies: response.data, isLoading: false });
+         return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch companies', isLoading: false });
       }

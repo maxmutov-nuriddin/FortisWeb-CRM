@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import PageLoader from '../components/loader/PageLoader';
+import { useAuthStore } from '../store/auth.store';
 
 const Company = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -21,10 +22,15 @@ const Company = () => {
    const [editingCompanyId, setEditingCompanyId] = useState(null);
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, isLoading } = useCompanyStore();
+   const { user } = useAuthStore();
+
 
    useEffect(() => {
-      getCompanies();
-   }, [getCompanies]);
+      const userData = user?.data?.user || user;
+      if (userData?.role === 'super_admin') {
+         getCompanies();
+      }
+   }, [getCompanies, user]);
 
    const companiesList = companies?.data?.companies || [];
 
@@ -92,7 +98,7 @@ const Company = () => {
       hovermode: 'x unified'
    };
 
-   const filteredCompanies = useMemo(() => {
+   const filteredCompaniesMemo = useMemo(() => {
       let result = [...companiesList];
 
       if (statusFilter !== 'All Statuses') {
@@ -113,8 +119,18 @@ const Company = () => {
          );
       }
 
+      const userData = user?.data?.user || user;
+      const isAdmin = userData?.role === 'super_admin';
+
+      if (!isAdmin && userData?.company?._id) {
+         // Filter to only show the user's company
+         return companiesList.filter(c => c._id === userData.company._id);
+      }
+
       return result;
-   }, [companiesList, statusFilter, searchQuery]);
+   }, [companiesList, statusFilter, searchQuery, user]);
+
+   const filteredCompanies = filteredCompaniesMemo || [];
 
    const activeCompanies = useMemo(() =>
       companiesList.filter(c => c.isActive === true), [companiesList]);
@@ -230,25 +246,28 @@ const Company = () => {
          <div id="companies-header-section">
             <div className="flex items-center justify-between">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Companies Management</h1>
-                  <p className="text-gray-400">Manage all companies in the system</p>
+                  <h1 className="text-3xl font-bold text-white mb-2">
+                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? 'Companies Management' : 'My Company'}
+                  </h1>
+                  <p className="text-gray-400">
+                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? 'Manage all companies in the system' : 'View and manage your company details'}
+                  </p>
                </div>
-               <div className="flex items-center space-x-3">
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
-                     <i className="fa-solid fa-filter"></i>
-                     <span>Filters</span>
-                  </button>
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
-                     <i className="fa-solid fa-download"></i>
-                     <span>Export</span>
-                  </button>
-                  <button
-                     onClick={openCreateModal}
-                     className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
-                     <i className="fa-solid fa-plus"></i>
-                     <span>Add New Company</span>
-                  </button>
-               </div>
+               {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
+                  <div className="flex items-center space-x-3">
+                     <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
+                        <i className="fa-solid fa-filter"></i>
+                        <span>Filters</span>
+                     </button>
+                     <button
+                        onClick={openCreateModal}
+                        className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-3 shadow-lg shadow-red-900/20"
+                     >
+                        <i className="fa-solid fa-plus text-xs"></i>
+                        <span>Register Company</span>
+                     </button>
+                  </div>
+               )}
             </div>
          </div>
 

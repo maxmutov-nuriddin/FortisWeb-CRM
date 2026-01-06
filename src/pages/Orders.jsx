@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable no-dupe-keys */
 import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
@@ -17,6 +18,10 @@ const Orders = () => {
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [isEditMode, setIsEditMode] = useState(false);
    const [isCreateMode, setIsCreateMode] = useState(false);
+   const [paymentFormData, setPaymentFormData] = useState({
+      paymentMethod: 'bank_transfer',
+      status: 'pending'
+   });
 
    const [formData, setFormData] = useState({
       title: '',
@@ -46,7 +51,7 @@ const Orders = () => {
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
    const { users, getUsersByCompany } = useUserStore();
 
-   const { payments, getPaymentsByCompany } = usePaymentStore();
+   const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
@@ -62,22 +67,25 @@ const Orders = () => {
       }
    }, [isSuperAdmin, getCompanies]);
 
-   useEffect(() => {
-      const fetchData = async () => {
-         if (isSuperAdmin && viewCompanyId === 'all') {
-            if (allCompanies.length > 0) {
-               const ids = allCompanies.map(c => c._id);
-               await getAllProjects(ids);
-            }
-         } else if (activeCompanyId && activeCompanyId !== 'all') {
+   const fetchData = async () => {
+      if (isSuperAdmin && viewCompanyId === 'all') {
+         if (allCompanies.length > 0) {
+            const ids = allCompanies.map(c => c._id);
             await Promise.all([
-               getProjectsByCompany(activeCompanyId),
-               getPaymentsByCompany(activeCompanyId),
-               getUsersByCompany(activeCompanyId)
+               getAllProjects(ids),
+               getAllPayments(ids)
             ]);
          }
-      };
+      } else if (activeCompanyId && activeCompanyId !== 'all') {
+         await Promise.all([
+            getProjectsByCompany(activeCompanyId),
+            getPaymentsByCompany(activeCompanyId),
+            getUsersByCompany(activeCompanyId)
+         ]);
+      }
+   };
 
+   useEffect(() => {
       fetchData();
    }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
 
@@ -92,7 +100,7 @@ const Orders = () => {
       return usersData;
    }, [users]);
 
-   const projectsList = useMemo(() => Array.isArray(projects) ? projects : [], [projects]);
+   const projectsList = useMemo(() => projects?.data?.projects || (Array.isArray(projects) ? projects : []), [projects]);
    const paymentsList = useMemo(() => payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []), [payments]);
 
    const statusData = useMemo(() => {
@@ -296,12 +304,7 @@ const Orders = () => {
             await createProject(createData);
             alert('Order created successfully!');
 
-            // Refresh list for the active company
-            if (activeCompanyId === 'all') {
-               getAllProjects(allCompanies.map(c => c._id));
-            } else if (activeCompanyId) {
-               getProjectsByCompany(activeCompanyId);
-            }
+            await fetchData();
 
             closeModal();
          }
@@ -336,11 +339,7 @@ const Orders = () => {
             await updateProject(selectedOrder._id, updateData);
             alert('Order updated successfully!');
 
-            if (activeCompanyId === 'all') {
-               getAllProjects(allCompanies.map(c => c._id));
-            } else if (activeCompanyId) {
-               getProjectsByCompany(activeCompanyId);
-            }
+            await fetchData();
 
             closeModal();
          }
@@ -366,6 +365,10 @@ const Orders = () => {
 
    const resetForm = () => {
       setFormData({
+         title: '',
+         description: '',
+         budget: '',
+         status: 'pending',
          deadline: '',
          priority: 'medium',
          clientName: '',
@@ -418,11 +421,7 @@ const Orders = () => {
          try {
             await deleteProject(orderId);
             alert('Order deleted successfully!');
-            if (activeCompanyId === 'all') {
-               getAllProjects();
-            } else if (activeCompanyId) {
-               getProjectsByCompany(activeCompanyId);
-            }
+            await fetchData();
          } catch (error) {
             console.error('Error deleting order:', error);
             alert('Failed to delete order: ' + (error.response?.data?.message || error.message));
@@ -435,11 +434,7 @@ const Orders = () => {
       try {
          await updateProject(orderId, { status: 'in_progress' });
          alert('Order accepted successfully!');
-         if (activeCompanyId === 'all') {
-            getAllProjects(allCompanies.map(c => c._id));
-         } else if (activeCompanyId) {
-            getProjectsByCompany(activeCompanyId);
-         }
+         await fetchData();
          closeModal();
       } catch (error) {
          console.error('Error accepting order:', error);
@@ -447,11 +442,42 @@ const Orders = () => {
       }
    };
 
+   const handleCreatePaymentManually = async (e, order) => {
+      e.stopPropagation();
+      try {
+         await createPayment({
+            amount: order.budget,
+            project: order._id,
+            company: order.company?._id || order.company,
+            status: 'pending',
+            paymentMethod: paymentFormData.paymentMethod || 'bank_transfer'
+         });
+         alert('Payment created successfully!');
+         await fetchData();
+      } catch (error) {
+         console.error('Error creating payment:', error);
+         alert('Failed to create payment: ' + (error.response?.data?.message || error.message));
+      }
+   };
+
+
+
+
    const handleViewDetails = (e, order) => {
       e.stopPropagation();
       setSelectedOrder(order);
       setIsEditMode(false);
       setIsCreateMode(false);
+
+      // Pre-populate payment data for the view modal
+      const payment = paymentsList.find(p => p.project?._id === order._id || p.project === order._id);
+      if (payment) {
+         setPaymentFormData({
+            paymentMethod: payment.paymentMethod || 'bank_transfer',
+            status: payment.status || 'pending'
+         });
+      }
+
       setIsModalOpen(true);
    };
 
@@ -578,17 +604,20 @@ const Orders = () => {
                         <option>Cancelled</option>
                      </select>
                   </div>
-                  {isSuperAdmin && (
-                     <div>
-                        <label className="text-xs text-gray-400 mb-1 block">Viewing Company</label>
+                  {/* Company Filter - Only for Super Admin */}
+                  {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
+                     <div className="flex-1 min-w-[200px]">
+                        <label className="text-xs text-gray-400 mb-1 block">Filter by Company</label>
                         <select
-                           className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                           className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
                            value={viewCompanyId}
                            onChange={(e) => setViewCompanyId(e.target.value)}
                         >
                            <option value="all">All Companies</option>
-                           {allCompanies.map(c => (
-                              <option key={c._id} value={c._id}>{c.name || c.title || c._id}</option>
+                           {allCompanies.map(company => (
+                              <option key={company._id} value={company._id}>
+                                 {company.name}
+                              </option>
                            ))}
                         </select>
                      </div>
@@ -645,13 +674,14 @@ const Orders = () => {
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Source</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Payment</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800 relative">
                      {projectsLoading && projectsList.length > 0 && (
                         <tr className="absolute top-0 left-0 w-full h-1 z-10">
-                           <td colSpan="8" className="p-0">
+                           <td colSpan="9" className="p-0">
                               <div className="h-0.5 bg-dark-accent animate-pulse w-full"></div>
                            </td>
                         </tr>
@@ -724,15 +754,46 @@ const Orders = () => {
                                  })()}
                               </td>
                               <td className="px-6 py-4">
+                                 {(() => {
+                                    const payment = paymentsList.find(p => p.project?._id === order._id || p.project === order._id);
+                                    if (!payment) return <span className="text-gray-500 text-[10px] italic">No payment</span>;
+
+                                    let statusColor = 'text-gray-500 bg-gray-500';
+                                    const statusText = payment.status || 'pending';
+
+                                    switch (statusText) {
+                                       case 'pending':
+                                          statusColor = 'text-yellow-500 bg-yellow-500';
+                                          break;
+                                       case 'confirmed':
+                                       case 'processing':
+                                          statusColor = 'text-blue-500 bg-blue-500';
+                                          break;
+                                       case 'completed':
+                                          statusColor = 'text-green-500 bg-green-500';
+                                          break;
+                                       case 'failed':
+                                          statusColor = 'text-red-500 bg-red-500';
+                                          break;
+                                       default:
+                                          statusColor = 'text-gray-400 bg-gray-400';
+                                    }
+
+                                    return (
+                                       <div className="flex flex-col space-y-1">
+                                          <span className={`px-2 py-0.5 bg-opacity-20 rounded-full text-[10px] font-medium w-fit ${statusColor}`}>
+                                             {statusText.toUpperCase()}
+                                          </span>
+                                          <span className="text-[10px] text-gray-500 flex items-center">
+                                             <i className="fa-solid fa-wallet mr-1"></i>
+                                             {payment.paymentMethod || 'bank_transfer'}
+                                          </span>
+                                       </div>
+                                    );
+                                 })()}
+                              </td>
+                              <td className="px-6 py-4">
                                  <div className="flex items-center space-x-2">
-                                    {order.status === 'pending' && (
-                                       <button
-                                          onClick={(e) => handleAccept(e, order._id)}
-                                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
-                                       >
-                                          Accept
-                                       </button>
-                                    )}
                                     <button
                                        onClick={(e) => handleViewDetails(e, order)}
                                        className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
@@ -745,21 +806,6 @@ const Orders = () => {
                                     >
                                        Edit
                                     </button>
-                                    {order.status !== 'completed' && order.status !== 'cancelled' && (
-                                       <button
-                                          onClick={(e) => {
-                                             e.stopPropagation();
-                                             handleEditOrder(e, order);
-                                             // We'll use the edit modal for distribution too, 
-                                             // or we could show a specific section.
-                                             // Given the user asked for a "distribution button", 
-                                             // I'll make sure the assignment fields are visible.
-                                          }}
-                                          className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
-                                       >
-                                          Distribute
-                                       </button>
-                                    )}
                                     <button
                                        onClick={(e) => handleDeleteOrder(e, order._id)}
                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
@@ -772,16 +818,16 @@ const Orders = () => {
                         ))
                      ) : (
                         <tr>
-                           <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                           <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                               <i className="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
                               <p>No orders found matching your filters</p>
                            </td>
                         </tr>
                      )}
-                  </tbody>
-               </table>
-            </div>
-         </div>
+                  </tbody >
+               </table >
+            </div >
+         </div >
 
          <div id="orders-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
@@ -856,426 +902,551 @@ const Orders = () => {
          </div>
 
          {/* Modal for View/Create/Edit */}
-         {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                     <h2 className="text-xl font-bold text-white">
-                        {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
-                     </h2>
-                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
-                        <i className="fa-solid fa-times text-xl"></i>
-                     </button>
-                  </div>
+         {
+            isModalOpen && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+                  <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                     <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
+                        <h2 className="text-xl font-bold text-white">
+                           {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
+                        </h2>
+                        <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
+                           <i className="fa-solid fa-times text-xl"></i>
+                        </button>
+                     </div>
 
-                  <div className="p-6">
-                     {(isCreateMode || isEditMode) ? (
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                           {/* Company Selector - Only for super_admin in create mode */}
-                           {isCreateMode && isSuperAdmin && (
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Company <span className="text-red-500">*</span>
-                                 </label>
-                                 <select
-                                    name="selectedCompanyId"
-                                    value={formData.selectedCompanyId}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                    required
-                                 >
-                                    <option value="">Select a company ({allCompanies.length} available)</option>
-                                    {allCompanies.map((company) => (
-                                       <option key={company._id} value={company._id}>
-                                          {company.name || company.title || `Company ${company._id}`}
-                                       </option>
-                                    ))}
-                                 </select>
-                              </div>
-                           )}
+                     <div className="p-6">
+                        {(isCreateMode || isEditMode) ? (
+                           <form onSubmit={handleSubmit} className="space-y-4">
+                              {/* Company Selector - Only for super_admin in create mode */}
+                              {isCreateMode && isSuperAdmin && (
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">
+                                       Company <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                       name="selectedCompanyId"
+                                       value={formData.selectedCompanyId}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                       required
+                                    >
+                                       <option value="">Select a company ({allCompanies.length} available)</option>
+                                       {allCompanies.map((company) => (
+                                          <option key={company._id} value={company._id}>
+                                             {company.name || company.title || `Company ${company._id}`}
+                                          </option>
+                                       ))}
+                                    </select>
+                                 </div>
+                              )}
 
-                           {/* Show company info for non-super_admin in create mode */}
-                           {isCreateMode && !isSuperAdmin && (
-                              <div className="bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg p-4">
-                                 <div className="flex items-start space-x-3">
-                                    <i className="fa-solid fa-info-circle text-blue-500 text-lg mt-0.5"></i>
-                                    <div>
-                                       <p className="text-blue-400 text-sm font-medium mb-1">
-                                          Creating order for your company
-                                       </p>
-                                       <p className="text-blue-300 text-xs">
-                                          Company: {allCompanies[0]?.name || 'Your Company'}
-                                       </p>
+                              {/* Show company info for non-super_admin in create mode */}
+                              {isCreateMode && !isSuperAdmin && (
+                                 <div className="bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg p-4">
+                                    <div className="flex items-start space-x-3">
+                                       <i className="fa-solid fa-info-circle text-blue-500 text-lg mt-0.5"></i>
+                                       <div>
+                                          <p className="text-blue-400 text-sm font-medium mb-1">
+                                             Creating order for your company
+                                          </p>
+                                          <p className="text-blue-300 text-xs">
+                                             Company: {allCompanies[0]?.name || 'Your Company'}
+                                          </p>
+                                       </div>
                                     </div>
                                  </div>
-                              </div>
-                           )}
+                              )}
 
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
-                                 <input
-                                    type="text"
-                                    name="title"
-                                    value={formData.title}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="e.g., Website Redesign"
-                                    required
-                                 />
-                              </div>
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
-                                 <input
-                                    type="number"
-                                    name="budget"
-                                    value={formData.budget}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="e.g., 1500"
-                                    required
-                                 />
-                              </div>
-                           </div>
-
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
-                                 <input
-                                    type="date"
-                                    name="deadline"
-                                    value={formData.deadline}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    required
-                                 />
-                              </div>
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
-                                 <select
-                                    name="priority"
-                                    value={formData.priority}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
-                                 </select>
-                              </div>
-                           </div>
-
-                           <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
-                              <textarea
-                                 name="description"
-                                 value={formData.description}
-                                 onChange={handleInputChange}
-                                 rows="3"
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 placeholder="Project details..."
-                              ></textarea>
-                           </div>
-
-                           <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">
-                                 Status
-                              </label>
-                              <select
-                                 name="status"
-                                 value={formData.status}
-                                 onChange={handleInputChange}
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                              >
-                                 <option value="pending">Pending</option>
-                                 <option value="in_progress">In Progress</option>
-                                 <option value="review">Review</option>
-                                 <option value="revision">Revision</option>
-                                 <option value="completed">Completed</option>
-                                 <option value="cancelled">Cancelled</option>
-                              </select>
-                           </div>
-
-                           <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
                                     <input
                                        type="text"
-                                       name="clientName"
-                                       value={formData.clientName}
+                                       name="title"
+                                       value={formData.title}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="Full Name"
+                                       placeholder="e.g., Website Redesign"
+                                       required
                                     />
                                  </div>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
+                                    <input
+                                       type="number"
+                                       name="budget"
+                                       value={formData.budget}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="e.g., 1500"
+                                       required
+                                    />
+                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
+                                    <input
+                                       type="date"
+                                       name="deadline"
+                                       value={formData.deadline}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       required
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
+                                    <select
+                                       name="priority"
+                                       value={formData.priority}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    >
+                                       <option value="low">Low</option>
+                                       <option value="medium">Medium</option>
+                                       <option value="high">High</option>
+                                       <option value="urgent">Urgent</option>
+                                    </select>
+                                 </div>
+                              </div>
+
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
+                                 <textarea
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    rows="3"
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="Project details..."
+                                 ></textarea>
+                              </div>
+
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Status
+                                 </label>
+                                 <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="review">Review</option>
+                                    <option value="revision">Revision</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                 </select>
+                              </div>
+
+                              <div className="border-t border-gray-800 pt-4">
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
+                                       <input
+                                          type="text"
+                                          name="clientName"
+                                          value={formData.clientName}
+                                          onChange={handleInputChange}
+                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                          placeholder="Full Name"
+                                       />
+                                    </div>
+                                    <div>
+                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
+                                       <input
+                                          type="text"
+                                          name="clientUsername"
+                                          value={formData.clientUsername}
+                                          onChange={handleInputChange}
+                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                          placeholder="@username"
+                                       />
+                                    </div>
+                                 </div>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
+                                       <input
+                                          type="email"
+                                          name="clientEmail"
+                                          value={formData.clientEmail}
+                                          onChange={handleInputChange}
+                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                          placeholder="email@example.com"
+                                       />
+                                    </div>
+                                    <div>
+                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
+                                       <input
+                                          type="text"
+                                          name="clientPhone"
+                                          value={formData.clientPhone}
+                                          onChange={handleInputChange}
+                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                          placeholder="+12345678"
+                                       />
+                                    </div>
+                                 </div>
+                                 <div className="mt-4">
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
                                     <input
                                        type="text"
-                                       name="clientUsername"
-                                       value={formData.clientUsername}
+                                       name="clientCompany"
+                                       value={formData.clientCompany}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="@username"
+                                       placeholder="Company Name"
                                     />
                                  </div>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+
+                              <div className="border-t border-gray-800 pt-4">
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
-                                    <input
-                                       type="email"
-                                       name="clientEmail"
-                                       value={formData.clientEmail}
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
+                                    <select
+                                       name="teamLead"
+                                       value={formData.teamLead}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="email@example.com"
-                                    />
+                                    >
+                                       <option value="">Select Team Lead</option>
+                                       {allUsers.filter(user => user.role === 'team_lead').map(user => (
+                                          <option key={user._id} value={user._id}>{user.name}</option>
+                                       ))}
+                                    </select>
                                  </div>
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
-                                    <input
-                                       type="text"
-                                       name="clientPhone"
-                                       value={formData.clientPhone}
+                                 <div className="mt-4">
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
+                                    <select
+                                       name="team"
+                                       value={formData.team}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="+12345678"
-                                    />
+                                    >
+                                       <option value="">Select Team</option>
+                                       {allTeams.map(team => (
+                                          <option key={team._id} value={team._id}>{team.name}</option>
+                                       ))}
+                                    </select>
+                                 </div>
+                                 <div className="mt-4">
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
+                                    <select
+                                       name="assignedMembers"
+                                       multiple
+                                       value={formData.assignedMembers}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
+                                    >
+                                       {allUsers.filter(user => user.role === 'member').map(user => (
+                                          <option key={user._id} value={user._id}>{user.name}</option>
+                                       ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
                                  </div>
                               </div>
-                              <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
-                                 <input
-                                    type="text"
-                                    name="clientCompany"
-                                    value={formData.clientCompany}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="Company Name"
-                                 />
-                              </div>
-                           </div>
 
-                           <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
-                                 <select
-                                    name="teamLead"
-                                    value={formData.teamLead}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 >
-                                    <option value="">Select Team Lead</option>
-                                    {allUsers.filter(user => user.role === 'team_lead').map(user => (
-                                       <option key={user._id} value={user._id}>{user.name}</option>
-                                    ))}
-                                 </select>
-                              </div>
-                              <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
-                                 <select
-                                    name="team"
-                                    value={formData.team}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 >
-                                    <option value="">Select Team</option>
-                                    {allTeams.map(team => (
-                                       <option key={team._id} value={team._id}>{team.name}</option>
-                                    ))}
-                                 </select>
-                              </div>
-                              <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
-                                 <select
-                                    name="assignedMembers"
-                                    multiple
-                                    value={formData.assignedMembers}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
-                                 >
-                                    {allUsers.filter(user => user.role === 'member').map(user => (
-                                       <option key={user._id} value={user._id}>{user.name}</option>
-                                    ))}
-                                 </select>
-                                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
-                              </div>
-                           </div>
-
-                           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
-                              <button
-                                 type="button"
-                                 onClick={closeModal}
-                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
-                              >
-                                 Cancel
-                              </button>
-                              <button
-                                 type="submit"
-                                 className="bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition"
-                              >
-                                 {isCreateMode ? 'Create Order' : 'Save Changes'}
-                              </button>
-                           </div>
-                        </form>
-                     ) : (
-                        <div className="space-y-6">
-                           <div className="flex flex-col sm:flex-row justify-between gap-4">
-                              <div>
-                                 <span className="text-xs text-gray-500 block mb-1">Order ID</span>
-                                 <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
-                                    #{selectedOrder._id}
-                                 </span>
-                              </div>
-                              <div>
-                                 <span className="text-xs text-gray-500 block mb-1">Status</span>
-                                 <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
-                                    ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
-                                       selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
-                                          selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
-                                    {selectedOrder.status.toUpperCase().replace('_', ' ')}
-                                 </span>
-                              </div>
-                           </div>
-
-                           <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
-                              <div className="bg-dark-tertiary rounded-lg p-4">
-                                 <div className="flex items-center space-x-3">
-                                    <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                       <i className="fa-solid fa-building text-indigo-500"></i>
-                                    </div>
-                                    <div>
-                                       <p className="text-white font-medium">
-                                          {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
-                                       </p>
-                                       <p className="text-xs text-gray-500 italic">Project source entity</p>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-
-                           <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
-                              <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
-                                 <div>
-                                    <span className="text-xs text-gray-500 block">Title</span>
-                                    <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
-                                 </div>
-                                 <div>
-                                    <span className="text-xs text-gray-500 block">Description</span>
-                                    <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
-                                 </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Budget/Amount</span>
-                                       <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Priority</span>
-                                       <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
-                                           ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
-                                             selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
-                                                'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
-                                          {selectedOrder.priority || 'Medium'}
-                                       </span>
-                                    </div>
-                                 </div>
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Date Created</span>
-                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Source</span>
-                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-
-                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                              <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
-                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
-                                       {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
-                                    </div>
-                                    <div>
-                                       <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
-                                       <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
-                                       <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Team Lead</span>
-                                       <p className="text-white text-sm">{selectedOrder.teamLead?.name || 'Not assigned'}</p>
-                                    </div>
-                                    <div className="mt-2">
-                                       <span className="text-xs text-gray-500 block">Assigned Members</span>
-                                       <div className="flex -space-x-2 mt-1">
-                                          {selectedOrder.assignedMembers?.length > 0 ? (
-                                             selectedOrder.assignedMembers.map((m, i) => (
-                                                <div key={i} className="w-7 h-7 rounded-full bg-dark-accent border-2 border-dark-tertiary flex items-center justify-center text-[10px] text-white" title={m.user?.name}>
-                                                   {m.user?.name?.charAt(0) || '?'}
-                                                </div>
-                                             ))
-                                          ) : <p className="text-gray-500 text-xs">No members</p>}
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                           </div>
-
-                           {selectedOrder.results?.length > 0 && (
-                              <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
-                                    {selectedOrder.results.map((res, i) => (
-                                       <div key={i} className="flex items-center justify-between text-sm">
-                                          <span className="text-gray-300">{res.name}</span>
-                                          <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
-                                       </div>
-                                    ))}
-                                 </div>
-                              </div>
-                           )}
-
-                           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
-                              <button
-                                 onClick={(e) => handleEditOrder(e, selectedOrder)}
-                                 className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
-                              >
-                                 <i className="fa-solid fa-edit"></i>
-                                 <span>Edit Order</span>
-                              </button>
-                              {selectedOrder.status === 'pending' && (
+                              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
                                  <button
-                                    onClick={(e) => handleAccept(e, selectedOrder._id)}
-                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                    type="button"
+                                    onClick={closeModal}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
                                  >
-                                    <i className="fa-solid fa-check"></i>
-                                    <span>Accept Order</span>
+                                    Cancel
                                  </button>
+                                 <button
+                                    type="submit"
+                                    className="bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition"
+                                 >
+                                    {isCreateMode ? 'Create Order' : 'Save Changes'}
+                                 </button>
+                              </div>
+                           </form>
+                        ) : (
+                           <div className="space-y-6">
+                              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                                 <div>
+                                    <span className="text-xs text-gray-500 block mb-1">Order ID</span>
+                                    <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
+                                       #{selectedOrder._id}
+                                    </span>
+                                 </div>
+                                 <div>
+                                    <span className="text-xs text-gray-500 block mb-1">Status</span>
+                                    <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
+                                    ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
+                                          selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
+                                             selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
+                                       {selectedOrder.status.toUpperCase().replace('_', ' ')}
+                                    </span>
+                                 </div>
+                              </div>
+
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4">
+                                    <div className="flex items-center space-x-3">
+                                       <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                          <i className="fa-solid fa-building text-indigo-500"></i>
+                                       </div>
+                                       <div>
+                                          <p className="text-white font-medium">
+                                             {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
+                                          </p>
+                                          <p className="text-xs text-gray-500 italic">Project source entity</p>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Title</span>
+                                       <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Description</span>
+                                       <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                       <div>
+                                          <span className="text-xs text-gray-500 block">Budget/Amount</span>
+                                          <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                       </div>
+                                       <div>
+                                          <span className="text-xs text-gray-500 block">Priority</span>
+                                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
+                                           ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
+                                                selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                   'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                             {selectedOrder.priority || 'Medium'}
+                                          </span>
+                                       </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                       <div>
+                                          <span className="text-xs text-gray-500 block">Date Created</span>
+                                          <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                       </div>
+                                       <div>
+                                          <span className="text-xs text-gray-500 block">Source</span>
+                                          <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                 <div>
+                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                                    <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                                       <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                                          {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                                       </div>
+                                       <div>
+                                          <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                                          <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
+                                          <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div>
+                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
+                                    <div className="bg-dark-tertiary rounded-lg p-4">
+                                       <div>
+                                          <span className="text-xs text-gray-500 block">Team Lead</span>
+                                          <p className="text-white text-sm">{selectedOrder.teamLead?.name || 'Not assigned'}</p>
+                                       </div>
+                                       <div className="mt-2">
+                                          <span className="text-xs text-gray-500 block">Assigned Members</span>
+                                          <div className="flex -space-x-2 mt-1">
+                                             {selectedOrder.assignedMembers?.length > 0 ? (
+                                                selectedOrder.assignedMembers.map((m, i) => (
+                                                   <div key={i} className="w-7 h-7 rounded-full bg-dark-accent border-2 border-dark-tertiary flex items-center justify-center text-[10px] text-white" title={m.user?.name}>
+                                                      {m.user?.name?.charAt(0) || '?'}
+                                                   </div>
+                                                ))
+                                             ) : <p className="text-gray-500 text-xs">No members</p>}
+                                          </div>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+
+                              <div className="border-t border-gray-800 pt-6">
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                                    <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
+                                    Payment Information
+                                 </h3>
+                                 {(() => {
+                                    const payment = paymentsList.find(p => p.project?._id === selectedOrder._id || p.project === selectedOrder._id);
+                                    if (!payment) {
+                                       return (
+                                          <div className="bg-dark-tertiary rounded-lg p-6 border border-dashed border-gray-700 space-y-4">
+                                             <div className="text-center">
+                                                <p className="text-gray-500 text-sm">No payment has been created for this order yet.</p>
+                                             </div>
+                                             <div>
+                                                <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-semibold text-center">Select Payment Method</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                   <select
+                                                      value={paymentFormData.paymentMethod}
+                                                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                                                      className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
+                                                   >
+                                                      <option value="bank_transfer">Bank Transfer</option>
+                                                      <option value="cash">Cash</option>
+                                                      <option value="card">Card</option>
+                                                      <option value="paypal">PayPal</option>
+                                                      <option value="crypto">Crypto</option>
+                                                      <option value="other">Other</option>
+                                                   </select>
+                                                   <button
+                                                      onClick={(e) => handleCreatePaymentManually(e, selectedOrder)}
+                                                      className="col-span-2 bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
+                                                   >
+                                                      <i className="fa-solid fa-plus mr-2"></i>
+                                                      Create Initial Payment
+                                                   </button>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       );
+                                    }
+
+                                    return (
+                                       <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
+                                                <div className="flex items-center space-x-2">
+                                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit
+                                                      ${payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                         payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
+                                                            'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                                      {payment.status}
+                                                   </span>
+                                                </div>
+                                             </div>
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Amount</span>
+                                                <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
+                                             </div>
+                                          </div>
+
+                                          <div className="grid grid-cols-1 gap-4">
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
+                                                <div className="flex items-center text-white text-sm bg-dark-secondary px-3 py-2 rounded-lg border border-gray-700">
+                                                   <i className="fa-solid fa-wallet mr-2 text-gray-400"></i>
+                                                   {payment.paymentMethod || 'bank_transfer'}
+                                                </div>
+                                             </div>
+                                          </div>
+
+                                          <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
+                                             {/* 1. Only 'Confirm Receipt' for pending status */}
+                                             {payment.status === 'pending' && (
+                                                <button
+                                                   type="button"
+                                                   onClick={async () => {
+                                                      try {
+                                                         await confirmPayment(payment._id || payment.id);
+                                                         await fetchData();
+                                                         alert('Payment confirmed successfully!');
+                                                      } catch (err) {
+                                                         alert('Failed to confirm: ' + err.message);
+                                                      }
+                                                   }}
+                                                   className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center"
+                                                >
+                                                   <i className="fa-solid fa-check-double mr-1"></i>
+                                                   Confirm Receipt (Money Received)
+                                                </button>
+                                             )}
+
+                                             {/* 2. 'Mark as Paid' - ONLY for Super Admin at any time (or if you prefer, only after confirmation) */}
+                                             {isSuperAdmin && payment.status !== 'completed' && (
+                                                <button
+                                                   type="button"
+                                                   onClick={async () => {
+                                                      try {
+                                                         await completePayment(payment._id || payment.id);
+                                                         await fetchData();
+                                                         alert('Payment marked as paid!');
+                                                      } catch (err) {
+                                                         alert('Failed to complete: ' + err.message);
+                                                      }
+                                                   }}
+                                                   className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center`}
+                                                >
+                                                   <i className="fa-solid fa-flag-checkered mr-1"></i>
+                                                   {payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)'}
+                                                </button>
+                                             )}
+                                          </div>
+                                       </div>
+                                    );
+                                 })()}
+                              </div>
+
+                              {selectedOrder.results?.length > 0 && (
+                                 <div>
+                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
+                                    <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
+                                       {selectedOrder.results.map((res, i) => (
+                                          <div key={i} className="flex items-center justify-between text-sm">
+                                             <span className="text-gray-300">{res.name}</span>
+                                             <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 </div>
                               )}
+
+                              <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+                                 <button
+                                    onClick={closeModal}
+                                    className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                                 >
+                                    Close
+                                 </button>
+                                 <div className="flex space-x-3">
+                                    <button
+                                       onClick={(e) => handleEditOrder(e, selectedOrder)}
+                                       className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                    >
+                                       <i className="fa-solid fa-edit"></i>
+                                       <span>Edit Order</span>
+                                    </button>
+                                    {selectedOrder.status === 'pending' && (
+                                       <button
+                                          onClick={(e) => handleAccept(e, selectedOrder._id)}
+                                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                       >
+                                          <i className="fa-solid fa-check"></i>
+                                          <span>Accept Order</span>
+                                       </button>
+                                    )}
+                                 </div>
+                              </div>
                            </div>
-                        </div>
-                     )}
+                        )}
+                     </div>
                   </div>
                </div>
-            </div>
-         )
-         }
-      </div >
+            )}
+      </div>
    );
 };
 

@@ -10,7 +10,20 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.create(data);
-         set((state) => ({ payments: [...state.payments, response.data], isLoading: false }));
+         const newPayment = response.data;
+         set((state) => {
+            const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+            return {
+               payments: {
+                  ...state.payments,
+                  data: {
+                     ...state.payments?.data,
+                     payments: [...currentList, newPayment]
+                  }
+               },
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create payment', isLoading: false });
@@ -22,10 +35,20 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.confirm(id);
-         set((state) => ({
-            payments: state.payments.map((p) => (p.id === id ? response.data : p)),
-            isLoading: false,
-         }));
+         const updatedPayment = response.data;
+         set((state) => {
+            const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+            return {
+               payments: {
+                  ...state.payments,
+                  data: {
+                     ...state.payments?.data,
+                     payments: currentList.map((p) => (p.id === id || p._id === id ? updatedPayment : p))
+                  }
+               },
+               isLoading: false
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to confirm payment', isLoading: false });
       }
@@ -35,10 +58,20 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.complete(id);
-         set((state) => ({
-            payments: state.payments.map((p) => (p.id === id ? response.data : p)),
-            isLoading: false,
-         }));
+         const updatedPayment = response.data;
+         set((state) => {
+            const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+            return {
+               payments: {
+                  ...state.payments,
+                  data: {
+                     ...state.payments?.data,
+                     payments: currentList.map((p) => (p.id === id || p._id === id ? updatedPayment : p))
+                  }
+               },
+               isLoading: false
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to complete payment', isLoading: false });
       }
@@ -48,9 +81,45 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.getByCompany(companyId);
-         set({ payments: response.data, isLoading: false });
+         // Standardize to { data: { payments: [...] } } if it's just of type list or similar
+         const data = response.data?.data?.payments || response.data?.payments || (Array.isArray(response.data) ? response.data : []);
+         set({
+            payments: {
+               data: { payments: data },
+               success: true
+            },
+            isLoading: false
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch payments', isLoading: false });
+      }
+   },
+
+   getAllPayments: async (companyIds) => {
+      if (!companyIds || companyIds.length === 0) {
+         set({ payments: [], isLoading: false });
+         return;
+      }
+      set({ isLoading: true, error: null });
+      try {
+         const promises = companyIds.map(id => paymentsApi.getByCompany(id));
+         const results = await Promise.all(promises);
+         let allPayments = [];
+         results.forEach(res => {
+            const data = res.data?.data?.payments || res.data?.payments || (Array.isArray(res.data) ? res.data : []);
+            allPayments = [...allPayments, ...data];
+         });
+         // Sort by creation date descending
+         allPayments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+         set({
+            payments: {
+               data: { payments: allPayments },
+               success: true
+            },
+            isLoading: false
+         });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to fetch all payments', isLoading: false });
       }
    },
 
@@ -58,7 +127,14 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.getByUser(userId);
-         set({ payments: response.data, isLoading: false });
+         const data = response.data?.data?.payments || response.data?.payments || (Array.isArray(response.data) ? response.data : []);
+         set({
+            payments: {
+               data: { payments: data },
+               success: true
+            },
+            isLoading: false
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch user payments', isLoading: false });
       }

@@ -12,10 +12,19 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.create(data);
          const newProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: Array.isArray(state.projects) ? [newProject, ...state.projects] : [newProject],
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: [newProject, ...currentList]
+                  }
+               },
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create project', isLoading: false });
@@ -27,8 +36,7 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.getByCompany(companyId);
-         const projectsArray = response.data.data?.projects || response.data.projects || (Array.isArray(response.data) ? response.data : []);
-         set({ projects: projectsArray, isLoading: false });
+         set({ projects: response.data, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch projects', isLoading: false });
       }
@@ -50,7 +58,13 @@ export const useProjectStore = create((set) => ({
          });
          // Sort by creation date descending
          allProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-         set({ projects: allProjects, isLoading: false });
+         set({
+            projects: {
+               data: { projects: allProjects },
+               success: true
+            },
+            isLoading: false
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch all projects', isLoading: false });
       }
@@ -72,11 +86,20 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.update(id, data);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update project', isLoading: false });
@@ -88,11 +111,20 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          await projectsApi.delete(id);
-         set((state) => ({
-            projects: state.projects.filter(p => (p._id !== id && p.id !== id)),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? null : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.filter(p => (p._id !== id && p.id !== id))
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? null : state.selectedProject,
+               isLoading: false
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to delete project', isLoading: false });
          throw error;
@@ -102,14 +134,22 @@ export const useProjectStore = create((set) => ({
    assignProject: async (id, data) => {
       set({ isLoading: true, error: null });
       try {
-         // data should contain { teamLeadId, memberIds, assignedTeam, etc. }
          const response = await projectsApi.assign(id, data);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to assign project', isLoading: false });

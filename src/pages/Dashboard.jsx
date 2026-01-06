@@ -8,13 +8,15 @@ import PageLoader from '../components/loader/PageLoader';
 import { usePaymentStore } from '../store/payment.store';
 import { isOnline, isToday, isYesterday } from '../utils/date';
 import { useUserStore } from '../store/user.store';
+import { useCompanyStore } from '../store/company.store';
 
 const Dashboard = () => {
    //! DATA
    const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
-   const { users, getUsersByCompany } = useUserStore();
-   const { projects, getProjectsByCompany, isLoading: projectsLoading, error: projectsError } = useProjectStore();
-   const { payments, getPaymentsByCompany, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
+   const { users, getUsersByCompany, getAllUsers } = useUserStore();
+   const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
+   const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
+   const { companies, getCompanies } = useCompanyStore();
 
    //! State
    const [newOrder, setNewOrder] = useState([])
@@ -161,8 +163,8 @@ const Dashboard = () => {
 
    // ===================== USERS =====================
    useEffect(() => {
-      const usersList = users?.data?.users
-      if (!usersList) return
+      const usersList = users?.data?.users || (Array.isArray(users) ? users : [])
+      if (!usersList || usersList.length === 0) return
 
       const activeRolesCount = new Set(
          usersList
@@ -182,8 +184,8 @@ const Dashboard = () => {
 
    // ===================== PAYMENTS =====================
    useEffect(() => {
-      const paymentsList = payments?.data?.payments
-      if (!paymentsList) return
+      const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : [])
+      if (!paymentsList || paymentsList.length === 0) return
 
       // 💰 Сегодня
       const todayPayments = paymentsList.filter(p =>
@@ -222,21 +224,49 @@ const Dashboard = () => {
    }, [])
 
 
-   // ===================== COMPANY DATA =====================
+   // ===================== DATA INITIALIZATION =====================
    useEffect(() => {
-      const companyId = user?.data?.user?.company?._id
-      if (!companyId) return
+      const initDashboard = async () => {
+         const userData = user?.data?.user || user;
+         if (!userData) return;
 
-      getProjectsByCompany(companyId)
-      getPaymentsByCompany(companyId)
-      getUsersByCompany(companyId)
-   }, [user?.data?.user?.company?._id])
+         const companyId = userData.company?._id;
+         const role = userData.role;
+
+         if (role === 'super_admin') {
+            try {
+               // Super admin needs all companies first
+               const res = await getCompanies();
+               const companiesList = res?.data?.companies || res?.companies || (Array.isArray(res) ? res : []);
+
+               // Fallback to store state if return value is missing
+               const finalCompanies = companiesList.length > 0 ? companiesList : (companies?.data?.companies || []);
+               const companyIds = finalCompanies.map(c => c._id);
+
+               if (companyIds.length > 0) {
+                  getAllProjects(companyIds);
+                  getAllPayments(companyIds);
+                  getAllUsers(companyIds);
+               }
+            } catch (error) {
+               console.error('Error fetching data for super_admin:', error);
+            }
+         } else if (companyId) {
+            // Company admin or regular admin/user
+            getProjectsByCompany(companyId);
+            getPaymentsByCompany(companyId);
+            getUsersByCompany(companyId);
+         }
+      };
+
+      initDashboard();
+   }, [user, getCompanies, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany]);
 
 
    // ===================== PROJECTS =====================
    useEffect(() => {
-      const projectsData = projects?.data?.projects
-      if (!Array.isArray(projectsData)) {
+      const projectsData = projects?.data?.projects || (Array.isArray(projects) ? projects : [])
+      if (!Array.isArray(projectsData) || projectsData.length === 0) {
          setTodayProjects([])
          setNewOrder(0)
          setActiveProjects(0)
@@ -270,9 +300,10 @@ const Dashboard = () => {
    //! Recent Order
 
    const recentOrders = useMemo(() => {
-      if (!projects?.data?.projects) return []
+      const projectsData = projects?.data?.projects || (Array.isArray(projects) ? projects : [])
+      if (!projectsData || projectsData.length === 0) return []
 
-      return [...projects.data.projects]
+      return [...projectsData]
          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
          .slice(0, 5)
    }, [projects])
