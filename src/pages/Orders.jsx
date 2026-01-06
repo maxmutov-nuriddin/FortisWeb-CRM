@@ -494,8 +494,6 @@ const Orders = () => {
       return <PageLoader />;
    }
 
-   console.log(filteredOrders);
-
    return (
       <div className="p-8 space-y-8">
          <div id="orders-header-section">
