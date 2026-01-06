@@ -16,7 +16,7 @@ const Dashboard = () => {
    const { users, getUsersByCompany, getAllUsers } = useUserStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
    const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
-   const { companies, getCompanies } = useCompanyStore();
+   const { companies, getCompanies, isLoading: companiesLoading, } = useCompanyStore();
 
    //! State
    const [newOrder, setNewOrder] = useState([])
@@ -356,7 +356,7 @@ const Dashboard = () => {
 
 
    return (
-      authLoading && paymentsLoading && projectsLoading ? (
+      authLoading && paymentsLoading && projectsLoading && companiesLoading ? (
          <PageLoader />
       ) : (
          <>
