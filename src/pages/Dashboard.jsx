@@ -504,7 +504,6 @@ const Dashboard = () => {
                                  const memberData = usersList.find(u => String(u._id) === userId);
                                  const name = memberData?.name || m.user?.name || m.name || 'Unknown User';
                                  const role = memberData?.role || m.role || 'Member';
-                                 const position = memberData?.position || '';
 
                                  return (
                                     <div
@@ -517,7 +516,7 @@ const Dashboard = () => {
                                        <div className="flex flex-col">
                                           <span className="font-medium">{name}</span>
                                           <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-                                             {position || role.replace('_', ' ')}
+                                             {role || role.replace('_', ' ')}
                                           </span>
                                        </div>
                                     </div>
