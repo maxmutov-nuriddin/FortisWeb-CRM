@@ -23,6 +23,7 @@ const Company = () => {
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
+console.log(companies);
 
 
    useEffect(() => {
@@ -236,6 +237,7 @@ const Company = () => {
    if (isLoading) return (
       <PageLoader />
    );
+
 
    return (
       <div className="p-8 space-y-8">

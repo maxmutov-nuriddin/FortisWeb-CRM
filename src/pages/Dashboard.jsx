@@ -9,6 +9,7 @@ import { usePaymentStore } from '../store/payment.store';
 import { isOnline, isToday, isYesterday } from '../utils/date';
 import { useUserStore } from '../store/user.store';
 import { useCompanyStore } from '../store/company.store';
+import { toast } from 'react-toastify';
 
 const Dashboard = () => {
    //! DATA
@@ -241,7 +242,7 @@ const Dashboard = () => {
 
                // Fallback to store state if return value is missing
                const finalCompanies = companiesList.length > 0 ? companiesList : (companies?.data?.companies || []);
-               const companyIds = finalCompanies.map(c => c._id);
+               const companyIds = finalCompanies.map(c => c._id).filter(Boolean);
 
                if (companyIds.length > 0) {
                   getAllProjects(companyIds);
@@ -261,6 +262,15 @@ const Dashboard = () => {
 
       initDashboard();
    }, [user, getCompanies, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany]);
+
+   useEffect(() => {
+      if (users?.partialFailure) {
+         toast.warning('Some dashboard data could not be fully loaded. Check console for details.', {
+            toastId: 'dashboard-partial-load',
+            autoClose: 5000
+         });
+      }
+   }, [users?.partialFailure]);
 
 
    // ===================== PROJECTS =====================

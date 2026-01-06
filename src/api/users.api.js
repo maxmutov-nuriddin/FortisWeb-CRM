@@ -5,7 +5,7 @@ export const usersApi = {
    getByCompany: (companyId) => api.get(`/api/users/company/${companyId}`),
    getById: (id) => api.get(`/api/users/${id}`),
    update: (id, data) => api.put(`/api/users/${id}`, data),
-   updateStatus: (id, status) => api.patch(`/api/users/${id}/status`, { status }),
+   updateStatus: (id) => api.patch(`/api/users/${id}/status`),
    delete: (id) => api.delete(`/api/users/${id}`),
    getStats: (id) => api.get(`/api/users/${id}/stats`),
 };

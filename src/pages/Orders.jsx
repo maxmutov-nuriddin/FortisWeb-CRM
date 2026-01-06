@@ -51,7 +51,7 @@ const Orders = () => {
 
    const { companies, getCompanies, isLoading: companiesLoading } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
-   const { users, getUsersByCompany, isLoading: usersLoading } = useUserStore();
+   const { users, getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
 
@@ -64,10 +64,15 @@ const Orders = () => {
    const allCompanies = companies?.data?.companies || companies?.companies || [];
 
    useEffect(() => {
-      if (isSuperAdmin) {
-         getCompanies();
+      if (isSuperAdmin && viewCompanyId === 'all') {
+         getCompanies().then(camps => {
+            const companyList = camps?.data?.companies || camps || [];
+            if (companyList.length > 0) {
+               getAllUsers(companyList.map(c => c._id).filter(Boolean));
+            }
+         });
       }
-   }, [isSuperAdmin, getCompanies]);
+   }, [isSuperAdmin, viewCompanyId, getCompanies, getAllUsers]);
 
    const fetchData = async () => {
       if (isSuperAdmin && viewCompanyId === 'all') {
@@ -92,10 +97,53 @@ const Orders = () => {
    }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
 
    const allTeams = useMemo(() => {
-      if (!activeCompanyId || activeCompanyId === 'all') return [];
-      const company = allCompanies.find(c => c._id === activeCompanyId);
-      return company?.teams || [];
+      const companyList = allCompanies;
+      if (!activeCompanyId || activeCompanyId === 'all') {
+         // If super admin and all companies selected, aggregate all teams
+         let teams = [];
+         companyList.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyId: c._id }))];
+         });
+         return teams;
+      }
+      const company = companyList.find(c => c._id === activeCompanyId);
+      return company?.teams?.map(t => ({ ...t, companyId: company._id })) || [];
    }, [activeCompanyId, allCompanies]);
+
+   // Available Team Leads filtered by selected/active company
+   const availableLeads = useMemo(() => {
+      const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
+      let baseUsers = users?.data?.users || (Array.isArray(users) ? users : []);
+
+      let leads = baseUsers.filter(u => u.role === 'team_lead');
+
+      if (targetCompanyId && targetCompanyId !== 'all') {
+         leads = leads.filter(u =>
+            String(u.company?._id || u.company || '') === targetCompanyId
+         );
+      }
+
+      // Filter: only show leads that actually have teams in allTeams
+      return leads.filter(lead =>
+         allTeams.some(team => String(team.lead?._id || team.lead || '') === String(lead._id))
+      );
+   }, [users, allTeams, formData.selectedCompanyId, activeCompanyId]);
+
+   // Available Teams filtered by selected company and lead
+   const availableTeams = useMemo(() => {
+      const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
+      let teams = allTeams;
+
+      if (targetCompanyId && targetCompanyId !== 'all') {
+         teams = teams.filter(t => String(t.companyId || '') === targetCompanyId);
+      }
+
+      if (formData.teamLead) {
+         teams = teams.filter(t => String(t.lead?._id || t.lead || '') === String(formData.teamLead));
+      }
+
+      return teams;
+   }, [allTeams, formData.selectedCompanyId, formData.teamLead, activeCompanyId]);
 
    const allUsers = useMemo(() => {
       const usersData = users?.data?.users || users?.users || (Array.isArray(users) ? users : []);
@@ -362,13 +410,7 @@ const Orders = () => {
          }
       } catch (error) {
          console.error('Error saving order:', error);
-         toast.error('Failed to save order: ', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         } + (error.response?.data?.message || error.message));
+         toast.error('Failed to save order: ' + (error.response?.data?.message || error.message));
       } finally {
          setIsSubmitting(false);
       }
@@ -380,6 +422,58 @@ const Orders = () => {
       if (type === 'select-multiple') {
          const values = Array.from(selectedOptions).map(opt => opt.value);
          setFormData(prev => ({ ...prev, [name]: values }));
+      } else if (name === 'selectedCompanyId') {
+         // Clear assignments when company changes
+         setFormData(prev => ({
+            ...prev,
+            selectedCompanyId: value,
+            teamLead: '',
+            assignedTeam: '',
+            assignedMembers: []
+         }));
+      } else if (name === 'teamLead') {
+         if (!value) {
+            setFormData(prev => ({ ...prev, teamLead: '', assignedTeam: '', assignedMembers: [] }));
+            return;
+         }
+
+         // When a lead is chosen, check if they have exactly one team in the current company
+         const leadTeams = availableTeams.filter(t => String(t.lead?._id || t.lead || '') === String(value));
+
+         if (leadTeams.length === 1) {
+            const team = leadTeams[0];
+            setFormData(prev => ({
+               ...prev,
+               teamLead: value,
+               assignedTeam: team._id,
+               assignedMembers: team.members?.map(m => m.user?._id || m.user) || []
+            }));
+         } else {
+            // Multiple teams or none? Clear specific team/members selection
+            setFormData(prev => ({
+               ...prev,
+               teamLead: value,
+               assignedTeam: '',
+               assignedMembers: []
+            }));
+         }
+      } else if (name === 'assignedTeam') {
+         if (!value) {
+            setFormData(prev => ({ ...prev, assignedTeam: '', assignedMembers: [] }));
+            return;
+         }
+         // Auto-select members if a team is chosen
+         const team = availableTeams.find(t => String(t._id) === String(value));
+         if (team) {
+            setFormData(prev => ({
+               ...prev,
+               assignedTeam: value,
+               teamLead: team.lead?._id || team.lead || prev.teamLead,
+               assignedMembers: team.members?.map(m => m.user?._id || m.user) || []
+            }));
+         } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+         }
       } else {
          setFormData(prev => ({
             ...prev,
@@ -454,13 +548,13 @@ const Orders = () => {
             });
          } catch (error) {
             console.error('Error deleting order:', error);
-            toast.error('Failed to delete order: ', {
+            toast.error('Failed to delete order: ' + (error.response?.data?.message || error.message), {
                position: 'top-right',
                autoClose: 5000,
                closeOnClick: false,
                draggable: false,
                theme: 'dark',
-            } + (error.response?.data?.message || error.message));
+            });
          }
       }
    };
@@ -480,13 +574,13 @@ const Orders = () => {
          closeModal();
       } catch (error) {
          console.error('Error accepting order:', error);
-         toast.error('Failed to accept order: ', {
+         toast.error('Failed to accept order: ' + (error.response?.data?.message || error.message), {
             position: 'top-right',
             autoClose: 5000,
             closeOnClick: false,
             draggable: false,
             theme: 'dark',
-         } + (error.response?.data?.message || error.message));
+         });
       } finally {
          setIsSubmitting(false);
       }
@@ -883,10 +977,10 @@ const Orders = () => {
                            </td>
                         </tr>
                      )}
-                  </tbody >
-               </table >
-            </div >
-         </div >
+                  </tbody>
+               </table>
+            </div>
+         </div>
 
          <div id="orders-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
@@ -1176,8 +1270,8 @@ const Orders = () => {
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
                                     >
-                                       <option value="">Select Team Lead</option>
-                                       {allUsers.filter(user => user.role === 'team_lead').map(user => (
+                                       <option value="">Select Team Lead ({availableLeads.length})</option>
+                                       {availableLeads.map(user => (
                                           <option key={user._id} value={user._id}>{user.name}</option>
                                        ))}
                                     </select>
@@ -1185,13 +1279,13 @@ const Orders = () => {
                                  <div className="mt-4">
                                     <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
                                     <select
-                                       name="team"
-                                       value={formData.team}
+                                       name="assignedTeam"
+                                       value={formData.assignedTeam}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
                                     >
-                                       <option value="">Select Team</option>
-                                       {allTeams.map(team => (
+                                       <option value="">Select Team ({availableTeams.length})</option>
+                                       {availableTeams.map(team => (
                                           <option key={team._id} value={team._id}>{team.name}</option>
                                        ))}
                                     </select>
@@ -1205,9 +1299,26 @@ const Orders = () => {
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
                                     >
-                                       {allUsers.filter(user => user.role === 'member').map(user => (
-                                          <option key={user._id} value={user._id}>{user.name}</option>
-                                       ))}
+                                       {(() => {
+                                          if (!formData.assignedTeam) {
+                                             return <option disabled className="text-gray-500 italic">Select a team first...</option>;
+                                          }
+                                          const team = allTeams.find(t => String(t._id) === String(formData.assignedTeam));
+                                          if (!team || !team.members || team.members.length === 0) {
+                                             return <option disabled className="text-gray-500 italic">No members found in this team</option>;
+                                          }
+                                          return team.members.map((m, idx) => {
+                                             const uId = String(m.user?._id || m.user);
+                                             const userFound = allUsers.find(u => String(u._id) === uId);
+                                             const name = userFound?.name || (typeof m.user === 'object' ? m.user.name : 'Unknown');
+                                             const role = userFound?.role || (typeof m.user === 'object' ? m.user.role : 'member');
+                                             return (
+                                                <option key={`${uId}-${idx}`} value={uId}>
+                                                   {name} ({role.replace('_', ' ')})
+                                                </option>
+                                             );
+                                          });
+                                       })()}
                                     </select>
                                     <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
                                  </div>
@@ -1322,21 +1433,51 @@ const Orders = () => {
                                  </div>
                                  <div>
                                     <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
-                                    <div className="bg-dark-tertiary rounded-lg p-4">
+                                    <div className="bg-dark-tertiary rounded-lg p-4 space-y-4">
                                        <div>
-                                          <span className="text-xs text-gray-500 block">Team Lead</span>
-                                          <p className="text-white text-sm">{selectedOrder.teamLead?.name || 'Not assigned'}</p>
+                                          <span className="text-xs text-gray-500 block mb-1">Team & Lead</span>
+                                          <div className="flex items-center space-x-2">
+                                             <p className="text-white text-sm font-medium">
+                                                {(() => {
+                                                   const teamId = selectedOrder.assignedTeam?._id || selectedOrder.assignedTeam;
+                                                   const teamFound = allTeams.find(t => String(t._id) === String(teamId));
+                                                   return teamFound?.name || 'No Team';
+                                                })()}
+                                             </p>
+                                             <span className="text-gray-600">•</span>
+                                             <p className="text-gray-400 text-xs">
+                                                {(() => {
+                                                   const lead = selectedOrder.teamLead;
+                                                   if (!lead) return 'No Lead';
+                                                   const leadId = lead?._id || lead;
+                                                   const userFound = allUsers.find(u => String(u._id) === String(leadId));
+                                                   return userFound?.name || (typeof lead === 'object' ? lead.name : 'Unknown');
+                                                })()}
+                                             </p>
+                                          </div>
                                        </div>
-                                       <div className="mt-2">
-                                          <span className="text-xs text-gray-500 block">Assigned Members</span>
-                                          <div className="flex -space-x-2 mt-1">
+                                       <div>
+                                          <span className="text-xs text-gray-500 block mb-2">Assigned Members</span>
+                                          <div className="grid grid-cols-1 gap-2">
                                              {selectedOrder.assignedMembers?.length > 0 ? (
-                                                selectedOrder.assignedMembers.map((m, i) => (
-                                                   <div key={i} className="w-7 h-7 rounded-full bg-dark-accent border-2 border-dark-tertiary flex items-center justify-center text-[10px] text-white" title={m.user?.name}>
-                                                      {m.user?.name?.charAt(0) || '?'}
-                                                   </div>
-                                                ))
-                                             ) : <p className="text-gray-500 text-xs">No members</p>}
+                                                selectedOrder.assignedMembers.map((m, i) => {
+                                                   const uId = String(m.user?._id || m.user);
+                                                   const userFound = allUsers.find(u => String(u._id) === uId);
+                                                   const userName = userFound?.name || (typeof m.user === 'object' ? m.user.name : 'Unknown');
+                                                   const userRole = userFound?.role || (typeof m.user === 'object' ? m.user.role : 'Member');
+                                                   return (
+                                                      <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md">
+                                                         <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
+                                                            {userName.charAt(0).toUpperCase()}
+                                                         </div>
+                                                         <div className="flex flex-col">
+                                                            <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
+                                                            <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
+                                                         </div>
+                                                      </div>
+                                                   );
+                                                })
+                                             ) : <p className="text-gray-500 text-xs">No members assigned</p>}
                                           </div>
                                        </div>
                                     </div>

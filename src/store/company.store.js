@@ -104,34 +104,91 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await companiesApi.addTeam(id, data);
-         // Update selected company teams if possible
+         const newTeam = response.data.data?.team || response.data.team || response.data;
+
          set((state) => {
-            if (state.selectedCompany && state.selectedCompany.id === id) {
-               return {
-                  selectedCompany: {
-                     ...state.selectedCompany,
-                     teams: [...(state.selectedCompany.teams || []), response.data]
-                  },
-                  isLoading: false
+            const currentCompanies = state.companies?.data?.companies || (Array.isArray(state.companies) ? state.companies : []);
+
+            const updatedCompanies = currentCompanies.map(c => {
+               if (c._id === id) {
+                  return {
+                     ...c,
+                     teams: [...(c.teams || []), newTeam]
+                  };
+               }
+               return c;
+            });
+
+            const newState = {
+               isLoading: false,
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: updatedCompanies
+                  }
+               }
+            };
+
+            if (state.selectedCompany?._id === id) {
+               newState.selectedCompany = {
+                  ...state.selectedCompany,
+                  teams: [...(state.selectedCompany.teams || []), newTeam]
                };
             }
-            return { isLoading: false };
+
+            return newState;
          });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add team', isLoading: false });
+         throw error;
       }
    },
 
-   addTeamMember: async (id, data) => {
+   addTeamMemberDirect: async (id, data) => {
       set({ isLoading: true, error: null });
       try {
-         await companiesApi.addTeamMemberDirect(id, data);
-         // Refresh company data to see new members? Or manually update?
-         // For now just toggle loading
-         set({ isLoading: false });
+         const response = await companiesApi.addTeamMemberDirect(id, data);
+         const updatedTeam = response.data.data?.team || response.data.team || response.data;
+
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || (Array.isArray(state.companies) ? state.companies : []);
+
+            const updatedCompanies = currentCompanies.map(c => {
+               if (c._id === id) {
+                  return {
+                     ...c,
+                     teams: (c.teams || []).map(t => t._id === (data.teamId || updatedTeam._id) ? updatedTeam : t)
+                  };
+               }
+               return c;
+            });
+
+            const newState = {
+               isLoading: false,
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: updatedCompanies
+                  }
+               }
+            };
+
+            if (state.selectedCompany?._id === id) {
+               newState.selectedCompany = {
+                  ...state.selectedCompany,
+                  teams: (state.selectedCompany.teams || []).map(t => t._id === (data.teamId || updatedTeam._id) ? updatedTeam : t)
+               };
+            }
+
+            return newState;
+         });
+         return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add team member', isLoading: false });
+         throw error;
       }
    },
    deleteCompany: async (companyId) => {

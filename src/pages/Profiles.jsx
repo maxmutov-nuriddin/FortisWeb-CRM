@@ -1,22 +1,149 @@
-import React from 'react';
+/* eslint-disable no-unused-vars */
+import React, { useEffect, useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
+import { useUserStore } from '../store/user.store';
+import { useAuthStore } from '../store/auth.store';
+import { useCompanyStore } from '../store/company.store';
+import { toast } from 'react-toastify';
+import PageLoader from '../components/loader/PageLoader';
 
 const Profiles = () => {
-   const roleData = [{
-      type: 'pie',
-      labels: ['Backend', 'Frontend', 'Team Leads', 'Admins', 'Marketing'],
-      values: [8, 6, 5, 3, 2],
-      marker: { colors: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] },
-      textinfo: 'label+percent',
-      textfont: { color: '#FFFFFF', size: 11 },
-      hovertemplate: '%{label}: %{value} members<extra></extra>'
-   }];
+   const { user: currentUser } = useAuthStore();
+   const userData = useMemo(() => currentUser?.data?.user || currentUser?.user || currentUser, [currentUser]);
+   const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
+
+   const { users, isLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
+   const { companies, getCompanies, addTeam, addTeamMemberDirect } = useCompanyStore();
+
+   const [activeTab, setActiveTab] = useState('members');
+   const [filter, setFilter] = useState('All Members');
+   const [isModalOpen, setIsModalOpen] = useState(false);
+   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [selectedUser, setSelectedUser] = useState(null);
+   const [isSubmitting, setIsSubmitting] = useState(false);
+   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+   const [selectedTeamId, setSelectedTeamId] = useState(null);
+   const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState(null);
+   const [memberToAddId, setMemberToAddId] = useState('');
+
+   const [formData, setFormData] = useState({
+      name: '',
+      email: '',
+      password: '',
+      role: 'employee',
+      phone: '',
+      position: '',
+      companyId: ''
+   });
+
+   const [teamFormData, setTeamFormData] = useState({
+      name: '',
+      teamLeadId: '',
+      description: '',
+      companyId: ''
+   });
+
+   const fetchData = async () => {
+      if (!userData) return;
+
+      const userCompanyId = userData.company?._id || userData.company;
+
+      if (isSuperAdmin) {
+         getCompanies().then(camps => {
+            const companyList = camps?.data?.companies || camps || [];
+            if (companyList.length > 0) {
+               const validIds = companyList.map(c => c._id).filter(Boolean);
+               if (validIds.length > 0) {
+                  getAllUsers(validIds);
+               }
+            }
+         });
+      } else if (userCompanyId) {
+         getUsersByCompany(userCompanyId);
+      }
+   };
+
+   useEffect(() => {
+      fetchData();
+   }, [userData, isSuperAdmin, getCompanies, getAllUsers, getUsersByCompany]);
+
+   useEffect(() => {
+      if (users?.partialFailure) {
+         toast.warning('Some company data could not be loaded due to server errors. Check console for details.', {
+            toastId: 'partial-load-warning',
+            autoClose: 5000
+         });
+      }
+   }, [users?.partialFailure]);
+
+   const rawUserList = useMemo(() => {
+      return users?.data?.users || (Array.isArray(users) ? users : []);
+   }, [users]);
+
+   const userList = useMemo(() => {
+      const list = rawUserList;
+      if (filter === 'All Members') return list;
+      return list.filter(u => {
+         if (filter === 'Admins') return u.role === 'company_admin' || u.role === 'super_admin';
+         if (filter === 'Team Leads') return u.role === 'team_lead';
+         if (filter === 'Backend') return u.role === 'backend';
+         if (filter === 'Frontend') return u.role === 'frontend';
+         if (filter === 'Marketing') return u.role === 'marketer';
+         return true;
+      });
+   }, [users, filter]);
+
+   const allTeams = useMemo(() => {
+      if (!userData) return [];
+      const companyList = companies?.data?.companies || companies || [];
+      const userCompanyId = userData.company?._id || userData.company;
+
+      if (isSuperAdmin) {
+         let teams = [];
+         companyList.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: c._id }))];
+         });
+         return teams;
+      } else {
+         const company = companyList.find(c => c._id === userCompanyId);
+         return company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: company._id })) || [];
+      }
+   }, [companies, userData, isSuperAdmin]);
+
+   const stats = useMemo(() => {
+      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      return {
+         total: all.length,
+         active: all.filter(u => u.isActive).length,
+         leads: all.filter(u => u.role === 'team_lead').length,
+         leave: all.filter(u => !u.isActive).length,
+         teams: allTeams.length
+      };
+   }, [users, allTeams]);
+
+   const roleData = useMemo(() => {
+      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
+      const labels = ['Backend', 'Frontend', 'Team Leads', 'Admins', 'Marketing'];
+      const values = roles.map(r => all.filter(u => u.role === r).length);
+
+      return [{
+         type: 'pie',
+         labels,
+         values,
+         marker: { colors: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] },
+         textinfo: 'label+percent',
+         textfont: { color: '#FFFFFF', size: 11 },
+         hovertemplate: '%{label}: %{value} members<extra></extra>'
+      }];
+   }, [users]);
 
    const roleLayout = {
       autosize: true,
       margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: 'transparent',
+      paper_bgcolor: 'transparent',
       showlegend: false
    };
 
@@ -32,10 +159,170 @@ const Profiles = () => {
       xaxis: { title: '', gridcolor: '#2A2A2A', color: '#9CA3AF' },
       yaxis: { title: 'Success Rate (%)', gridcolor: '#2A2A2A', color: '#9CA3AF', range: [0, 100] },
       margin: { t: 20, r: 20, b: 60, l: 60 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: 'transparent',
+      paper_bgcolor: 'transparent',
       showlegend: false
    };
+
+   const styles = {
+      modalOverlay: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 backdrop-blur-sm",
+      modalContent: "bg-dark-secondary border border-gray-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl",
+      input: "w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent transition placeholder-gray-500",
+      label: "block text-sm font-medium text-gray-400 mb-1.5",
+      btnPrimary: "bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed",
+      btnSecondary: "bg-dark-tertiary hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition border border-gray-700"
+   };
+
+   const openModal = (user = null) => {
+      if (user) {
+         setIsEditMode(true);
+         setSelectedUser(user);
+         setFormData({
+            name: user.name || '',
+            email: user.email || '',
+            password: '',
+            role: user.role || 'employee',
+            phone: user.phone || '',
+            position: user.position || '',
+            companyId: user.company?._id || user.company || ''
+         });
+      } else {
+         setIsEditMode(false);
+         setSelectedUser(null);
+         const defaultCompanyId = currentUser?.role === 'super_admin' ? '' : (currentUser?.company || currentUser?.data?.user?.company || '');
+         setFormData({
+            name: '',
+            email: '',
+            password: '',
+            role: 'employee',
+            phone: '',
+            position: '',
+            companyId: defaultCompanyId
+         });
+      }
+      setIsModalOpen(true);
+   };
+
+   const openTeamModal = () => {
+      const companyData = currentUser?.company || currentUser?.data?.user?.company;
+      const defaultCompanyId = currentUser?.role === 'super_admin' ? '' : (companyData?._id || companyData || '');
+      setTeamFormData({ name: '', teamLeadId: '', description: '', companyId: String(defaultCompanyId) });
+      setIsTeamModalOpen(true);
+   };
+
+   const closeModal = () => {
+      setIsModalOpen(false);
+      setIsTeamModalOpen(false);
+      setIsMemberModalOpen(false);
+      resetForm();
+   };
+
+   const resetForm = () => {
+      setFormData({
+         name: '',
+         email: '',
+         password: '',
+         role: 'employee',
+         phone: '',
+         position: '',
+         companyId: ''
+      });
+   };
+
+   const handleSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      try {
+         if (isEditMode && selectedUser) {
+            const updateData = { ...formData };
+            if (!updateData.password) delete updateData.password;
+            await updateUser(selectedUser._id, updateData);
+            toast.success('User updated successfully!');
+         } else {
+            if (!formData.password) {
+               toast.error('Password is required for new users');
+               setIsSubmitting(false);
+               return;
+            }
+            await createUser(formData);
+            toast.success('User created successfully!');
+         }
+         closeModal();
+      } catch (error) {
+         console.error(error);
+         toast.error(error.response?.data?.message || 'Failed to save user');
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
+   const handleTeamSubmit = async (e) => {
+      e.preventDefault();
+      setIsSubmitting(true);
+      try {
+         await addTeam(teamFormData.companyId, {
+            name: teamFormData.name,
+            teamLeadId: teamFormData.teamLeadId,
+            description: teamFormData.description
+         });
+         toast.success('Team created successfully!');
+         closeModal();
+      } catch (error) {
+         toast.error(error.response?.data?.message || 'Failed to create team');
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
+   const handleDelete = async (userId) => {
+      if (window.confirm('Are you sure you want to delete this member?')) {
+         try {
+            await deleteUser(userId);
+            toast.success('User deleted successfully');
+         } catch (error) {
+            toast.error('Failed to delete user');
+         }
+      }
+   };
+
+   const toggleStatus = async (userId) => {
+      try {
+         await updateUserStatus(userId);
+         toast.success('Status updated');
+      } catch (error) {
+         toast.error('Failed to update status');
+      }
+   };
+
+   const handleAddMemberToTeam = (teamId, companyId) => {
+      setSelectedTeamId(teamId);
+      setSelectedTeamCompanyId(companyId);
+      setMemberToAddId('');
+      setIsMemberModalOpen(true);
+   };
+
+   const handleConfirmAddMember = async () => {
+      if (!memberToAddId) {
+         toast.error('Please select a member');
+         return;
+      }
+      setIsSubmitting(true);
+      try {
+         await addTeamMemberDirect(selectedTeamCompanyId, { teamId: selectedTeamId, userId: memberToAddId });
+         toast.success('Member added to team');
+         setIsMemberModalOpen(false);
+      } catch (error) {
+         toast.error(error.response?.data?.message || 'Failed to add member');
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
+   if (isLoading && userList.length === 0) return <PageLoader />;
+
+   if (!isLoading && userList.length === 0 && !users?.partialFailure && !isSuperAdmin) {
+      // Optional: Show "No data" message if list is empty and no error
+   }
 
    return (
       <div className="p-8 space-y-8">
@@ -46,23 +333,19 @@ const Profiles = () => {
                   <p className="text-gray-400">Manage team members, roles, and access permissions</p>
                </div>
                <div className="flex items-center space-x-3">
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
-                     <i className="fa-solid fa-filter"></i>
-                     <span>Filter by Role</span>
-                  </button>
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
-                     <i className="fa-solid fa-download"></i>
-                     <span>Export</span>
-                  </button>
-                  <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                  <button onClick={() => openModal()} className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                      <i className="fa-solid fa-user-plus"></i>
                      <span>Add New Member</span>
+                  </button>
+                  <button onClick={() => openTeamModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                     <i className="fa-solid fa-people-group"></i>
+                     <span>Create Team</span>
                   </button>
                </div>
             </div>
          </div>
 
-         <div id="profiles-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+         <div id="profiles-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -70,10 +353,8 @@ const Profiles = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Total Members</h3>
-               <p className="text-2xl font-bold text-white">24</p>
-               <p className="text-xs text-green-500 mt-1">+3 this month</p>
+               <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
-            {/* ... other stats cards ... */}
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -81,8 +362,7 @@ const Profiles = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Active Now</h3>
-               <p className="text-2xl font-bold text-white">18</p>
-               <p className="text-xs text-gray-500 mt-1">75% online rate</p>
+               <p className="text-2xl font-bold text-white">{stats.active}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -91,8 +371,7 @@ const Profiles = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Team Leads</h3>
-               <p className="text-2xl font-bold text-white">5</p>
-               <p className="text-xs text-gray-500 mt-1">Managing teams</p>
+               <p className="text-2xl font-bold text-white">{stats.leads}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
@@ -100,116 +379,162 @@ const Profiles = () => {
                      <i className="fa-solid fa-user-clock text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">On Leave</h3>
-               <p className="text-2xl font-bold text-white">2</p>
-               <p className="text-xs text-gray-500 mt-1">Returning soon</p>
+               <h3 className="text-gray-400 text-xs mb-1">Inactive</h3>
+               <p className="text-2xl font-bold text-white">{stats.leave}</p>
+            </div>
+            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+               <div className="flex items-center justify-between mb-3">
+                  <div className="w-11 h-11 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                     <i className="fa-solid fa-layer-group text-indigo-500 text-xl"></i>
+                  </div>
+               </div>
+               <h3 className="text-gray-400 text-xs mb-1">Teams</h3>
+               <p className="text-2xl font-bold text-white">{stats.teams}</p>
             </div>
          </div>
 
-         <div id="profiles-role-tabs-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
-            <button className="flex-auto px-4 py-2.5 bg-dark-accent text-white rounded-lg text-sm font-medium transition">All Members (24)</button>
-            <button className="flex-auto px-4 py-2.5 hover:bg-dark-tertiary text-gray-400 hover:text-white rounded-lg text-sm font-medium transition">Admins (3)</button>
-            <button className="flex-auto px-4 py-2.5 hover:bg-dark-tertiary text-gray-400 hover:text-white rounded-lg text-sm font-medium transition">Team Leads (5)</button>
-            <button className="flex-auto px-4 py-2.5 hover:bg-dark-tertiary text-gray-400 hover:text-white rounded-lg text-sm font-medium transition">Backend (8)</button>
-            <button className="flex-auto px-4 py-2.5 hover:bg-dark-tertiary text-gray-400 hover:text-white rounded-lg text-sm font-medium transition">Frontend (6)</button>
-            <button className="flex-auto px-4 py-2.5 hover:bg-dark-tertiary text-gray-400 hover:text-white rounded-lg text-sm font-medium transition">Marketing (2)</button>
+         <div className="flex border-b border-gray-800">
+            <button
+               onClick={() => setActiveTab('members')}
+               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'members' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
+            >
+               Members List
+            </button>
+            <button
+               onClick={() => setActiveTab('teams')}
+               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'teams' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
+            >
+               Teams & Departments
+            </button>
          </div>
 
-         <div id="profiles-grid-section" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Alex Johnson */}
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="relative">
-                     <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Profile" className="w-16 h-16 rounded-full border-2 border-dark-accent" />
-                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-secondary"></div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button>
-                  </div>
+         {activeTab === 'members' ? (
+            <>
+               <div id="profiles-role-tabs-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
+                  {['All Members', 'Admins', 'Team Leads', 'Backend', 'Frontend', 'Marketing'].map(t => (
+                     <button
+                        key={t}
+                        onClick={() => setFilter(t)}
+                        className={`flex-auto px-4 py-2.5 rounded-lg text-sm font-medium transition ${filter === t ? 'bg-dark-accent text-white' : 'hover:bg-dark-tertiary text-gray-400 hover:text-white'}`}
+                     >
+                        {t}
+                     </button>
+                  ))}
                </div>
-               <h3 className="text-lg font-semibold text-white mb-1">Alex Johnson</h3>
-               <p className="text-sm text-dark-accent mb-3">Main Admin</p>
-               <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span>alex.johnson@fortisweb.com</span></div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>+1 (555) 123-4567</span></div>
-               </div>
-               <div className="flex items-center space-x-2 mb-4">
-                  <span className="px-2 py-1 bg-dark-accent bg-opacity-20 text-dark-accent rounded text-xs">Full Access</span>
-                  <span className="px-2 py-1 bg-green-500 bg-opacity-20 text-green-500 rounded text-xs">Active</span>
-               </div>
-               <div className="pt-4 border-t border-gray-800">
-                  <div className="flex items-center justify-between text-xs">
-                     <div><p className="text-gray-400 mb-1">Tasks Assigned</p><p className="text-white font-semibold">156</p></div>
-                     <div><p className="text-gray-400 mb-1">Completed</p><p className="text-white font-semibold">142</p></div>
-                     <div><p className="text-gray-400 mb-1">Success Rate</p><p className="text-white font-semibold">91%</p></div>
-                  </div>
-               </div>
-            </div>
 
-            {/* Michael Chen */}
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="relative">
-                     <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" alt="Profile" className="w-16 h-16 rounded-full" />
-                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-secondary"></div>
+               <div id="profiles-grid-section" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {userList.map(item => (
+                     <div key={item._id} className={`bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition ${!item.isActive ? 'opacity-60' : ''}`}>
+                        <div className="flex items-start justify-between mb-4">
+                           <div className="relative">
+                              <img
+                                 src={item.avatar || `https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-${(item.name?.length % 9) + 1}.jpg`}
+                                 alt="Profile"
+                                 className={`w-16 h-16 rounded-full border-2 ${item.isActive ? 'border-dark-accent' : 'border-gray-600'}`}
+                              />
+                              <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-dark-secondary ${item.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                           </div>
+                           <div className="flex items-center space-x-2">
+                              <button onClick={() => openModal(item)} className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
+                              <div className="relative group">
+                                 <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button>
+                                 <div className="absolute right-0 top-full mt-2 w-48 bg-dark-tertiary border border-gray-700 rounded-lg shadow-xl overflow-hidden hidden group-hover:block z-20">
+                                    <button onClick={() => toggleStatus(item._id)} className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-gray-700 transition">
+                                       {item.isActive ? 'Deactivate' : 'Activate'}
+                                    </button>
+                                    <button onClick={() => handleDelete(item._id)} className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-gray-700 transition">Delete Member</button>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                        <h3 className="text-lg font-semibold text-white mb-1">{item.name}</h3>
+                        <p className="text-sm text-dark-accent mb-3">{item.position || item.role?.replace('_', ' ')}</p>
+                        <div className="space-y-2 mb-4">
+                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span className="truncate">{item.email}</span></div>
+                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>{item.phone || 'No phone'}</span></div>
+                        </div>
+                        <div className="flex items-center space-x-2 mb-4">
+                           <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.role === 'super_admin' ? 'bg-red-500 text-red-500' :
+                              item.role === 'company_admin' ? 'bg-blue-500 text-blue-500' :
+                                 item.role === 'team_lead' ? 'bg-purple-500 text-purple-500' :
+                                    'bg-gray-500 text-gray-400'
+                              }`}>{item.role?.replace('_', ' ')}</span>
+                           <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.isActive ? 'bg-green-500 text-green-500' : 'bg-red-500 text-red-500'}`}>
+                              {item.isActive ? 'Active' : 'Inactive'}
+                           </span>
+                        </div>
+                        <div className="pt-4 border-t border-gray-800">
+                           <div className="flex items-center justify-between text-xs">
+                              <div><p className="text-gray-400 mb-1">Salary</p><p className="text-white font-semibold">${item.salary || 0}</p></div>
+                              <div><p className="text-gray-400 mb-1">Company</p><p className="text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
+                              <div><p className="text-gray-400 mb-1">Created</p><p className="text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
+                           </div>
+                        </div>
+                     </div>
+                  ))}
+                  {userList.length === 0 && (
+                     <div className="col-span-full py-12 text-center text-gray-500 bg-dark-secondary rounded-xl border border-dashed border-gray-800">
+                        <i className="fa-solid fa-users-slash text-4xl mb-3"></i>
+                        <p>No members found in this category</p>
+                     </div>
+                  )}
+               </div>
+            </>
+         ) : (
+            <div id="teams-grid-section" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {allTeams.map(team => (
+                  <div key={team._id} className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+                     <div className="flex items-center justify-between mb-6">
+                        <div>
+                           <h3 className="text-xl font-bold text-white mb-1">{team.name}</h3>
+                           <p className="text-xs text-gray-500">Company: {team.companyName}</p>
+                        </div>
+                        <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-white text-sm font-medium transition">
+                           <i className="fa-solid fa-plus mr-1"></i> Add Member
+                        </button>
+                     </div>
+                     <div className="mb-6">
+                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Team Lead</p>
+                        <div className="flex items-center space-x-3 bg-dark-tertiary p-3 rounded-lg">
+                           <div className="w-10 h-10 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-purple-500 font-bold">
+                              {users?.data?.users?.find(u => u._id === (team.teamLead?._id || team.teamLead))?.name?.charAt(0) || '?'}
+                           </div>
+                           <div>
+                              <p className="text-sm font-medium text-white">
+                                 {users?.data?.users?.find(u => u._id === (team.teamLead?._id || team.teamLead))?.name || 'Unassigned Lead'}
+                              </p>
+                              <p className="text-xs text-gray-500">Responsible for deliverables</p>
+                           </div>
+                        </div>
+                     </div>
+                     <div>
+                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Members ({team.members?.length || 0})</p>
+                        <div className="grid grid-cols-2 gap-2">
+                           {team.members?.map((m, idx) => {
+                              const memberUser = users?.data?.users?.find(u => u._id === (m.user?._id || m.user));
+                              return (
+                                 <div key={idx} className="flex items-center space-x-2 bg-dark-tertiary p-2 rounded-lg">
+                                    <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">
+                                       {memberUser?.name?.charAt(0) || '?'}
+                                    </div>
+                                    <span className="text-xs text-gray-300 truncate">{memberUser?.name || 'Unknown'}</span>
+                                 </div>
+                              );
+                           })}
+                           {(!team.members || team.members.length === 0) && <p className="text-xs text-gray-600 col-span-2">No members in this team yet</p>}
+                        </div>
+                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button>
+               ))}
+               {allTeams.length === 0 && (
+                  <div className="col-span-full py-12 text-center text-gray-500 bg-dark-secondary rounded-xl border border-dashed border-gray-800">
+                     <i className="fa-solid fa-people-group text-4xl mb-3"></i>
+                     <p>No teams found. Create one to get started!</p>
                   </div>
-               </div>
-               <h3 className="text-lg font-semibold text-white mb-1">Michael Chen</h3>
-               <p className="text-sm text-blue-500 mb-3">Admin</p>
-               <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span>michael.chen@fortisweb.com</span></div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>+1 (555) 234-5678</span></div>
-               </div>
-               <div className="flex items-center space-x-2 mb-4">
-                  <span className="px-2 py-1 bg-blue-500 bg-opacity-20 text-blue-500 rounded text-xs">Admin Access</span>
-                  <span className="px-2 py-1 bg-green-500 bg-opacity-20 text-green-500 rounded text-xs">Active</span>
-               </div>
-               <div className="pt-4 border-t border-gray-800">
-                  <div className="flex items-center justify-between text-xs">
-                     <div><p className="text-gray-400 mb-1">Tasks Assigned</p><p className="text-white font-semibold">124</p></div>
-                     <div><p className="text-gray-400 mb-1">Completed</p><p className="text-white font-semibold">115</p></div>
-                     <div><p className="text-gray-400 mb-1">Success Rate</p><p className="text-white font-semibold">93%</p></div>
-                  </div>
-               </div>
+               )}
             </div>
+         )}
 
-            {/* Sarah Williams */}
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="relative">
-                     <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" alt="Profile" className="w-16 h-16 rounded-full" />
-                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-secondary"></div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
-                     <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button>
-                  </div>
-               </div>
-               <h3 className="text-lg font-semibold text-white mb-1">Sarah Williams</h3>
-               <p className="text-sm text-purple-500 mb-3">Team Lead</p>
-               <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span>sarah.williams@fortisweb.com</span></div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>+1 (555) 345-6789</span></div>
-               </div>
-               <div className="flex items-center space-x-2 mb-4">
-                  <span className="px-2 py-1 bg-purple-500 bg-opacity-20 text-purple-500 rounded text-xs">Team Lead</span>
-                  <span className="px-2 py-1 bg-green-500 bg-opacity-20 text-green-500 rounded text-xs">Active</span>
-               </div>
-               <div className="pt-4 border-t border-gray-800">
-                  <div className="flex items-center justify-between text-xs">
-                     <div><p className="text-gray-400 mb-1">Tasks Assigned</p><p className="text-white font-semibold">98</p></div>
-                     <div><p className="text-gray-400 mb-1">Completed</p><p className="text-white font-semibold">89</p></div>
-                     <div><p className="text-gray-400 mb-1">Success Rate</p><p className="text-white font-semibold">91%</p></div>
-                  </div>
-               </div>
-            </div>
-            {/* ... other profiles would go here ... */}
-         </div>
 
          <div id="profiles-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
@@ -244,7 +569,226 @@ const Profiles = () => {
                </div>
             </div>
          </div>
-      </div>
+
+         {/* User Modal */}
+         {isModalOpen && (
+            <div className={styles.modalOverlay}>
+               <div className={styles.modalContent}>
+                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-white">{isEditMode ? 'Edit Team Member' : 'Add New Member'}</h2>
+                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  </div>
+                  <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                           <label className={styles.label}>Full Name</label>
+                           <input
+                              type="text" required className={styles.input} placeholder="e.g. John Doe"
+                              value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
+                           />
+                        </div>
+                        <div>
+                           <label className={styles.label}>Email Address</label>
+                           <input
+                              type="email" required className={styles.input} placeholder="john@example.com"
+                              value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                           />
+                        </div>
+                        {!isEditMode && (
+                           <div>
+                              <label className={styles.label}>Password</label>
+                              <input
+                                 type="password" required className={styles.input} placeholder="********"
+                                 value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
+                              />
+                           </div>
+                        )}
+                        <div>
+                           <label className={styles.label}>Phone Number</label>
+                           <input
+                              type="text" className={styles.input} placeholder="+1..."
+                              value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                           />
+                        </div>
+                        <div>
+                           <label className={styles.label}>Position</label>
+                           <input
+                              type="text" className={styles.input} placeholder="e.g. Senior Backend"
+                              value={formData.position} onChange={e => setFormData({ ...formData, position: e.target.value })}
+                           />
+                        </div>
+                        <div>
+                           <label className={styles.label}>Role</label>
+                           <select
+                              className={styles.input}
+                              value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
+                           >
+                              <option value="employee">Employee</option>
+                              <option value="team_lead">Team Lead</option>
+                              <option value="company_admin">Company Admin</option>
+                              {currentUser?.data?.user.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
+                              <option value="backend">Backend</option>
+                              <option value="frontend">Frontend</option>
+                              <option value="marketer">Marketer</option>
+                              <option value="designer">Designer</option>
+                           </select>
+                        </div>
+                        {(currentUser?.data?.user.role === 'super_admin' || currentUser?.role === 'super_admin') && (
+                           <div>
+                              <label className={styles.label}>Company</label>
+                              <select
+                                 className={styles.input} required
+                                 value={formData.companyId} onChange={e => setFormData({ ...formData, companyId: e.target.value })}
+                              >
+                                 <option value="">Select Company</option>
+                                 {(companies?.data?.companies || companies || []).map(c => (
+                                    <option key={c._id} value={c._id}>{c.name}</option>
+                                 ))}
+                              </select>
+                           </div>
+                        )}
+                     </div>
+                     <div className="pt-6 flex justify-end space-x-3">
+                        <button type="button" onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
+                        <button type="submit" disabled={isSubmitting} className={styles.btnPrimary}>
+                           {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
+                           {isEditMode ? 'Update Member' : 'Create Member'}
+                        </button>
+                     </div>
+                  </form>
+               </div>
+            </div>
+         )}
+
+         {/* Team Modal */}
+         {isTeamModalOpen && (
+            <div className={styles.modalOverlay}>
+               <div className={styles.modalContent}>
+                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-white">Create New Team</h2>
+                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  </div>
+                  <form onSubmit={handleTeamSubmit} className="p-6 space-y-4">
+                     <div>
+                        <label className={styles.label}>Team Name</label>
+                        <input
+                           type="text" required className={styles.input} placeholder="e.g. Backend Devs"
+                           value={teamFormData.name} onChange={e => setTeamFormData({ ...teamFormData, name: e.target.value })}
+                        />
+                     </div>
+                     <div>
+                        <label className={styles.label}>Team Lead</label>
+                        <select
+                           required className={styles.input}
+                           value={teamFormData.teamLeadId} onChange={e => setTeamFormData({ ...teamFormData, teamLeadId: e.target.value })}
+                        >
+                           {isLoading ? (
+                              <option disabled>Loading members...</option>
+                           ) : (
+                              <>
+                                 <option value="">Select a Lead</option>
+                                 {rawUserList
+                                    .filter(u => {
+                                       const uCompId = String(u.company?._id || u.company || '');
+                                       const selectedId = String(teamFormData.companyId || '');
+                                       return u.role === 'team_lead' && (!selectedId || uCompId === selectedId);
+                                    })
+                                    .map(u => (
+                                       <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
+                                    ))
+                                 }
+                                 {rawUserList.length === 0 && <option disabled>No users found</option>}
+                              </>
+                           )}
+                        </select>
+                     </div>
+                     <div>
+                        <label className={styles.label}>Description</label>
+                        <textarea
+                           className={styles.input + " h-24 resize-none"}
+                           placeholder="Team responsibilities..."
+                           value={teamFormData.description} onChange={e => setTeamFormData({ ...teamFormData, description: e.target.value })}
+                        ></textarea>
+                     </div>
+                     {isSuperAdmin && (
+                        <div>
+                           <label className={styles.label}>Company</label>
+                           <select
+                              className={styles.input} required
+                              value={teamFormData.companyId} onChange={e => setTeamFormData({ ...teamFormData, companyId: e.target.value })}
+                           >
+                              <option value="">Select Company</option>
+                              {(companies?.data?.companies || companies || []).map(c => (
+                                 <option key={c._id} value={c._id}>{c.name}</option>
+                              ))}
+                           </select>
+                        </div>
+                     )}
+                     <div className="pt-6 flex justify-end space-x-3">
+                        <button type="button" onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
+                        <button type="submit" disabled={isSubmitting} className={styles.btnPrimary}>
+                           {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
+                           Create Team
+                        </button>
+                     </div>
+                  </form>
+               </div>
+            </div >
+         )}
+
+         {/* Add Member to Team Modal */}
+         {
+            isMemberModalOpen && (
+               <div className={styles.modalOverlay}>
+                  <div className={styles.modalContent + " max-w-md"}>
+                     <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-white">Add Member to Team</h2>
+                        <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                     </div>
+                     <div className="p-6 space-y-4">
+                        <div>
+                           <label className={styles.label}>Select Member</label>
+                           <select
+                              className={styles.input}
+                              value={memberToAddId} onChange={e => setMemberToAddId(e.target.value)}
+                           >
+                              {isLoading ? (
+                                 <option disabled>Loading members...</option>
+                              ) : (
+                                 <>
+                                    <option value="">Choose a user...</option>
+                                    {rawUserList
+                                       .filter(u => {
+                                          const uCompId = String(u.company?._id || u.company || '');
+                                          const selectedId = String(selectedTeamCompanyId || '');
+                                          return uCompId === selectedId;
+                                       })
+                                       .map(u => (
+                                          <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
+                                       ))
+                                    }
+                                    {rawUserList.length === 0 && <option disabled>No users found</option>}
+                                 </>
+                              )}
+                           </select>
+                        </div>
+                        <div className="pt-4 flex justify-end space-x-3">
+                           <button onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
+                           <button
+                              onClick={handleConfirmAddMember}
+                              disabled={isSubmitting || !memberToAddId}
+                              className={styles.btnPrimary}
+                           >
+                              {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
+                              Add to Team
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div >
+            )
+         }
+      </div >
    );
 };
 

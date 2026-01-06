@@ -8,12 +8,13 @@ export const useUserStore = create((set) => ({
    userStats: null,
    isLoading: false,
    error: null,
+   blacklistedCompanies: [],
 
    createUser: async (data) => {
       set({ isLoading: true, error: null });
       try {
          const response = await usersApi.create(data);
-         const newUser = response.data;
+         const newUser = response.data.data?.user || response.data;
          set((state) => {
             const currentList = state.users?.data?.users || (Array.isArray(state.users) ? state.users : []);
             return {
@@ -52,26 +53,47 @@ export const useUserStore = create((set) => ({
    },
 
    getAllUsers: async (companyIds) => {
-      if (!companyIds || companyIds.length === 0) {
-         set({ users: [], isLoading: false });
+      const { blacklistedCompanies } = useUserStore.getState();
+      const validIds = companyIds.filter(id => !blacklistedCompanies.includes(id));
+
+      if (validIds.length === 0) {
+         if (companyIds.length > 0) {
+            set({ isLoading: false });
+         } else {
+            set({ users: { data: { users: [] } }, isLoading: false });
+         }
          return;
       }
+
       set({ isLoading: true, error: null });
       try {
-         const promises = companyIds.map(id => usersApi.getByCompany(id));
+         const promises = validIds.map(id =>
+            usersApi.getByCompany(id).catch(err => {
+               if (err.response?.status === 500) {
+                  set(state => ({
+                     blacklistedCompanies: [...state.blacklistedCompanies, id]
+                  }));
+               }
+               console.error(`Backend Error (500) for company ${id}. This company will be blacklisted.`, err);
+               return { data: { users: [], _failed: true, _companyId: id } };
+            })
+         );
          const results = await Promise.all(promises);
          let allUsers = [];
          results.forEach(res => {
             const data = res.data?.data?.users || res.data?.users || (Array.isArray(res.data) ? res.data : []);
             allUsers = [...allUsers, ...data];
          });
-         set({
+         const failedCount = results.filter(r => r.data?._failed).length;
+
+         set(state => ({
             users: {
                data: { users: allUsers },
-               success: true
+               success: true,
+               partialFailure: failedCount > 0 || state.blacklistedCompanies.length > 0
             },
             isLoading: false
-         });
+         }));
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch all users', isLoading: false });
       }
@@ -81,8 +103,9 @@ export const useUserStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await usersApi.getById(id);
-         set({ selectedUser: response.data, isLoading: false });
-         return response.data;
+         const user = response.data.data?.user || response.data;
+         set({ selectedUser: user, isLoading: false });
+         return user;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch user', isLoading: false });
       }
@@ -92,7 +115,7 @@ export const useUserStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await usersApi.update(id, data);
-         const updatedUser = response.data;
+         const updatedUser = response.data.data?.user || response.data;
          set((state) => {
             const currentList = state.users?.data?.users || (Array.isArray(state.users) ? state.users : []);
             return {
@@ -100,10 +123,10 @@ export const useUserStore = create((set) => ({
                   ...state.users,
                   data: {
                      ...state.users?.data,
-                     users: currentList.map((u) => (u.id === id || u._id === id ? updatedUser : u))
+                     users: currentList.map((u) => (u._id === id ? updatedUser : u))
                   }
                },
-               selectedUser: (state.selectedUser?.id === id || state.selectedUser?._id === id) ? updatedUser : state.selectedUser,
+               selectedUser: state.selectedUser?._id === id ? updatedUser : state.selectedUser,
                isLoading: false
             };
          });
@@ -114,10 +137,11 @@ export const useUserStore = create((set) => ({
       }
    },
 
-   updateUserStatus: async (id, status) => {
+   updateUserStatus: async (id) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await usersApi.updateStatus(id, { isActive: status });
+         const response = await usersApi.updateStatus(id);
+         const updatedUser = response.data.data?.user || response.data;
          set((state) => {
             const currentList = state.users?.data?.users || (Array.isArray(state.users) ? state.users : []);
             return {
@@ -125,7 +149,7 @@ export const useUserStore = create((set) => ({
                   ...state.users,
                   data: {
                      ...state.users?.data,
-                     users: currentList.map(u => (u.id === id || u._id === id) ? { ...u, isActive: status } : u)
+                     users: currentList.map(u => u._id === id ? updatedUser : u)
                   }
                },
                isLoading: false
@@ -147,10 +171,10 @@ export const useUserStore = create((set) => ({
                   ...state.users,
                   data: {
                      ...state.users?.data,
-                     users: currentList.filter((u) => (u.id !== id && u._id !== id))
+                     users: currentList.filter((u) => u._id !== id)
                   }
                },
-               selectedUser: (state.selectedUser?.id === id || state.selectedUser?._id === id) ? null : state.selectedUser,
+               selectedUser: state.selectedUser?._id === id ? null : state.selectedUser,
                isLoading: false
             };
          });
@@ -163,7 +187,7 @@ export const useUserStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await usersApi.getStats(id);
-         set({ userStats: response.data, isLoading: false });
+         set({ userStats: response.data.data || response.data, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to get stats', isLoading: false });
       }
