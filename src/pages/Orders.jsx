@@ -678,6 +678,17 @@ const Orders = () => {
             assignedMembers: assignmentData.assignedMembers
          });
 
+         // Пытаемся автоматически подтвердить соответствующий платеж, если он есть
+         try {
+            const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+            const paymentToConfirm = paymentsList.find(p => String(p.project?._id || p.project || '') === String(orderId));
+            if (paymentToConfirm && paymentToConfirm.status === 'pending') {
+               await confirmPayment(paymentToConfirm._id);
+            }
+         } catch (payErr) {
+            console.warn('Auto-payment confirmation failed (non-critical):', payErr);
+         }
+
          toast.success('Order accepted and assigned successfully!');
          closeModal();
       } catch (error) {
@@ -1578,30 +1589,41 @@ const Orders = () => {
                                     <div>
                                        <span className="text-xs text-gray-500 block mb-2">Assigned Members</span>
                                        <div className="grid grid-cols-1 gap-2">
-                                          {selectedOrder.assignedMembers?.length > 0 ? (
-                                             selectedOrder.assignedMembers.map((m, i) => {
+                                          {(() => {
+                                             const seen = new Set();
+                                             const uniqueMembers = (selectedOrder.assignedMembers || []).filter(m => {
                                                 const userRef = m.user || m;
                                                 const uId = String(userRef?._id || userRef?.id || userRef);
+                                                if (seen.has(uId)) return false;
+                                                seen.add(uId);
+                                                return true;
+                                             });
 
-                                                const companyId = String(selectedOrder.company?._id || selectedOrder.company || '');
-                                                const company = allCompanies.find(c => String(c._id) === companyId);
-                                                const empFound = (company?.employees || allUsers).find(e => String(e._id || e.id) === uId);
+                                             return uniqueMembers.length > 0 ? (
+                                                uniqueMembers.map((m, i) => {
+                                                   const userRef = m.user || m;
+                                                   const uId = String(userRef?._id || userRef?.id || userRef);
 
-                                                const userName = empFound?.name || userRef?.name || m.name || 'Unknown Member';
-                                                const userRole = empFound?.role || userRef?.role || m.role || 'Member';
-                                                return (
-                                                   <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md">
-                                                      <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
-                                                         {userName.charAt(0).toUpperCase()}
+                                                   const companyId = String(selectedOrder.company?._id || selectedOrder.company || '');
+                                                   const company = allCompanies.find(c => String(c._id) === companyId);
+                                                   const empFound = (company?.employees || allUsers).find(e => String(e._id || e.id) === uId);
+
+                                                   const userName = empFound?.name || userRef?.name || m.name || 'Unknown Member';
+                                                   const userRole = empFound?.role || userRef?.role || m.role || 'Member';
+                                                   return (
+                                                      <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md border border-gray-800/50">
+                                                         <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
+                                                            {userName.charAt(0).toUpperCase()}
+                                                         </div>
+                                                         <div className="flex flex-col">
+                                                            <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
+                                                            <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
+                                                         </div>
                                                       </div>
-                                                      <div className="flex flex-col">
-                                                         <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
-                                                         <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
-                                                      </div>
-                                                   </div>
-                                                );
-                                             })
-                                          ) : <p className="text-gray-500 text-xs">No members assigned</p>}
+                                                   );
+                                                })
+                                             ) : <p className="text-gray-500 text-xs">No members assigned</p>;
+                                          })()}
                                        </div>
                                     </div>
                                  </div>

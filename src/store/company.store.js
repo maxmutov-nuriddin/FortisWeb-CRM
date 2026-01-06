@@ -191,6 +191,46 @@ export const useCompanyStore = create((set) => ({
          throw error;
       }
    },
+   deleteTeam: async (companyId, teamId) => {
+      set({ isLoading: true, error: null });
+      try {
+         await companiesApi.deleteTeam(companyId, teamId);
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || (Array.isArray(state.companies) ? state.companies : []);
+            const updatedCompanies = currentCompanies.map(c => {
+               if (c._id === companyId) {
+                  return {
+                     ...c,
+                     teams: (c.teams || []).filter(t => t._id !== teamId)
+                  };
+               }
+               return c;
+            });
+
+            const newState = {
+               isLoading: false,
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: updatedCompanies
+                  }
+               }
+            };
+
+            if (state.selectedCompany?._id === companyId) {
+               newState.selectedCompany = {
+                  ...state.selectedCompany,
+                  teams: (state.selectedCompany.teams || []).filter(t => t._id !== teamId)
+               };
+            }
+            return newState;
+         });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete team', isLoading: false });
+         throw error;
+      }
+   },
    deleteCompany: async (companyId) => {
       set({ isLoading: true, error: null });
       try {

@@ -13,7 +13,7 @@ const Profiles = () => {
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
    const { users, isLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
-   const { companies, getCompanies, addTeam, addTeamMemberDirect } = useCompanyStore();
+   const { companies, getCompanies, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
 
    const [activeTab, setActiveTab] = useState('members');
    const [filter, setFilter] = useState('All Members');
@@ -26,6 +26,7 @@ const Profiles = () => {
    const [selectedTeamId, setSelectedTeamId] = useState(null);
    const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState(null);
    const [memberToAddId, setMemberToAddId] = useState('');
+   const [openMenuUserId, setOpenMenuUserId] = useState(null);
 
    const [formData, setFormData] = useState({
       name: '',
@@ -285,6 +286,18 @@ const Profiles = () => {
       }
    };
 
+   const handleDeleteTeam = async (companyId, teamId) => {
+      if (window.confirm('Are you sure you want to delete this team? This will NOT delete team members, only the team organization.')) {
+         try {
+            await deleteTeamAction(companyId, teamId);
+            toast.success('Team deleted successfully');
+         } catch (error) {
+            console.error('Delete team error:', error);
+            toast.error(error.response?.data?.message || 'Failed to delete team');
+         }
+      }
+   };
+
    const toggleStatus = async (userId) => {
       try {
          await updateUserStatus(userId);
@@ -436,14 +449,44 @@ const Profiles = () => {
                            </div>
                            <div className="flex items-center space-x-2">
                               <button onClick={() => openModal(item)} className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
-                              <div className="relative group">
-                                 <button className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-ellipsis-v"></i></button>
-                                 <div className="absolute right-0 top-full mt-2 w-48 bg-dark-tertiary border border-gray-700 rounded-lg shadow-xl overflow-hidden hidden group-hover:block z-20">
-                                    <button onClick={() => toggleStatus(item._id)} className="w-full text-left px-4 py-2 text-xs text-gray-300 hover:bg-gray-700 transition">
-                                       {item.isActive ? 'Deactivate' : 'Activate'}
-                                    </button>
-                                    <button onClick={() => handleDelete(item._id)} className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-gray-700 transition">Delete Member</button>
-                                 </div>
+                              <div className="relative">
+                                 <button
+                                    onClick={(e) => {
+                                       e.preventDefault();
+                                       e.stopPropagation();
+                                       setOpenMenuUserId(openMenuUserId === item._id ? null : item._id);
+                                    }}
+                                    className="text-gray-400 hover:text-white transition p-1"
+                                 >
+                                    <i className="fa-solid fa-ellipsis-v"></i>
+                                 </button>
+                                 {openMenuUserId === item._id && (
+                                    <div
+                                       className="absolute right-0 top-full mt-2 w-48 bg-dark-tertiary border border-gray-700 rounded-lg shadow-xl overflow-hidden z-20"
+                                       onClick={(e) => e.stopPropagation()}
+                                    >
+                                       <button
+                                          onClick={() => {
+                                             toggleStatus(item._id);
+                                             setOpenMenuUserId(null);
+                                          }}
+                                          className="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-gray-700 transition flex items-center"
+                                       >
+                                          <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
+                                          {item.isActive ? 'Deactivate' : 'Activate'}
+                                       </button>
+                                       <button
+                                          onClick={() => {
+                                             handleDelete(item._id);
+                                             setOpenMenuUserId(null);
+                                          }}
+                                          className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
+                                       >
+                                          <i className="fa-solid fa-trash-can mr-2"></i>
+                                          Delete Member
+                                       </button>
+                                    </div>
+                                 )}
                               </div>
                            </div>
                         </div>
@@ -489,9 +532,14 @@ const Profiles = () => {
                            <h3 className="text-xl font-bold text-white mb-1">{team.name}</h3>
                            <p className="text-xs text-gray-500">Company: {team.companyName}</p>
                         </div>
-                        <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-white text-sm font-medium transition">
-                           <i className="fa-solid fa-plus mr-1"></i> Add Member
-                        </button>
+                        <div className="flex items-center space-x-3">
+                           <button onClick={() => handleDeleteTeam(team.companyId, team._id)} className="text-gray-500 hover:text-red-500 transition text-sm">
+                              <i className="fa-solid fa-trash-can mr-1"></i>
+                           </button>
+                           <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-white text-sm font-medium transition">
+                              <i className="fa-solid fa-plus mr-1"></i> Add Member
+                           </button>
+                        </div>
                      </div>
                      <div className="mb-6">
                         <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Team Lead</p>

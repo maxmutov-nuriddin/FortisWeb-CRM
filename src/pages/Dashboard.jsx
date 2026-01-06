@@ -343,11 +343,14 @@ const Dashboard = () => {
 
    // Modal Payment
 
-   const projectPayments = payments?.data?.payments?.filter(
-      p => p.project?._id === selectedProject?._id
+   const projectPayments = (payments?.data?.payments || (Array.isArray(payments) ? payments : [])).filter(
+      p => {
+         const pId = String(p.project?._id || p.project || '');
+         return pId === String(selectedProject?._id || '');
+      }
    ) || []
 
-   const confirmedPayment = projectPayments.find(p => p.status === 'confirmed')
+   const confirmedPayment = projectPayments.find(p => p.status === 'confirmed' || p.status === 'completed')
 
    const paymentStatus = confirmedPayment
       ? 'paid'
@@ -484,19 +487,46 @@ const Dashboard = () => {
                      {selectedProject.assignedMembers.length === 0 ? (
                         <div className="text-gray-500 text-sm">No members assigned</div>
                      ) : (
-                        <div className="flex gap-2 flex-wrap">
-                           {selectedProject.assignedMembers.map(m => (
-                              <div
-                                 key={m._id}
-                                 className="bg-dark-tertiary px-3 py-1 rounded text-sm text-white"
-                              >
-                                 {m.name}
-                              </div>
-                           ))}
+                        <div className="flex gap-3 flex-wrap">
+                           {(() => {
+                              const usersList = users?.data?.users || (Array.isArray(users) ? users : []);
+                              // Дедупликация участников по ID
+                              const seen = new Set();
+                              const uniqueMembers = selectedProject.assignedMembers.filter(m => {
+                                 const id = String(m.user?._id || m.user || m._id || m);
+                                 if (seen.has(id)) return false;
+                                 seen.add(id);
+                                 return true;
+                              });
+
+                              return uniqueMembers.map((m, idx) => {
+                                 const userId = String(m.user?._id || m.user || m._id || m);
+                                 const memberData = usersList.find(u => String(u._id) === userId);
+                                 const name = memberData?.name || m.user?.name || m.name || 'Unknown User';
+                                 const role = memberData?.role || m.role || 'Member';
+                                 const position = memberData?.position || '';
+
+                                 return (
+                                    <div
+                                       key={idx}
+                                       className="bg-dark-tertiary px-3 py-2 rounded-lg text-sm text-white flex items-center space-x-3 border border-gray-800"
+                                    >
+                                       <div className="w-8 h-8 rounded-full bg-dark-accent/20 flex items-center justify-center text-xs text-dark-accent font-bold border border-dark-accent/10">
+                                          {name.charAt(0).toUpperCase()}
+                                       </div>
+                                       <div className="flex flex-col">
+                                          <span className="font-medium">{name}</span>
+                                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+                                             {position || role.replace('_', ' ')}
+                                          </span>
+                                       </div>
+                                    </div>
+                                 );
+                              });
+                           })()}
                         </div>
                      )}
                   </div>
-
                   {/* STATS */}
                   <div className="mt-4 grid grid-cols-3 gap-4 text-sm text-gray-300">
                      <div>
