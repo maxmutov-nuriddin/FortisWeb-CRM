@@ -39,10 +39,10 @@ const TestApi = () => {
    const handleLogin = async () => {
       try {
          const res = await login({
-            email: 'admin@gmail.com',
-            password: 'test12',
-            // email: 'fortisweb.digital.stuido@gmail.com',
-            // password: 'MvFortisWebDigitalStudio',
+            // email: 'admin@gmail.com',
+            // password: 'test12',
+            email: 'fortisweb.digital.stuido@gmail.com',
+            password: 'MvFortisWebDigitalStudio',
          });
 
          console.log('Login response:', res);

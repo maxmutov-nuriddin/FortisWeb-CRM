@@ -236,7 +236,14 @@ const Dashboard = () => {
    // ===================== PROJECTS =====================
    useEffect(() => {
       const projectsData = projects?.data?.projects
-      if (!projectsData) return
+      if (!Array.isArray(projectsData)) {
+         setTodayProjects([])
+         setNewOrder(0)
+         setActiveProjects(0)
+         setInProgress(0)
+         setTotalProjects(0)
+         return
+      }
 
       setTodayProjects(
          projectsData.filter(p => isToday(p.createdAt))
@@ -258,6 +265,7 @@ const Dashboard = () => {
 
       setTotalProjects(projectsData.length)
    }, [projects])
+
 
    //! Recent Order
 
@@ -507,7 +515,7 @@ const Dashboard = () => {
                            <i className="fa-solid fa-dollar-sign text-green-500 text-2xl"></i>
                         </div>
                         <span className={`${revenuePercent >= 0 ? "text-green-500" : "text-dark-accent"} text-sm font-medium`}> {revenuePercent >= 0 ? '+' : ''}
-                           {revenuePercent}%</span>
+                           {revenuePercent ?? 0}%</span>
                      </div>
                      <h3 className="text-gray-400 text-sm mb-1">Today's Revenue</h3>
                      <div className="h-[36px] flex items-center">
