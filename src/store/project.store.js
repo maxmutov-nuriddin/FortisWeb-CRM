@@ -11,7 +11,11 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.create(data);
-         set((state) => ({ projects: [...state.projects, response.data], isLoading: false }));
+         const newProject = response.data.data?.project || response.data;
+         set((state) => ({
+            projects: Array.isArray(state.projects) ? [newProject, ...state.projects] : [newProject],
+            isLoading: false
+         }));
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create project', isLoading: false });
@@ -23,9 +27,21 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.getByCompany(companyId);
-         set({ projects: response.data, isLoading: false });
+         const projectsArray = response.data.data?.projects || response.data.projects || (Array.isArray(response.data) ? response.data : []);
+         set({ projects: projectsArray, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch projects', isLoading: false });
+      }
+   },
+
+   getAllProjects: async () => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.getAll();
+         const projectsArray = response.data.data?.projects || response.data.projects || (Array.isArray(response.data) ? response.data : []);
+         set({ projects: projectsArray, isLoading: false });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to fetch all projects', isLoading: false });
       }
    },
 
@@ -40,27 +56,64 @@ export const useProjectStore = create((set) => ({
       }
    },
 
-   assignProject: async (id, data) => {
+   updateProject: async (id, data) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await projectsApi.assign(id, data);
+         const response = await projectsApi.update(id, data);
+         const updatedProject = response.data.data?.project || response.data;
          set((state) => ({
-            selectedProject: state.selectedProject?.id === id ? response.data : state.selectedProject,
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+            isLoading: false
+         }));
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update project', isLoading: false });
+         throw error;
+      }
+   },
+
+   deleteProject: async (id) => {
+      set({ isLoading: true, error: null });
+      try {
+         await projectsApi.delete(id);
+         set((state) => ({
+            projects: state.projects.filter(p => (p._id !== id && p.id !== id)),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? null : state.selectedProject,
             isLoading: false
          }));
       } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete project', isLoading: false });
+         throw error;
+      }
+   },
+
+   assignProject: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         // data should contain { teamLeadId, memberIds, assignedTeam, etc. }
+         const response = await projectsApi.assign(id, data);
+         const updatedProject = response.data.data?.project || response.data;
+         set((state) => ({
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+            isLoading: false
+         }));
+         return response.data;
+      } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to assign project', isLoading: false });
+         throw error;
       }
    },
 
    updateWorkPercentage: async (id, percentage) => {
-      // Optimistic update?
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.updateWorkPercentage(id, percentage);
+         const updatedProject = response.data.data?.project || response.data;
          set((state) => ({
-            projects: state.projects.map(p => p.id === id ? { ...p, ...response.data } : p),
-            selectedProject: state.selectedProject?.id === id ? { ...state.selectedProject, ...response.data } : state.selectedProject,
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
             isLoading: false
          }));
       } catch (error) {
@@ -92,9 +145,10 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.complete(id);
+         const updatedProject = response.data.data?.project || response.data;
          set((state) => ({
-            projects: state.projects.map(p => p.id === id ? { ...p, ...response.data } : p),
-            selectedProject: state.selectedProject?.id === id ? { ...state.selectedProject, ...response.data } : state.selectedProject,
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
             isLoading: false
          }));
       } catch (error) {

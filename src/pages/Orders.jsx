@@ -1,9 +1,12 @@
+/* eslint-disable no-dupe-keys */
 import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
 import { usePaymentStore } from '../store/payment.store';
 import { useAuthStore } from '../store/auth.store';
+import PageLoader from '../components/loader/PageLoader';
+import { useUserStore } from '../store/user.store';
 
 const Orders = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -15,59 +18,131 @@ const Orders = () => {
    const [isEditMode, setIsEditMode] = useState(false);
    const [isCreateMode, setIsCreateMode] = useState(false);
 
-   // Form state
    const [formData, setFormData] = useState({
       title: '',
       description: '',
       budget: '',
       status: 'pending',
+      deadline: '',
+      priority: 'medium',
       clientName: '',
+      clientEmail: '',
+      clientPhone: '',
+      clientCompany: '',
       clientUsername: '',
-      selectedCompanyId: ''
+      selectedCompanyId: '',
+      teamLead: '',
+      assignedTeam: '',
+      assignedMembers: []
    });
 
    const { user } = useAuthStore();
+   const userData = user?.data?.user || user?.user || user;
+   const isSuperAdmin = userData?.role === 'super_admin';
+
+   const [viewCompanyId, setViewCompanyId] = useState(() => isSuperAdmin ? 'all' : '');
+
    const { companies, getCompanies } = useCompanyStore();
-   const { projects, getProjectsByCompany, createProject, updateProject, deleteProject, isLoading } = useProjectStore();
+   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
+   const { users, getUsersByCompany } = useUserStore();
+
    const { payments, getPaymentsByCompany } = usePaymentStore();
 
-   const isSuperAdmin = user?.data?.user?.role === 'super_admin';
-   const currentCompanyId = companies?.data?.companies?.[0]?._id;
+   const activeCompanyId = useMemo(() => {
+      let id = '';
+      if (isSuperAdmin) {
+         id = viewCompanyId; // 'all' or specific ID
+      } else {
+         id = userData?.company?._id || userData?.company;
+      }
+      return id;
+   }, [isSuperAdmin, viewCompanyId, userData]);
 
    // Получаем список компаний в зависимости от структуры данных
    const allCompanies = companies?.data?.companies || companies?.companies || [];
 
    useEffect(() => {
       if (isSuperAdmin) {
-         console.log('Loading all companies for super_admin...');
          getCompanies();
       }
    }, [isSuperAdmin, getCompanies]);
 
    useEffect(() => {
-      console.log('Companies data:', companies);
-      console.log('All companies:', allCompanies);
-      console.log('Is super admin:', isSuperAdmin);
-   }, [companies, allCompanies, isSuperAdmin]);
-
-   useEffect(() => {
-      if (currentCompanyId && !isSuperAdmin) {
-         getProjectsByCompany(currentCompanyId);
-         getPaymentsByCompany(currentCompanyId);
+      if (isSuperAdmin && viewCompanyId === 'all') {
+         getAllProjects();
+      } else if (activeCompanyId && activeCompanyId !== 'all') {
+         getProjectsByCompany(activeCompanyId);
+         getPaymentsByCompany(activeCompanyId);
+         getUsersByCompany(activeCompanyId);
       }
-   }, [currentCompanyId, isSuperAdmin, getProjectsByCompany, getPaymentsByCompany]);
+   }, [activeCompanyId, viewCompanyId, isSuperAdmin, getProjectsByCompany, getAllProjects, getPaymentsByCompany, getUsersByCompany]);
 
-   const statusData = [{
-      type: 'pie',
-      labels: ['Pending', 'Assigned', 'In Progress', 'Completed', 'Cancelled'],
-      values: [12, 8, 24, 156, 7],
-      marker: {
-         colors: ['#EAB308', '#3B82F6', '#8B5CF6', '#10B981', '#EF4444']
-      },
-      textinfo: 'label+percent',
-      textfont: { color: '#FFFFFF', size: 11 },
-      hovertemplate: '%{label}: %{value} orders<extra></extra>'
-   }];
+   const allTeams = useMemo(() => {
+      if (!activeCompanyId || activeCompanyId === 'all') return [];
+      const company = allCompanies.find(c => c._id === activeCompanyId);
+      return company?.teams || [];
+   }, [activeCompanyId, allCompanies]);
+
+   const allUsers = useMemo(() => {
+      const usersData = users?.data?.users || users?.users || (Array.isArray(users) ? users : []);
+      return usersData;
+   }, [users]);
+
+   const projectsList = useMemo(() => Array.isArray(projects) ? projects : [], [projects]);
+   const paymentsList = useMemo(() => payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []), [payments]);
+
+   const statusData = useMemo(() => {
+      const statusLabels = ['Pending', 'In Progress', 'Review', 'Revision', 'Completed', 'Cancelled'];
+      const statusValues = statusLabels.map(label => {
+         const status = label.toLowerCase().replace(' ', '_');
+         return projectsList.filter(p => {
+            if (status === 'in_progress') return ['in_progress', 'assigned'].includes(p.status);
+            return p.status === status;
+         }).length;
+      });
+
+      return [{
+         type: 'pie',
+         labels: statusLabels,
+         values: statusValues,
+         marker: {
+            colors: ['#EAB308', '#3B82F6', '#8B5CF6', '#A855F7', '#10B981', '#EF4444']
+         },
+         textinfo: 'label+percent',
+         textfont: { color: '#FFFFFF', size: 11 },
+         hovertemplate: '%{label}: %{value} orders<extra></extra>'
+      }];
+   }, [projectsList]);
+
+   const trendData = useMemo(() => {
+      const months = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+         months.push(d.toLocaleString('default', { month: 'short' }));
+      }
+
+      const counts = months.map((month, idx) => {
+         const checkDate = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+         const nextDate = new Date(now.getFullYear(), now.getMonth() - (4 - idx), 1);
+
+         return projectsList.filter(p => {
+            const pDate = new Date(p.createdAt);
+            return pDate >= checkDate && pDate < nextDate;
+         }).length;
+      });
+
+      return [{
+         type: 'scatter',
+         mode: 'lines',
+         name: 'Orders',
+         x: months,
+         y: counts,
+         line: { color: '#FF0000', width: 3 },
+         fill: 'tozeroy',
+         fillcolor: 'rgba(255, 0, 0, 0.1)'
+      }];
+   }, [projectsList]);
 
    const statusLayout = {
       autosize: true,
@@ -76,17 +151,6 @@ const Orders = () => {
       paper_bgcolor: '#1A1A1A',
       showlegend: false
    };
-
-   const trendData = [{
-      type: 'scatter',
-      mode: 'lines',
-      name: 'Orders',
-      x: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
-      y: [28, 35, 42, 38, 47, 52],
-      line: { color: '#FF0000', width: 3 },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(255, 0, 0, 0.1)'
-   }];
 
    const trendLayout = {
       autosize: true,
@@ -99,9 +163,6 @@ const Orders = () => {
       showlegend: false,
       hovermode: 'x unified'
    };
-
-   const projectsList = projects?.data?.projects || [];
-   const paymentsList = payments?.data?.payments || [];
 
    const filteredOrders = useMemo(() => {
       let result = [...projectsList];
@@ -212,27 +273,30 @@ const Orders = () => {
                title: formData.title,
                description: formData.description || '',
                budget: parseFloat(formData.budget),
-               client: (formData.clientName || formData.clientUsername)
-                  ? {
-                     name: formData.clientName || '',
-                     username: formData.clientUsername || ''
-                  }
-                  : undefined,
-               priority: 'medium', // как по умолчанию на бэкенде
+               deadline: formData.deadline,
+               priority: formData.priority,
+               client: {
+                  name: formData.clientName || '',
+                  username: formData.clientUsername || '',
+                  email: formData.clientEmail || '',
+                  phone: formData.clientPhone || '',
+                  company: formData.clientCompany || ''
+               },
                source: 'manual',
-               // Для super_admin передаём companyId, для обычного пользователя — нет (бэкенд сам возьмёт из req.user.company)
+               teamLead: formData.teamLead || undefined,
+               assignedTeam: formData.assignedTeam || undefined,
+               assignedMembers: formData.assignedMembers?.map(userId => ({ user: userId })) || [],
                ...(isSuperAdmin && formData.selectedCompanyId && { companyId: formData.selectedCompanyId })
             };
 
             await createProject(createData);
             alert('Order created successfully!');
 
-            // Обновляем список проектов
-            if (!isSuperAdmin && currentCompanyId) {
-               getProjectsByCompany(currentCompanyId);
-            } else if (isSuperAdmin && formData.selectedCompanyId) {
-               // Если super_admin создал для конкретной компании — можно обновить, но обычно список общий
-               getProjectsByCompany(formData.selectedCompanyId); // опционально
+            // Refresh list for the active company
+            if (activeCompanyId === 'all') {
+               getAllProjects();
+            } else if (activeCompanyId) {
+               getProjectsByCompany(activeCompanyId);
             }
 
             closeModal();
@@ -248,21 +312,30 @@ const Orders = () => {
                description: formData.description || '',
                budget: parseFloat(formData.budget),
                status: formData.status,
-               priority: 'medium', // можно добавить поле в форму, если нужно менять
+               deadline: formData.deadline,
+               priority: formData.priority,
                source: 'manual',
-               client: (formData.clientName || formData.clientUsername)
-                  ? {
-                     name: formData.clientName || '',
-                     username: formData.clientUsername || ''
-                  }
-                  : undefined
+               deadline: formData.deadline,
+               priority: formData.priority,
+               teamLead: formData.teamLead || undefined,
+               assignedTeam: formData.assignedTeam || undefined,
+               assignedMembers: formData.assignedMembers?.map(userId => ({ user: userId })) || [],
+               client: {
+                  name: formData.clientName || '',
+                  username: formData.clientUsername || '',
+                  email: formData.clientEmail || '',
+                  phone: formData.clientPhone || '',
+                  company: formData.clientCompany || ''
+               }
             };
 
             await updateProject(selectedOrder._id, updateData);
             alert('Order updated successfully!');
 
-            if (currentCompanyId && !isSuperAdmin) {
-               getProjectsByCompany(currentCompanyId);
+            if (activeCompanyId === 'all') {
+               getAllProjects();
+            } else if (activeCompanyId) {
+               getProjectsByCompany(activeCompanyId);
             }
 
             closeModal();
@@ -275,22 +348,31 @@ const Orders = () => {
 
    // Исправлены опечатки в onChange
    const handleInputChange = (e) => {
-      const { name, value } = e.target;
-      setFormData(prev => ({
-         ...prev,
-         [name]: value
-      }));
+      const { name, value, type, selectedOptions } = e.target;
+      if (type === 'select-multiple') {
+         const values = Array.from(selectedOptions).map(opt => opt.value);
+         setFormData(prev => ({ ...prev, [name]: values }));
+      } else {
+         setFormData(prev => ({
+            ...prev,
+            [name]: value
+         }));
+      }
    };
 
    const resetForm = () => {
       setFormData({
-         title: '',
-         description: '',
-         budget: '',
-         status: 'pending',
+         deadline: '',
+         priority: 'medium',
          clientName: '',
+         clientEmail: '',
+         clientPhone: '',
+         clientCompany: '',
          clientUsername: '',
-         selectedCompanyId: ''
+         selectedCompanyId: '',
+         teamLead: '',
+         assignedTeam: '',
+         assignedMembers: []
       });
    };
 
@@ -307,13 +389,18 @@ const Orders = () => {
       setIsEditMode(true);
       setIsCreateMode(false);
       setFormData({
-         title: order.title || '',
-         description: order.description || '',
-         budget: order.budget || '',
          status: order.status || 'pending',
+         deadline: order.deadline ? new Date(order.deadline).toISOString().split('T')[0] : '',
+         priority: order.priority || 'medium',
          clientName: order.client?.name || '',
+         clientEmail: order.client?.email || '',
+         clientPhone: order.client?.phone || '',
+         clientCompany: order.client?.company || '',
          clientUsername: order.client?.username || '',
-         selectedCompanyId: order.company?._id || order.company || ''
+         selectedCompanyId: order.company?._id || order.company || activeCompanyId || '',
+         teamLead: order.teamLead?._id || order.teamLead || '',
+         assignedTeam: order.assignedTeam?._id || order.assignedTeam || '',
+         assignedMembers: order.assignedMembers?.map(m => m.user?._id || m.user) || []
       });
       setIsModalOpen(true);
    };
@@ -324,12 +411,14 @@ const Orders = () => {
          try {
             await deleteProject(orderId);
             alert('Order deleted successfully!');
-            if (currentCompanyId && !isSuperAdmin) {
-               getProjectsByCompany(currentCompanyId);
+            if (activeCompanyId === 'all') {
+               getAllProjects();
+            } else if (activeCompanyId) {
+               getProjectsByCompany(activeCompanyId);
             }
          } catch (error) {
             console.error('Error deleting order:', error);
-            alert('Failed to delete order. Please try again.');
+            alert('Failed to delete order: ' + (error.response?.data?.message || error.message));
          }
       }
    };
@@ -339,13 +428,15 @@ const Orders = () => {
       try {
          await updateProject(orderId, { status: 'in_progress' });
          alert('Order accepted successfully!');
-         if (currentCompanyId && !isSuperAdmin) {
-            getProjectsByCompany(currentCompanyId);
+         if (activeCompanyId === 'all') {
+            getAllProjects();
+         } else if (activeCompanyId) {
+            getProjectsByCompany(activeCompanyId);
          }
          closeModal();
       } catch (error) {
          console.error('Error accepting order:', error);
-         alert('Failed to accept order. Please try again.');
+         alert('Failed to accept order: ' + (error.response?.data?.message || error.message));
       }
    };
 
@@ -366,7 +457,13 @@ const Orders = () => {
    };
 
 
-   if (isLoading) return null;
+   // Only show loading if we have no projects OR if we are explicitly fetching for the first time
+   // But don't block the whole UI if it's just a background refresh
+   if (projectsLoading && projectsList.length === 0) return (
+      <PageLoader />
+   );
+
+   console.log(filteredOrders);
 
    return (
       <div className="p-8 space-y-8">
@@ -476,6 +573,21 @@ const Orders = () => {
                         <option>Cancelled</option>
                      </select>
                   </div>
+                  {isSuperAdmin && (
+                     <div>
+                        <label className="text-xs text-gray-400 mb-1 block">Viewing Company</label>
+                        <select
+                           className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                           value={viewCompanyId}
+                           onChange={(e) => setViewCompanyId(e.target.value)}
+                        >
+                           <option value="all">All Companies</option>
+                           {allCompanies.map(c => (
+                              <option key={c._id} value={c._id}>{c.name || c.title || c._id}</option>
+                           ))}
+                        </select>
+                     </div>
+                  )}
                   <div>
                      <label className="text-xs text-gray-400 mb-1 block">Date Range</label>
                      <select
@@ -618,6 +730,21 @@ const Orders = () => {
                                     >
                                        Edit
                                     </button>
+                                    {order.status !== 'completed' && order.status !== 'cancelled' && (
+                                       <button
+                                          onClick={(e) => {
+                                             e.stopPropagation();
+                                             handleEditOrder(e, order);
+                                             // We'll use the edit modal for distribution too, 
+                                             // or we could show a specific section.
+                                             // Given the user asked for a "distribution button", 
+                                             // I'll make sure the assignment fields are visible.
+                                          }}
+                                          className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       >
+                                          Distribute
+                                       </button>
+                                    )}
                                     <button
                                        onClick={(e) => handleDeleteOrder(e, order._id)}
                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
@@ -769,116 +896,215 @@ const Orders = () => {
                               </div>
                            )}
 
-                           <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">
-                                 Title <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                 type="text"
-                                 name="title"
-                                 value={formData.title}
-                                 onChange={handleInputChange}
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                 placeholder="Enter order title"
-                                 required
-                              />
-                           </div>
-
-                           <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">
-                                 Description
-                              </label>
-                              <textarea
-                                 name="description"
-                                 value={formData.description}
-                                 onChange={handleInputChange}
-                                 rows="4"
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                 placeholder="Enter order description"
-                              />
-                           </div>
-
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Budget <span className="text-red-500">*</span>
-                                 </label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
+                                 <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="e.g., Website Redesign"
+                                    required
+                                 />
+                              </div>
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
                                  <input
                                     type="number"
                                     name="budget"
                                     value={formData.budget}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="0.00"
-                                    min="0"
-                                    step="0.01"
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="e.g., 1500"
                                     required
                                  />
-                              </div>
-
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Status
-                                 </label>
-                                 <select
-                                    name="status"
-                                    value={formData.status}
-                                    onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                 >
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="review">Review</option>
-                                    <option value="revision">Revision</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
-                                 </select>
                               </div>
                            </div>
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Client Name
-                                 </label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
                                  <input
-                                    type="text"
-                                    name="clientName"
-                                    value={formData.clientName}
+                                    type="date"
+                                    name="deadline"
+                                    value={formData.deadline}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="Enter client name"
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    required
                                  />
                               </div>
-
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Client Username
-                                 </label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
+                                 <select
+                                    name="priority"
+                                    value={formData.priority}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                 </select>
+                              </div>
+                           </div>
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
+                              <textarea
+                                 name="description"
+                                 value={formData.description}
+                                 onChange={handleInputChange}
+                                 rows="3"
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 placeholder="Project details..."
+                              ></textarea>
+                           </div>
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">
+                                 Status
+                              </label>
+                              <select
+                                 name="status"
+                                 value={formData.status}
+                                 onChange={handleInputChange}
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                              >
+                                 <option value="pending">Pending</option>
+                                 <option value="in_progress">In Progress</option>
+                                 <option value="review">Review</option>
+                                 <option value="revision">Revision</option>
+                                 <option value="completed">Completed</option>
+                                 <option value="cancelled">Cancelled</option>
+                              </select>
+                           </div>
+
+                           <div className="border-t border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
+                                    <input
+                                       type="text"
+                                       name="clientName"
+                                       value={formData.clientName}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="Full Name"
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
+                                    <input
+                                       type="text"
+                                       name="clientUsername"
+                                       value={formData.clientUsername}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="@username"
+                                    />
+                                 </div>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
+                                    <input
+                                       type="email"
+                                       name="clientEmail"
+                                       value={formData.clientEmail}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="email@example.com"
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
+                                    <input
+                                       type="text"
+                                       name="clientPhone"
+                                       value={formData.clientPhone}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="+12345678"
+                                    />
+                                 </div>
+                              </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
                                  <input
                                     type="text"
-                                    name="clientUsername"
-                                    value={formData.clientUsername}
+                                    name="clientCompany"
+                                    value={formData.clientCompany}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="@username"
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="Company Name"
                                  />
                               </div>
                            </div>
 
-                           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+                           <div className="border-t border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
+                                 <select
+                                    name="teamLead"
+                                    value={formData.teamLead}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="">Select Team Lead</option>
+                                    {allUsers.filter(user => user.role === 'team_lead').map(user => (
+                                       <option key={user._id} value={user._id}>{user.name}</option>
+                                    ))}
+                                 </select>
+                              </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
+                                 <select
+                                    name="team"
+                                    value={formData.team}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="">Select Team</option>
+                                    {allTeams.map(team => (
+                                       <option key={team._id} value={team._id}>{team.name}</option>
+                                    ))}
+                                 </select>
+                              </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
+                                 <select
+                                    name="assignedMembers"
+                                    multiple
+                                    value={formData.assignedMembers}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
+                                 >
+                                    {allUsers.filter(user => user.role === 'member').map(user => (
+                                       <option key={user._id} value={user._id}>{user.name}</option>
+                                    ))}
+                                 </select>
+                                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
+                              </div>
+                           </div>
+
+                           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
                               <button
                                  type="button"
                                  onClick={closeModal}
-                                 className="bg-dark-tertiary hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
+                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
                               >
                                  Cancel
                               </button>
                               <button
                                  type="submit"
-                                 className="bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
+                                 className="bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition"
                               >
-                                 {isEditMode ? 'Update Order' : 'Create Order'}
+                                 {isCreateMode ? 'Create Order' : 'Save Changes'}
                               </button>
                            </div>
                         </form>
@@ -919,26 +1145,78 @@ const Orders = () => {
                                        <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
                                     </div>
                                     <div>
-                                       <span className="text-xs text-gray-500 block">Date</span>
+                                       <span className="text-xs text-gray-500 block">Priority</span>
+                                       <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
+                                           ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
+                                             selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                          {selectedOrder.priority || 'Medium'}
+                                       </span>
+                                    </div>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Date Created</span>
                                        <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Source</span>
+                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
                                     </div>
                                  </div>
                               </div>
                            </div>
 
-                           <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
-                              <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
-                                 <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
-                                    {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                                       {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                                    </div>
+                                    <div>
+                                       <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                                       <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
+                                       <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
+                                    </div>
                                  </div>
-                                 <div>
-                                    <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
-                                    <p className="text-gray-500 text-sm">{selectedOrder.client?.username || 'No username'}</p>
-                                    <p className="text-gray-500 text-xs mt-1">ID: {selectedOrder.client?._id}</p>
+                              </div>
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Team Lead</span>
+                                       <p className="text-white text-sm">{selectedOrder.teamLead?.name || 'Not assigned'}</p>
+                                    </div>
+                                    <div className="mt-2">
+                                       <span className="text-xs text-gray-500 block">Assigned Members</span>
+                                       <div className="flex -space-x-2 mt-1">
+                                          {selectedOrder.assignedMembers?.length > 0 ? (
+                                             selectedOrder.assignedMembers.map((m, i) => (
+                                                <div key={i} className="w-7 h-7 rounded-full bg-dark-accent border-2 border-dark-tertiary flex items-center justify-center text-[10px] text-white" title={m.user?.name}>
+                                                   {m.user?.name?.charAt(0) || '?'}
+                                                </div>
+                                             ))
+                                          ) : <p className="text-gray-500 text-xs">No members</p>}
+                                       </div>
+                                    </div>
                                  </div>
                               </div>
                            </div>
+
+                           {selectedOrder.results?.length > 0 && (
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
+                                    {selectedOrder.results.map((res, i) => (
+                                       <div key={i} className="flex items-center justify-between text-sm">
+                                          <span className="text-gray-300">{res.name}</span>
+                                          <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
+                                       </div>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
 
                            <div className="flex justify-between items-center pt-4 border-t border-gray-800">
                               <button
@@ -963,8 +1241,9 @@ const Orders = () => {
                   </div>
                </div>
             </div>
-         )}
-      </div>
+         )
+         }
+      </div >
    );
 };
 
