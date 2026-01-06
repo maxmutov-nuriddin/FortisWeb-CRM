@@ -439,7 +439,7 @@ const Company = () => {
                               className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
     ${selectedCompany.isActive === true ? 'text-green-500 bg-green-500' :
                                     selectedCompany.isActive === false ? 'text-red-500 bg-red-500' :
-                                       'text-yellow-500 bg-yellow-500'}`}
+                                       'text-gray-500 bg-gray-500'}`}
                            >
                               {selectedCompany.isActive === true
                                  ? 'Active'
