@@ -3,7 +3,7 @@ import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
 import { usePaymentStore } from '../store/payment.store';
-
+import { useAuthStore } from '../store/auth.store';
 
 const Orders = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -12,6 +12,50 @@ const Orders = () => {
    const [searchQuery, setSearchQuery] = useState('');
    const [selectedOrder, setSelectedOrder] = useState(null);
    const [isModalOpen, setIsModalOpen] = useState(false);
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [isCreateMode, setIsCreateMode] = useState(false);
+
+   // Form state
+   const [formData, setFormData] = useState({
+      title: '',
+      description: '',
+      budget: '',
+      status: 'pending',
+      clientName: '',
+      clientUsername: '',
+      selectedCompanyId: ''
+   });
+
+   const { user } = useAuthStore();
+   const { companies, getCompanies } = useCompanyStore();
+   const { projects, getProjectsByCompany, createProject, updateProject, deleteProject, isLoading } = useProjectStore();
+   const { payments, getPaymentsByCompany } = usePaymentStore();
+
+   const isSuperAdmin = user?.data?.user?.role === 'super_admin';
+   const currentCompanyId = companies?.data?.companies?.[0]?._id;
+
+   // Получаем список компаний в зависимости от структуры данных
+   const allCompanies = companies?.data?.companies || companies?.companies || [];
+
+   useEffect(() => {
+      if (isSuperAdmin) {
+         console.log('Loading all companies for super_admin...');
+         getCompanies();
+      }
+   }, [isSuperAdmin, getCompanies]);
+
+   useEffect(() => {
+      console.log('Companies data:', companies);
+      console.log('All companies:', allCompanies);
+      console.log('Is super admin:', isSuperAdmin);
+   }, [companies, allCompanies, isSuperAdmin]);
+
+   useEffect(() => {
+      if (currentCompanyId && !isSuperAdmin) {
+         getProjectsByCompany(currentCompanyId);
+         getPaymentsByCompany(currentCompanyId);
+      }
+   }, [currentCompanyId, isSuperAdmin, getProjectsByCompany, getPaymentsByCompany]);
 
    const statusData = [{
       type: 'pie',
@@ -56,27 +100,12 @@ const Orders = () => {
       hovermode: 'x unified'
    };
 
-   const { companies } = useCompanyStore();
-   const { projects, getProjectsByCompany, isLoading, } = useProjectStore();
-   const { payments, getPaymentsByCompany } = usePaymentStore();
-
-
-   const companyId = companies?.data?.companies?.[0]?._id;
-
-   useEffect(() => {
-      if (companyId) {
-         getProjectsByCompany(companyId);
-         getPaymentsByCompany(companyId);
-      }
-   }, [companyId, getProjectsByCompany, getPaymentsByCompany]);
-
    const projectsList = projects?.data?.projects || [];
    const paymentsList = payments?.data?.payments || [];
 
    const filteredOrders = useMemo(() => {
       let result = [...projectsList];
 
-      // 1. Status Filter
       if (statusFilter !== 'All Statuses') {
          result = result.filter(project => {
             if (statusFilter === 'Pending') return project.status === 'pending';
@@ -89,7 +118,6 @@ const Orders = () => {
          });
       }
 
-      // 2. Date Filter
       if (dateFilter !== 'All Time') {
          const now = new Date();
          const projectDate = (project) => new Date(project.createdAt);
@@ -106,7 +134,6 @@ const Orders = () => {
          }
       }
 
-      // 3. Amount Filter
       if (amountFilter !== 'All Amounts') {
          result = result.filter(project => {
             const amount = project.budget || 0;
@@ -118,7 +145,6 @@ const Orders = () => {
          });
       }
 
-      // 4. Search Query (Name/Title)
       if (searchQuery) {
          const query = searchQuery.toLowerCase();
          result = result.filter(project =>
@@ -132,7 +158,6 @@ const Orders = () => {
       return result;
    }, [projectsList, statusFilter, dateFilter, amountFilter, searchQuery]);
 
-   /* --- существующие helpers helpers used for stats --- */
    const getPendingOrders = (projects = []) =>
       projects.filter(project => project.status === 'pending');
 
@@ -147,13 +172,11 @@ const Orders = () => {
    const getCancelledOrders = (projects = []) =>
       projects.filter(project => project.status === 'cancelled');
 
-   /* --- Stats --- */
    const pendingOrders = useMemo(() => getPendingOrders(projectsList), [projectsList]);
    const inProgressOrders = useMemo(() => getInProgressOrders(projectsList), [projectsList]);
    const completedOrders = useMemo(() => getCompletedOrders(projectsList), [projectsList]);
    const cancelledOrders = useMemo(() => getCancelledOrders(projectsList), [projectsList]);
 
-   /* --- Assigned (Completed + Paid) --- */
    const assignedOrders = useMemo(() => {
       const paymentsMap = new Map();
 
@@ -165,7 +188,6 @@ const Orders = () => {
 
       return projectsList.filter(project => {
          const payment = paymentsMap.get(project._id);
-
          return (
             project.status === 'completed' &&
             payment &&
@@ -174,23 +196,174 @@ const Orders = () => {
       });
    }, [projectsList, paymentsList]);
 
-   const handleAccept = async () => {
 
+   const handleSubmit = async (e) => {
+      e.preventDefault();
+
+      try {
+         if (isCreateMode) {
+            // Обязательные поля для создания
+            if (!formData.title || !formData.budget) {
+               alert('Title and Budget are required!');
+               return;
+            }
+
+            const createData = {
+               title: formData.title,
+               description: formData.description || '',
+               budget: parseFloat(formData.budget),
+               client: (formData.clientName || formData.clientUsername)
+                  ? {
+                     name: formData.clientName || '',
+                     username: formData.clientUsername || ''
+                  }
+                  : undefined,
+               priority: 'medium', // как по умолчанию на бэкенде
+               source: 'manual',
+               // Для super_admin передаём companyId, для обычного пользователя — нет (бэкенд сам возьмёт из req.user.company)
+               ...(isSuperAdmin && formData.selectedCompanyId && { companyId: formData.selectedCompanyId })
+            };
+
+            await createProject(createData);
+            alert('Order created successfully!');
+
+            // Обновляем список проектов
+            if (!isSuperAdmin && currentCompanyId) {
+               getProjectsByCompany(currentCompanyId);
+            } else if (isSuperAdmin && formData.selectedCompanyId) {
+               // Если super_admin создал для конкретной компании — можно обновить, но обычно список общий
+               getProjectsByCompany(formData.selectedCompanyId); // опционально
+            }
+
+            closeModal();
+         }
+         else if (isEditMode && selectedOrder) {
+            if (!formData.title || !formData.budget) {
+               alert('Title and Budget are required!');
+               return;
+            }
+
+            const updateData = {
+               title: formData.title,
+               description: formData.description || '',
+               budget: parseFloat(formData.budget),
+               status: formData.status,
+               priority: 'medium', // можно добавить поле в форму, если нужно менять
+               source: 'manual',
+               client: (formData.clientName || formData.clientUsername)
+                  ? {
+                     name: formData.clientName || '',
+                     username: formData.clientUsername || ''
+                  }
+                  : undefined
+            };
+
+            await updateProject(selectedOrder._id, updateData);
+            alert('Order updated successfully!');
+
+            if (currentCompanyId && !isSuperAdmin) {
+               getProjectsByCompany(currentCompanyId);
+            }
+
+            closeModal();
+         }
+      } catch (error) {
+         console.error('Error saving order:', error);
+         alert('Failed to save order: ' + (error.response?.data?.message || error.message));
+      }
+   };
+
+   // Исправлены опечатки в onChange
+   const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({
+         ...prev,
+         [name]: value
+      }));
+   };
+
+   const resetForm = () => {
+      setFormData({
+         title: '',
+         description: '',
+         budget: '',
+         status: 'pending',
+         clientName: '',
+         clientUsername: '',
+         selectedCompanyId: ''
+      });
+   };
+
+   const handleCreateOrder = () => {
+      setIsCreateMode(true);
+      setIsEditMode(false);
+      resetForm();
+      setIsModalOpen(true);
+   };
+
+   const handleEditOrder = (e, order) => {
+      e.stopPropagation();
+      setSelectedOrder(order);
+      setIsEditMode(true);
+      setIsCreateMode(false);
+      setFormData({
+         title: order.title || '',
+         description: order.description || '',
+         budget: order.budget || '',
+         status: order.status || 'pending',
+         clientName: order.client?.name || '',
+         clientUsername: order.client?.username || '',
+         selectedCompanyId: order.company?._id || order.company || ''
+      });
+      setIsModalOpen(true);
+   };
+
+   const handleDeleteOrder = async (e, orderId) => {
+      e.stopPropagation();
+      if (window.confirm('Are you sure you want to delete this order?')) {
+         try {
+            await deleteProject(orderId);
+            alert('Order deleted successfully!');
+            if (currentCompanyId && !isSuperAdmin) {
+               getProjectsByCompany(currentCompanyId);
+            }
+         } catch (error) {
+            console.error('Error deleting order:', error);
+            alert('Failed to delete order. Please try again.');
+         }
+      }
+   };
+
+   const handleAccept = async (e, orderId) => {
+      e.stopPropagation();
+      try {
+         await updateProject(orderId, { status: 'in_progress' });
+         alert('Order accepted successfully!');
+         if (currentCompanyId && !isSuperAdmin) {
+            getProjectsByCompany(currentCompanyId);
+         }
+         closeModal();
+      } catch (error) {
+         console.error('Error accepting order:', error);
+         alert('Failed to accept order. Please try again.');
+      }
    };
 
    const handleViewDetails = (e, order) => {
       e.stopPropagation();
       setSelectedOrder(order);
+      setIsEditMode(false);
+      setIsCreateMode(false);
       setIsModalOpen(true);
    };
 
    const closeModal = () => {
       setIsModalOpen(false);
       setSelectedOrder(null);
+      setIsEditMode(false);
+      setIsCreateMode(false);
+      resetForm();
    };
-
-
-   console.log(filteredOrders);
 
 
    if (isLoading) return null;
@@ -212,7 +385,10 @@ const Orders = () => {
                      <i className="fa-solid fa-download"></i>
                      <span>Export</span>
                   </button>
-                  <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                  <button
+                     onClick={handleCreateOrder}
+                     className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                  >
                      <i className="fa-solid fa-plus"></i>
                      <span>Add Manual Order</span>
                   </button>
@@ -300,7 +476,6 @@ const Orders = () => {
                         <option>Cancelled</option>
                      </select>
                   </div>
-                  {/* Other filters */}
                   <div>
                      <label className="text-xs text-gray-400 mb-1 block">Date Range</label>
                      <select
@@ -435,7 +610,19 @@ const Orders = () => {
                                        onClick={(e) => handleViewDetails(e, order)}
                                        className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       View Details
+                                       View
+                                    </button>
+                                    <button
+                                       onClick={(e) => handleEditOrder(e, order)}
+                                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                    >
+                                       Edit
+                                    </button>
+                                    <button
+                                       onClick={(e) => handleDeleteOrder(e, order._id)}
+                                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                    >
+                                       Delete
                                     </button>
                                  </div>
                               </td>
@@ -443,7 +630,7 @@ const Orders = () => {
                         ))
                      ) : (
                         <tr>
-                           <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                           <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                               <i className="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
                               <p>No orders found matching your filters</p>
                            </td>
@@ -523,86 +710,254 @@ const Orders = () => {
                   <p className="text-2xl font-bold text-white mb-1">1,247</p>
                   <p className="text-xs text-gray-500">Total received</p>
                </div>
-               {/* ... other stats ... */}
             </div>
          </div>
-         {/* Order Details Modal */}
-         {isModalOpen && selectedOrder && (
+
+         {/* Modal for View/Create/Edit */}
+         {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
                <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                     <h2 className="text-xl font-bold text-white">Order Details</h2>
+                     <h2 className="text-xl font-bold text-white">
+                        {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
+                     </h2>
                      <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
                         <i className="fa-solid fa-times text-xl"></i>
                      </button>
                   </div>
 
-                  <div className="p-6 space-y-6">
-                     <div className="flex flex-col sm:flex-row justify-between gap-4">
-                        <div>
-                           <span className="text-xs text-gray-500 block mb-1">Order ID</span>
-                           <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
-                              #{selectedOrder._id}
-                           </span>
-                        </div>
-                        <div>
-                           <span className="text-xs text-gray-500 block mb-1">Status</span>
-                           <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
-                              ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
-                                 selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
-                                    selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
-                              {selectedOrder.status.toUpperCase().replace('_', ' ')}
-                           </span>
-                        </div>
-                     </div>
-
-                     <div>
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
-                        <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
-                           <div>
-                              <span className="text-xs text-gray-500 block">Title</span>
-                              <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
-                           </div>
-                           <div>
-                              <span className="text-xs text-gray-500 block">Description</span>
-                              <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6">
+                     {(isCreateMode || isEditMode) ? (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                           {/* Company Selector - Only for super_admin in create mode */}
+                           {isCreateMode && isSuperAdmin && (
                               <div>
-                                 <span className="text-xs text-gray-500 block">Budget/Amount</span>
-                                 <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Company <span className="text-red-500">*</span>
+                                 </label>
+                                 <select
+                                    name="selectedCompanyId"
+                                    value={formData.selectedCompanyId}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    required
+                                 >
+                                    <option value="">Select a company ({allCompanies.length} available)</option>
+                                    {allCompanies.map((company) => (
+                                       <option key={company._id} value={company._id}>
+                                          {company.name || company.title || `Company ${company._id}`}
+                                       </option>
+                                    ))}
+                                 </select>
+                              </div>
+                           )}
+
+                           {/* Show company info for non-super_admin in create mode */}
+                           {isCreateMode && !isSuperAdmin && (
+                              <div className="bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg p-4">
+                                 <div className="flex items-start space-x-3">
+                                    <i className="fa-solid fa-info-circle text-blue-500 text-lg mt-0.5"></i>
+                                    <div>
+                                       <p className="text-blue-400 text-sm font-medium mb-1">
+                                          Creating order for your company
+                                       </p>
+                                       <p className="text-blue-300 text-xs">
+                                          Company: {allCompanies[0]?.name || 'Your Company'}
+                                       </p>
+                                    </div>
+                                 </div>
+                              </div>
+                           )}
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">
+                                 Title <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                 type="text"
+                                 name="title"
+                                 value={formData.title}
+                                 onChange={handleInputChange}
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                 placeholder="Enter order title"
+                                 required
+                              />
+                           </div>
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">
+                                 Description
+                              </label>
+                              <textarea
+                                 name="description"
+                                 value={formData.description}
+                                 onChange={handleInputChange}
+                                 rows="4"
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                 placeholder="Enter order description"
+                              />
+                           </div>
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Budget <span className="text-red-500">*</span>
+                                 </label>
+                                 <input
+                                    type="number"
+                                    name="budget"
+                                    value={formData.budget}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="0.00"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                 />
+                              </div>
+
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Status
+                                 </label>
+                                 <select
+                                    name="status"
+                                    value={formData.status}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="review">Review</option>
+                                    <option value="revision">Revision</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                 </select>
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Client Name
+                                 </label>
+                                 <input
+                                    type="text"
+                                    name="clientName"
+                                    value={formData.clientName}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="Enter client name"
+                                 />
+                              </div>
+
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                    Client Username
+                                 </label>
+                                 <input
+                                    type="text"
+                                    name="clientUsername"
+                                    value={formData.clientUsername}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="@username"
+                                 />
+                              </div>
+                           </div>
+
+                           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
+                              <button
+                                 type="button"
+                                 onClick={closeModal}
+                                 className="bg-dark-tertiary hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
+                              >
+                                 Cancel
+                              </button>
+                              <button
+                                 type="submit"
+                                 className="bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
+                              >
+                                 {isEditMode ? 'Update Order' : 'Create Order'}
+                              </button>
+                           </div>
+                        </form>
+                     ) : (
+                        <div className="space-y-6">
+                           <div className="flex flex-col sm:flex-row justify-between gap-4">
+                              <div>
+                                 <span className="text-xs text-gray-500 block mb-1">Order ID</span>
+                                 <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
+                                    #{selectedOrder._id}
+                                 </span>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block">Date</span>
-                                 <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                 <span className="text-xs text-gray-500 block mb-1">Status</span>
+                                 <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
+                                    ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
+                                       selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
+                                          selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
+                                    {selectedOrder.status.toUpperCase().replace('_', ' ')}
+                                 </span>
                               </div>
                            </div>
-                        </div>
-                     </div>
 
-                     <div>
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
-                        <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
-                           <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
-                              {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
-                           </div>
                            <div>
-                              <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
-                              <p className="text-gray-500 text-sm">{selectedOrder.client?.username || 'No username'}</p>
-                              <p className="text-gray-500 text-xs mt-1">ID: {selectedOrder.client?._id}</p>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
+                              <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Title</span>
+                                    <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
+                                 </div>
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Description</span>
+                                    <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Budget/Amount</span>
+                                       <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Date</span>
+                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    </div>
+                                 </div>
+                              </div>
                            </div>
-                        </div>
-                     </div>
 
-                     {selectedOrder.status === 'pending' && (
-                        <div className="flex justify-end pt-4 border-t border-gray-800">
-                           <button
-                              onClick={(e) => handleAccept(e, selectedOrder._id)}
-                              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
-                           >
-                              <i className="fa-solid fa-check"></i>
-                              <span>Accept Order</span>
-                           </button>
+                           <div>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                              <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                                 <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                                    {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                                 </div>
+                                 <div>
+                                    <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                                    <p className="text-gray-500 text-sm">{selectedOrder.client?.username || 'No username'}</p>
+                                    <p className="text-gray-500 text-xs mt-1">ID: {selectedOrder.client?._id}</p>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+                              <button
+                                 onClick={(e) => handleEditOrder(e, selectedOrder)}
+                                 className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                              >
+                                 <i className="fa-solid fa-edit"></i>
+                                 <span>Edit Order</span>
+                              </button>
+                              {selectedOrder.status === 'pending' && (
+                                 <button
+                                    onClick={(e) => handleAccept(e, selectedOrder._id)}
+                                    className="bg-green-500 hover:bg-green-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                 >
+                                    <i className="fa-solid fa-check"></i>
+                                    <span>Accept Order</span>
+                                 </button>
+                              )}
+                           </div>
                         </div>
                      )}
                   </div>
