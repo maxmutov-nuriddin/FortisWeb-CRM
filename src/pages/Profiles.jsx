@@ -500,7 +500,7 @@ const Profiles = () => {
                               {(() => {
                                  const leadId = String(team.teamLead?._id || team.teamLead || '');
                                  const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
-                                 const leadFound = (company?.employees || []).find(e => String(e._id) === leadId);
+                                 const leadFound = (company?.employees || rawUserList).find(e => String(e._id) === leadId);
                                  return (leadFound?.name || team.teamLead?.name || '?').charAt(0).toUpperCase();
                               })()}
                            </div>
@@ -509,7 +509,7 @@ const Profiles = () => {
                                  {(() => {
                                     const leadId = String(team.teamLead?._id || team.teamLead || '');
                                     const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
-                                    const leadFound = (company?.employees || []).find(e => String(e._id) === leadId);
+                                    const leadFound = (company?.employees || rawUserList).find(e => String(e._id) === leadId);
                                     return leadFound?.name || team.teamLead?.name || 'Unassigned Lead';
                                  })()}
                               </p>
@@ -523,7 +523,7 @@ const Profiles = () => {
                            {team.members?.map((m, idx) => {
                               const uId = String(m?._id || m.user?._id || m.user || m);
                               const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
-                              const empFound = (company?.employees || []).find(e => String(e._id) === uId);
+                              const empFound = (company?.employees || rawUserList).find(e => String(e._id) === uId);
                               const name = empFound?.name || m.name || m.user?.name || 'Unknown Member';
 
                               return (

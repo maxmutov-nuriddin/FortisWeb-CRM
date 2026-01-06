@@ -60,7 +60,6 @@ const Orders = () => {
       return userData?.company?._id || userData?.company || '';
    }, [isSuperAdmin, viewCompanyId, userData]);
 
-   // Получаем список компаний в зависимости от структуры данных
    const allCompanies = companies?.data?.companies || companies?.companies || [];
 
    useEffect(() => {
@@ -96,10 +95,17 @@ const Orders = () => {
       fetchData();
    }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
 
+   const allUsers = useMemo(() => {
+      let aggregated = [];
+      allCompanies.forEach(c => {
+         if (c.employees) aggregated = [...aggregated, ...c.employees];
+      });
+      return aggregated;
+   }, [allCompanies]);
+
    const allTeams = useMemo(() => {
       const companyList = allCompanies;
       if (!activeCompanyId || activeCompanyId === 'all') {
-         // If super admin and all companies selected, aggregate all teams
          let teams = [];
          companyList.forEach(c => {
             if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyId: c._id }))];
@@ -110,45 +116,80 @@ const Orders = () => {
       return company?.teams?.map(t => ({ ...t, companyId: company._id })) || [];
    }, [activeCompanyId, allCompanies]);
 
-   // Available Team Leads filtered by selected/active company
+   // ИСПРАВЛЕНО: Team Leads фильтруются по выбранной компании
    const availableLeads = useMemo(() => {
       const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
-      let baseUsers = users?.data?.users || (Array.isArray(users) ? users : []);
 
-      let leads = baseUsers.filter(u => u.role === 'team_lead');
-
-      if (targetCompanyId && targetCompanyId !== 'all') {
-         leads = leads.filter(u =>
-            String(u.company?._id || u.company || '') === targetCompanyId
-         );
+      if (isSuperAdmin && !targetCompanyId) {
+         // Если super admin и компания не выбрана, показываем всех team leads
+         let allLeads = [];
+         allCompanies.forEach(c => {
+            if (c.employees) {
+               const leads = c.employees.filter(u => u.role === 'team_lead');
+               allLeads = [...allLeads, ...leads.map(l => ({ ...l, companyName: c.name }))];
+            }
+         });
+         return allLeads;
       }
 
-      // Filter: only show leads that actually have teams in allTeams
-      return leads.filter(lead =>
-         allTeams.some(team => String(team.lead?._id || team.lead || '') === String(lead._id))
-      );
-   }, [users, allTeams, formData.selectedCompanyId, activeCompanyId]);
+      if (targetCompanyId === 'all') {
+         // Если выбрано "All Companies"
+         let allLeads = [];
+         allCompanies.forEach(c => {
+            if (c.employees) {
+               const leads = c.employees.filter(u => u.role === 'team_lead');
+               allLeads = [...allLeads, ...leads.map(l => ({ ...l, companyName: c.name }))];
+            }
+         });
+         return allLeads;
+      }
 
-   // Available Teams filtered by selected company and lead
+      // Фильтруем по конкретной компании
+      const company = allCompanies.find(c => String(c._id) === targetCompanyId);
+      const employees = company?.employees || [];
+      return employees.filter(u => u.role === 'team_lead');
+   }, [allCompanies, formData.selectedCompanyId, activeCompanyId, isSuperAdmin]);
+
+   // ИСПРАВЛЕНО: Teams фильтруются по выбранному Team Lead
    const availableTeams = useMemo(() => {
       const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
       let teams = allTeams;
 
+      // Фильтруем по компании
       if (targetCompanyId && targetCompanyId !== 'all') {
          teams = teams.filter(t => String(t.companyId || '') === targetCompanyId);
       }
 
+      // ГЛАВНОЕ: Фильтруем по выбранному Team Lead
       if (formData.teamLead) {
-         teams = teams.filter(t => String(t.lead?._id || t.lead || '') === String(formData.teamLead));
+         teams = teams.filter(t => String(t.teamLead?._id || t.teamLead || '') === String(formData.teamLead));
       }
 
       return teams;
    }, [allTeams, formData.selectedCompanyId, formData.teamLead, activeCompanyId]);
 
-   const allUsers = useMemo(() => {
-      const usersData = users?.data?.users || users?.users || (Array.isArray(users) ? users : []);
-      return usersData;
-   }, [users]);
+   // ИСПРАВЛЕНО: Члены команды из выбранной команды
+   const availableMembers = useMemo(() => {
+      if (!formData.assignedTeam) return [];
+
+      const team = allTeams.find(t => String(t._id) === String(formData.assignedTeam));
+      if (!team || !team.members || team.members.length === 0) return [];
+
+      const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
+      const companyFound = allCompanies.find(c => String(c._id) === targetCompanyId);
+      const companyEmployees = companyFound?.employees || allUsers;
+
+      return team.members.map(m => {
+         const uId = String(m._id || m.user?._id || m.user || m);
+         const empFound = companyEmployees.find(e => String(e._id) === uId);
+         return {
+            id: uId,
+            name: empFound?.name || m.name || m.user?.name || 'Unknown Member',
+            role: empFound?.role || m.role || m.user?.role || 'member'
+         };
+      });
+   }, [formData.assignedTeam, allTeams, allCompanies, formData.selectedCompanyId, activeCompanyId, allUsers]);
+
 
    const projectsList = useMemo(() => projects?.data?.projects || (Array.isArray(projects) ? projects : []), [projects]);
    const paymentsList = useMemo(() => payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []), [payments]);
@@ -326,7 +367,6 @@ const Orders = () => {
 
       try {
          if (isCreateMode) {
-            // Обязательные поля для создания
             if (!formData.title || !formData.budget) {
                toast.error('Title and Budget are required!', {
                   position: 'top-right',
@@ -384,8 +424,6 @@ const Orders = () => {
                deadline: formData.deadline,
                priority: formData.priority,
                source: 'manual',
-               deadline: formData.deadline,
-               priority: formData.priority,
                teamLead: formData.teamLead || undefined,
                assignedTeam: formData.assignedTeam || undefined,
                assignedMembers: formData.assignedMembers?.map(userId => ({ user: userId })) || [],
@@ -416,14 +454,15 @@ const Orders = () => {
       }
    };
 
-   // Исправлены опечатки в onChange
+   // ИСПРАВЛЕНО: Обработчик изменений
    const handleInputChange = (e) => {
       const { name, value, type, selectedOptions } = e.target;
+
       if (type === 'select-multiple') {
          const values = Array.from(selectedOptions).map(opt => opt.value);
          setFormData(prev => ({ ...prev, [name]: values }));
       } else if (name === 'selectedCompanyId') {
-         // Clear assignments when company changes
+         // При смене компании сбрасываем все назначения
          setFormData(prev => ({
             ...prev,
             selectedCompanyId: value,
@@ -437,19 +476,25 @@ const Orders = () => {
             return;
          }
 
-         // When a lead is chosen, check if they have exactly one team in the current company
-         const leadTeams = availableTeams.filter(t => String(t.lead?._id || t.lead || '') === String(value));
+         // При выборе Team Lead проверяем его команды
+         // Фильтруем из общего списка команд по компании и НОВОМУ лиду
+         const targetCompanyId = String(formData.selectedCompanyId || activeCompanyId || '');
+         const leadTeams = allTeams.filter(t =>
+            String(t.companyId || '') === targetCompanyId &&
+            String(t.teamLead?._id || t.teamLead || '') === String(value)
+         );
 
          if (leadTeams.length === 1) {
+            // Если у лида одна команда, автоматически выбираем её и её членов
             const team = leadTeams[0];
             setFormData(prev => ({
                ...prev,
                teamLead: value,
                assignedTeam: team._id,
-               assignedMembers: team.members?.map(m => m.user?._id || m.user) || []
+               assignedMembers: team.members?.map(m => m.user?._id || m.user || m._id || m) || []
             }));
          } else {
-            // Multiple teams or none? Clear specific team/members selection
+            // Если команд несколько или нет, просто выбираем лида
             setFormData(prev => ({
                ...prev,
                teamLead: value,
@@ -462,14 +507,14 @@ const Orders = () => {
             setFormData(prev => ({ ...prev, assignedTeam: '', assignedMembers: [] }));
             return;
          }
-         // Auto-select members if a team is chosen
-         const team = availableTeams.find(t => String(t._id) === String(value));
+         // При выборе команды автоматически выбираем всех её членов
+         const team = allTeams.find(t => String(t._id) === String(value));
          if (team) {
             setFormData(prev => ({
                ...prev,
                assignedTeam: value,
                teamLead: team.lead?._id || team.lead || prev.teamLead,
-               assignedMembers: team.members?.map(m => m.user?._id || m.user) || []
+               assignedMembers: team.members?.map(m => m.user?._id || m.user || m._id || m) || []
             }));
          } else {
             setFormData(prev => ({ ...prev, [name]: value }));
@@ -605,18 +650,15 @@ const Orders = () => {
          });
       } catch (error) {
          console.error('Error creating payment:', error);
-         toast.error('Failed to create payment: ', {
+         toast.error('Failed to create payment: ' + (error.response?.data?.message || error.message), {
             position: 'top-right',
             autoClose: 5000,
             closeOnClick: false,
             draggable: false,
             theme: 'dark',
-         } + (error.response?.data?.message || error.message));
+         });
       }
    };
-
-
-
 
    const handleViewDetails = (e, order) => {
       e.stopPropagation();
@@ -624,7 +666,6 @@ const Orders = () => {
       setIsEditMode(false);
       setIsCreateMode(false);
 
-      // Pre-populate payment data for the view modal
       const payment = paymentsList.find(p => p.project?._id === order._id || p.project === order._id);
       if (payment) {
          setPaymentFormData({
@@ -644,10 +685,12 @@ const Orders = () => {
       resetForm();
    };
 
-   // Only show full-page loader on initial load (when no data exists)
    if (projectsLoading && usersLoading && companiesLoading && projectsList.length === 0) {
       return <PageLoader />;
    }
+
+   console.log(filteredOrders);
+   
 
    return (
       <div className="p-8 space-y-8">
@@ -757,7 +800,6 @@ const Orders = () => {
                         <option>Cancelled</option>
                      </select>
                   </div>
-                  {/* Company Filter - Only for Super Admin */}
                   {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
                      <div className="flex-1 min-w-[200px]">
                         <label className="text-xs text-gray-400 mb-1 block">Filter by Company</label>
@@ -1054,630 +1096,632 @@ const Orders = () => {
             </div>
          </div>
 
-         {/* Modal for View/Create/Edit */}
-         {
-            isModalOpen && (
-               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
-                  <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                     <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                        <h2 className="text-xl font-bold text-white">
-                           {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
-                        </h2>
-                        <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
-                           <i className="fa-solid fa-times text-xl"></i>
-                        </button>
-                     </div>
+         {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+               <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
+                     <h2 className="text-xl font-bold text-white">
+                        {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
+                     </h2>
+                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
+                        <i className="fa-solid fa-times text-xl"></i>
+                     </button>
+                  </div>
 
-                     <div className="p-6">
-                        {(isCreateMode || isEditMode) ? (
-                           <form onSubmit={handleSubmit} className="space-y-4">
-                              {/* Company Selector - Only for super_admin in create mode */}
-                              {isCreateMode && isSuperAdmin && (
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">
-                                       Company <span className="text-red-500">*</span>
-                                    </label>
-                                    <select
-                                       name="selectedCompanyId"
-                                       value={formData.selectedCompanyId}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                                       required
-                                    >
-                                       <option value="">Select a company ({allCompanies.length} available)</option>
-                                       {allCompanies.map((company) => (
-                                          <option key={company._id} value={company._id}>
-                                             {company.name || company.title || `Company ${company._id}`}
-                                          </option>
-                                       ))}
-                                    </select>
-                                 </div>
-                              )}
-
-                              {/* Show company info for non-super_admin in create mode */}
-                              {isCreateMode && !isSuperAdmin && (
-                                 <div className="bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg p-4">
-                                    <div className="flex items-start space-x-3">
-                                       <i className="fa-solid fa-info-circle text-blue-500 text-lg mt-0.5"></i>
-                                       <div>
-                                          <p className="text-blue-400 text-sm font-medium mb-1">
-                                             Creating order for your company
-                                          </p>
-                                          <p className="text-blue-300 text-xs">
-                                             Company: {allCompanies[0]?.name || 'Your Company'}
-                                          </p>
-                                       </div>
-                                    </div>
-                                 </div>
-                              )}
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
-                                    <input
-                                       type="text"
-                                       name="title"
-                                       value={formData.title}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="e.g., Website Redesign"
-                                       required
-                                    />
-                                 </div>
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
-                                    <input
-                                       type="number"
-                                       name="budget"
-                                       value={formData.budget}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="e.g., 1500"
-                                       required
-                                    />
-                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
-                                    <input
-                                       type="date"
-                                       name="deadline"
-                                       value={formData.deadline}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       required
-                                    />
-                                 </div>
-                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
-                                    <select
-                                       name="priority"
-                                       value={formData.priority}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    >
-                                       <option value="low">Low</option>
-                                       <option value="medium">Medium</option>
-                                       <option value="high">High</option>
-                                       <option value="urgent">Urgent</option>
-                                    </select>
-                                 </div>
-                              </div>
-
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
-                                 <textarea
-                                    name="description"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                    rows="3"
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="Project details..."
-                                 ></textarea>
-                              </div>
-
+                  <div className="p-6">
+                     {(isCreateMode || isEditMode) ? (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                           {isCreateMode && isSuperAdmin && (
                               <div>
                                  <label className="text-sm font-medium text-gray-300 block mb-2">
-                                    Status
+                                    Company <span className="text-red-500">*</span>
                                  </label>
                                  <select
-                                    name="status"
-                                    value={formData.status}
+                                    name="selectedCompanyId"
+                                    value={formData.selectedCompanyId}
                                     onChange={handleInputChange}
                                     className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    required
                                  >
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="review">Review</option>
-                                    <option value="revision">Revision</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
+                                    <option value="">Select a company ({allCompanies.length} available)</option>
+                                    {allCompanies.map((company) => (
+                                       <option key={company._id} value={company._id}>
+                                          {company.name || company.title || `Company ${company._id}`}
+                                       </option>
+                                    ))}
                                  </select>
                               </div>
+                           )}
 
-                              <div className="border-t border-gray-800 pt-4">
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           {isCreateMode && !isSuperAdmin && (
+                              <div className="bg-blue-500 bg-opacity-20 border border-blue-500 rounded-lg p-4">
+                                 <div className="flex items-start space-x-3">
+                                    <i className="fa-solid fa-info-circle text-blue-500 text-lg mt-0.5"></i>
                                     <div>
-                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
-                                       <input
-                                          type="text"
-                                          name="clientName"
-                                          value={formData.clientName}
-                                          onChange={handleInputChange}
-                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                          placeholder="Full Name"
-                                       />
-                                    </div>
-                                    <div>
-                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
-                                       <input
-                                          type="text"
-                                          name="clientUsername"
-                                          value={formData.clientUsername}
-                                          onChange={handleInputChange}
-                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                          placeholder="@username"
-                                       />
+                                       <p className="text-blue-400 text-sm font-medium mb-1">
+                                          Creating order for your company
+                                       </p>
+                                       <p className="text-blue-300 text-xs">
+                                          Company: {allCompanies[0]?.name || 'Your Company'}
+                                       </p>
                                     </div>
                                  </div>
-                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                                    <div>
-                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
-                                       <input
-                                          type="email"
-                                          name="clientEmail"
-                                          value={formData.clientEmail}
-                                          onChange={handleInputChange}
-                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                          placeholder="email@example.com"
-                                       />
-                                    </div>
-                                    <div>
-                                       <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
-                                       <input
-                                          type="text"
-                                          name="clientPhone"
-                                          value={formData.clientPhone}
-                                          onChange={handleInputChange}
-                                          className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                          placeholder="+12345678"
-                                       />
-                                    </div>
-                                 </div>
-                                 <div className="mt-4">
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
+                              </div>
+                           )}
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
+                                 <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="e.g., Website Redesign"
+                                    required
+                                 />
+                              </div>
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
+                                 <input
+                                    type="number"
+                                    name="budget"
+                                    value={formData.budget}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="e.g., 1500"
+                                    required
+                                 />
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
+                                 <input
+                                    type="date"
+                                    name="deadline"
+                                    value={formData.deadline}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    required
+                                 />
+                              </div>
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
+                                 <select
+                                    name="priority"
+                                    value={formData.priority}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                 </select>
+                              </div>
+                           </div>
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
+                              <textarea
+                                 name="description"
+                                 value={formData.description}
+                                 onChange={handleInputChange}
+                                 rows="3"
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 placeholder="Project details..."
+                              ></textarea>
+                           </div>
+
+                           <div>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">
+                                 Status
+                              </label>
+                              <select
+                                 name="status"
+                                 value={formData.status}
+                                 onChange={handleInputChange}
+                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                              >
+                                 <option value="pending">Pending</option>
+                                 <option value="in_progress">In Progress</option>
+                                 <option value="review">Review</option>
+                                 <option value="revision">Revision</option>
+                                 <option value="completed">Completed</option>
+                                 <option value="cancelled">Cancelled</option>
+                              </select>
+                           </div>
+
+                           <div className="border-t border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
                                     <input
                                        type="text"
-                                       name="clientCompany"
-                                       value={formData.clientCompany}
+                                       name="clientName"
+                                       value={formData.clientName}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="Company Name"
+                                       placeholder="Full Name"
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
+                                    <input
+                                       type="text"
+                                       name="clientUsername"
+                                       value={formData.clientUsername}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       placeholder="@username"
                                     />
                                  </div>
                               </div>
-
-                              <div className="border-t border-gray-800 pt-4">
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
-                                    <select
-                                       name="teamLead"
-                                       value={formData.teamLead}
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
+                                    <input
+                                       type="email"
+                                       name="clientEmail"
+                                       value={formData.clientEmail}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    >
-                                       <option value="">Select Team Lead ({availableLeads.length})</option>
-                                       {availableLeads.map(user => (
-                                          <option key={user._id} value={user._id}>{user.name}</option>
-                                       ))}
-                                    </select>
+                                       placeholder="email@example.com"
+                                    />
                                  </div>
-                                 <div className="mt-4">
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
-                                    <select
-                                       name="assignedTeam"
-                                       value={formData.assignedTeam}
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
+                                    <input
+                                       type="text"
+                                       name="clientPhone"
+                                       value={formData.clientPhone}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    >
-                                       <option value="">Select Team ({availableTeams.length})</option>
-                                       {availableTeams.map(team => (
-                                          <option key={team._id} value={team._id}>{team.name}</option>
-                                       ))}
-                                    </select>
-                                 </div>
-                                 <div className="mt-4">
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
-                                    <select
-                                       name="assignedMembers"
-                                       multiple
-                                       value={formData.assignedMembers}
-                                       onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
-                                    >
-                                       {(() => {
-                                          if (!formData.assignedTeam) {
-                                             return <option disabled className="text-gray-500 italic">Select a team first...</option>;
-                                          }
-                                          const team = allTeams.find(t => String(t._id) === String(formData.assignedTeam));
-                                          if (!team || !team.members || team.members.length === 0) {
-                                             return <option disabled className="text-gray-500 italic">No members found in this team</option>;
-                                          }
-                                          return team.members.map((m, idx) => {
-                                             const uId = String(m.user?._id || m.user);
-                                             const userFound = allUsers.find(u => String(u._id) === uId);
-                                             const name = userFound?.name || (typeof m.user === 'object' ? m.user.name : 'Unknown');
-                                             const role = userFound?.role || (typeof m.user === 'object' ? m.user.role : 'member');
-                                             return (
-                                                <option key={`${uId}-${idx}`} value={uId}>
-                                                   {name} ({role.replace('_', ' ')})
-                                                </option>
-                                             );
-                                          });
-                                       })()}
-                                    </select>
-                                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
+                                       placeholder="+12345678"
+                                    />
                                  </div>
                               </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
+                                 <input
+                                    type="text"
+                                    name="clientCompany"
+                                    value={formData.clientCompany}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    placeholder="Company Name"
+                                 />
+                              </div>
+                           </div>
 
-                              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
-                                 <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
-                                 >
-                                    Cancel
-                                 </button>
-                                 <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className={`bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                 >
-                                    {isSubmitting ? 'Processing...' : (isCreateMode ? 'Create Order' : 'Save Changes')}
-                                 </button>
-                              </div>
-                           </form>
-                        ) : (
-                           <div className="space-y-6">
-                              <div className="flex flex-col sm:flex-row justify-between gap-4">
-                                 <div>
-                                    <span className="text-xs text-gray-500 block mb-1">Order ID</span>
-                                    <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
-                                       #{selectedOrder._id}
-                                    </span>
-                                 </div>
-                                 <div>
-                                    <span className="text-xs text-gray-500 block mb-1">Status</span>
-                                    <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
-                                    ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
-                                          selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
-                                             selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
-                                       {selectedOrder.status.toUpperCase().replace('_', ' ')}
-                                    </span>
-                                 </div>
-                              </div>
-
+                           <div className="border-t border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
                               <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4">
-                                    <div className="flex items-center space-x-3">
-                                       <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                          <i className="fa-solid fa-building text-indigo-500"></i>
-                                       </div>
-                                       <div>
-                                          <p className="text-white font-medium">
-                                             {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
-                                          </p>
-                                          <p className="text-xs text-gray-500 italic">Project source entity</p>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-
-                              <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Title</span>
-                                       <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Description</span>
-                                       <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                       <div>
-                                          <span className="text-xs text-gray-500 block">Budget/Amount</span>
-                                          <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
-                                       </div>
-                                       <div>
-                                          <span className="text-xs text-gray-500 block">Priority</span>
-                                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
-                                           ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
-                                                selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
-                                                   'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
-                                             {selectedOrder.priority || 'Medium'}
-                                          </span>
-                                       </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                       <div>
-                                          <span className="text-xs text-gray-500 block">Date Created</span>
-                                          <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
-                                       </div>
-                                       <div>
-                                          <span className="text-xs text-gray-500 block">Source</span>
-                                          <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                 <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
-                                    <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
-                                       <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
-                                          {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
-                                       </div>
-                                       <div>
-                                          <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
-                                          <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
-                                          <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
-                                    <div className="bg-dark-tertiary rounded-lg p-4 space-y-4">
-                                       <div>
-                                          <span className="text-xs text-gray-500 block mb-1">Team & Lead</span>
-                                          <div className="flex items-center space-x-2">
-                                             <p className="text-white text-sm font-medium">
-                                                {(() => {
-                                                   const teamId = selectedOrder.assignedTeam?._id || selectedOrder.assignedTeam;
-                                                   const teamFound = allTeams.find(t => String(t._id) === String(teamId));
-                                                   return teamFound?.name || 'No Team';
-                                                })()}
-                                             </p>
-                                             <span className="text-gray-600">•</span>
-                                             <p className="text-gray-400 text-xs">
-                                                {(() => {
-                                                   const lead = selectedOrder.teamLead;
-                                                   if (!lead) return 'No Lead';
-                                                   const leadId = lead?._id || lead;
-                                                   const userFound = allUsers.find(u => String(u._id) === String(leadId));
-                                                   return userFound?.name || (typeof lead === 'object' ? lead.name : 'Unknown');
-                                                })()}
-                                             </p>
-                                          </div>
-                                       </div>
-                                       <div>
-                                          <span className="text-xs text-gray-500 block mb-2">Assigned Members</span>
-                                          <div className="grid grid-cols-1 gap-2">
-                                             {selectedOrder.assignedMembers?.length > 0 ? (
-                                                selectedOrder.assignedMembers.map((m, i) => {
-                                                   const uId = String(m.user?._id || m.user);
-                                                   const userFound = allUsers.find(u => String(u._id) === uId);
-                                                   const userName = userFound?.name || (typeof m.user === 'object' ? m.user.name : 'Unknown');
-                                                   const userRole = userFound?.role || (typeof m.user === 'object' ? m.user.role : 'Member');
-                                                   return (
-                                                      <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md">
-                                                         <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
-                                                            {userName.charAt(0).toUpperCase()}
-                                                         </div>
-                                                         <div className="flex flex-col">
-                                                            <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
-                                                            <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
-                                                         </div>
-                                                      </div>
-                                                   );
-                                                })
-                                             ) : <p className="text-gray-500 text-xs">No members assigned</p>}
-                                          </div>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-
-                              <div className="border-t border-gray-800 pt-6">
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                                    <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
-                                    Payment Information
-                                 </h3>
-                                 {(() => {
-                                    const payment = paymentsList.find(p => p.project?._id === selectedOrder._id || p.project === selectedOrder._id);
-                                    if (!payment) {
-                                       return (
-                                          <div className="bg-dark-tertiary rounded-lg p-6 border border-dashed border-gray-700 space-y-4">
-                                             <div className="text-center">
-                                                <p className="text-gray-500 text-sm">No payment has been created for this order yet.</p>
-                                             </div>
-                                             <div>
-                                                <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-semibold text-center">Select Payment Method</label>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                   <select
-                                                      value={paymentFormData.paymentMethod}
-                                                      onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
-                                                      className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
-                                                   >
-                                                      <option value="bank_transfer">Bank Transfer</option>
-                                                      <option value="cash">Cash</option>
-                                                      <option value="card">Card</option>
-                                                      <option value="paypal">PayPal</option>
-                                                      <option value="crypto">Crypto</option>
-                                                      <option value="other">Other</option>
-                                                   </select>
-                                                   <button
-                                                      onClick={(e) => handleCreatePaymentManually(e, selectedOrder)}
-                                                      className="col-span-2 bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
-                                                   >
-                                                      <i className="fa-solid fa-plus mr-2"></i>
-                                                      Create Initial Payment
-                                                   </button>
-                                                </div>
-                                             </div>
-                                          </div>
-                                       );
-                                    }
-
-                                    return (
-                                       <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
-                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                             <div>
-                                                <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
-                                                <div className="flex items-center space-x-2">
-                                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit
-                                                      ${payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
-                                                         payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
-                                                            'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
-                                                      {payment.status}
-                                                   </span>
-                                                </div>
-                                             </div>
-                                             <div>
-                                                <span className="text-xs text-gray-500 block mb-1">Amount</span>
-                                                <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
-                                             </div>
-                                          </div>
-
-                                          <div className="grid grid-cols-1 gap-4">
-                                             <div>
-                                                <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
-                                                <div className="flex items-center text-white text-sm bg-dark-secondary px-3 py-2 rounded-lg border border-gray-700">
-                                                   <i className="fa-solid fa-wallet mr-2 text-gray-400"></i>
-                                                   {payment.paymentMethod || 'bank_transfer'}
-                                                </div>
-                                             </div>
-                                          </div>
-
-                                          <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
-                                             {/* 1. Only 'Confirm Receipt' for pending status */}
-                                             {payment.status === 'pending' && (
-                                                <button
-                                                   type="button"
-                                                   disabled={isSubmitting}
-                                                   onClick={async () => {
-                                                      setIsSubmitting(true);
-                                                      try {
-                                                         await confirmPayment(payment._id || payment.id);
-                                                         toast.success('Payment confirmed successfully!', {
-                                                            position: 'top-right',
-                                                            autoClose: 5000,
-                                                            closeOnClick: false,
-                                                            draggable: false,
-                                                            theme: 'dark',
-                                                         });
-                                                      } catch (err) {
-                                                         toast.error('Failed to confirm: ', {
-                                                            position: 'top-right',
-                                                            autoClose: 5000,
-                                                            closeOnClick: false,
-                                                            draggable: false,
-                                                            theme: 'dark',
-                                                         } + err.message);
-                                                      } finally {
-                                                         setIsSubmitting(false);
-                                                      }
-                                                   }}
-                                                   className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
-                                                   {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
-                                                </button>
-                                             )}
-
-                                             {/* 2. 'Mark as Paid' - ONLY for Super Admin at any time (or if you prefer, only after confirmation) */}
-                                             {isSuperAdmin && payment.status !== 'completed' && (
-                                                <button
-                                                   type="button"
-                                                   disabled={isSubmitting}
-                                                   onClick={async () => {
-                                                      setIsSubmitting(true);
-                                                      try {
-                                                         await completePayment(payment._id || payment.id);
-                                                         toast.success('Payment marked as paid!', {
-                                                            position: 'top-right',
-                                                            autoClose: 5000,
-                                                            closeOnClick: false,
-                                                            draggable: false,
-                                                            theme: 'dark',
-                                                         });
-                                                      } catch (err) {
-                                                         toast.error('Failed to complete: ', {
-                                                            position: 'top-right',
-                                                            autoClose: 5000,
-                                                            closeOnClick: false,
-                                                            draggable: false,
-                                                            theme: 'dark',
-                                                         } + err.message);
-                                                      } finally {
-                                                         setIsSubmitting(false);
-                                                      }
-                                                   }}
-                                                   className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-flag-checkered'} mr-1`}></i>
-                                                   {isSubmitting ? 'Processing...' : (payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)')}
-                                                </button>
-                                             )}
-                                          </div>
-                                       </div>
-                                    );
-                                 })()}
-                              </div>
-
-                              {selectedOrder.results?.length > 0 && (
-                                 <div>
-                                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
-                                    <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
-                                       {selectedOrder.results.map((res, i) => (
-                                          <div key={i} className="flex items-center justify-between text-sm">
-                                             <span className="text-gray-300">{res.name}</span>
-                                             <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
-                                          </div>
-                                       ))}
-                                    </div>
-                                 </div>
-                              )}
-
-                              <div className="flex justify-between items-center pt-4 border-t border-gray-800">
-                                 <button
-                                    onClick={closeModal}
-                                    className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
+                                 <select
+                                    name="teamLead"
+                                    value={formData.teamLead}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
                                  >
-                                    Close
-                                 </button>
-                                 <div className="flex space-x-3">
-                                    <button
-                                       onClick={(e) => handleEditOrder(e, selectedOrder)}
-                                       className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
-                                    >
-                                       <i className="fa-solid fa-edit"></i>
-                                       <span>Edit Order</span>
-                                    </button>
-                                    {selectedOrder.status === 'pending' && (
-                                       <button
-                                          onClick={(e) => handleAccept(e, selectedOrder._id)}
-                                          disabled={isSubmitting}
-                                          className={`bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                       >
-                                          <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
-                                          <span>{isSubmitting ? 'Accepting...' : 'Accept Order'}</span>
-                                       </button>
+                                    <option value="">Select Team Lead ({availableLeads.length} available)</option>
+                                    {availableLeads.map(user => (
+                                       <option key={user._id} value={user._id}>
+                                          {user.name} {user.companyName ? `(${user.companyName})` : ''}
+                                       </option>
+                                    ))}
+                                 </select>
+                              </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
+                                 <select
+                                    name="assignedTeam"
+                                    value={formData.assignedTeam}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    disabled={!formData.teamLead}
+                                 >
+                                    <option value="">
+                                       {!formData.teamLead
+                                          ? 'Select a Team Lead first...'
+                                          : `Select Team (${availableTeams.length} available)`}
+                                    </option>
+                                    {availableTeams.map(team => (
+                                       <option key={team._id} value={team._id}>
+                                          {team.name}
+                                       </option>
+                                    ))}
+                                 </select>
+                              </div>
+                              <div className="mt-4">
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
+                                 <select
+                                    name="assignedMembers"
+                                    multiple
+                                    value={formData.assignedMembers}
+                                    onChange={handleInputChange}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
+                                    disabled={!formData.assignedTeam}
+                                 >
+                                    {!formData.assignedTeam ? (
+                                       <option disabled className="text-gray-500 italic">Select a team first...</option>
+                                    ) : availableMembers.length === 0 ? (
+                                       <option disabled className="text-gray-500 italic">No members found in this team</option>
+                                    ) : (
+                                       availableMembers.map((member) => (
+                                          <option key={member.id} value={member.id}>
+                                             {member.name} ({member.role.replace('_', ' ')})
+                                          </option>
+                                       ))
                                     )}
+                                 </select>
+                                 <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple members</p>
+                              </div>
+                           </div>
+
+                           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
+                              <button
+                                 type="button"
+                                 onClick={closeModal}
+                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                              >
+                                 Cancel
+                              </button>
+                              <button
+                                 type="submit"
+                                 disabled={isSubmitting}
+                                 className={`bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                 {isSubmitting ? 'Processing...' : (isCreateMode ? 'Create Order' : 'Save Changes')}
+                              </button>
+                           </div>
+                        </form>
+                     ) : (
+                        <div className="space-y-6">
+                           <div className="flex flex-col sm:flex-row justify-between gap-4">
+                              <div>
+                                 <span className="text-xs text-gray-500 block mb-1">Order ID</span>
+                                 <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
+                                    #{selectedOrder._id}
+                                 </span>
+                              </div>
+                              <div>
+                                 <span className="text-xs text-gray-500 block mb-1">Status</span>
+                                 <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
+                                 ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
+                                       selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
+                                          selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
+                                    {selectedOrder.status.toUpperCase().replace('_', ' ')}
+                                 </span>
+                              </div>
+                           </div>
+
+                           <div>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                              <div className="bg-dark-tertiary rounded-lg p-4">
+                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                       <i className="fa-solid fa-building text-indigo-500"></i>
+                                    </div>
+                                    <div>
+                                       <p className="text-white font-medium">
+                                          {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
+                                       </p>
+                                       <p className="text-xs text-gray-500 italic">Project source entity</p>
+                                    </div>
                                  </div>
                               </div>
                            </div>
-                        )}
-                     </div>
+
+                           <div>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
+                              <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Title</span>
+                                    <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
+                                 </div>
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Description</span>
+                                    <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Budget/Amount</span>
+                                       <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Priority</span>
+                                       <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
+                                        ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
+                                             selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                          {selectedOrder.priority || 'Medium'}
+                                       </span>
+                                    </div>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Date Created</span>
+                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block">Source</span>
+                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                                       {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
+                                    </div>
+                                    <div>
+                                       <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                                       <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
+                                       <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-4">
+                                    <div>
+                                       <span className="text-xs text-gray-500 block mb-1">Team & Lead</span>
+                                       <div className="flex items-center space-x-2">
+                                          <p className="text-white text-sm font-medium">
+                                             {(() => {
+                                                const teamId = selectedOrder.assignedTeam?._id || selectedOrder.assignedTeam;
+                                                const teamFound = allTeams.find(t => String(t._id) === String(teamId));
+                                                return teamFound?.name || selectedOrder.assignedTeam?.name || 'No Team';
+                                             })()}
+                                          </p>
+                                          <span className="text-gray-600">•</span>
+                                          <p className="text-gray-400 text-xs">
+                                             {(() => {
+                                                const lead = selectedOrder.teamLead;
+                                                if (!lead) return 'No Lead';
+                                                const leadId = String(lead?._id || lead);
+
+                                                const companyId = String(selectedOrder.company?._id || selectedOrder.company || '');
+                                                const company = allCompanies.find(c => String(c._id) === companyId);
+                                                const leadFound = (company?.employees || allUsers).find(e => String(e._id) === leadId);
+
+                                                return leadFound?.name || (typeof lead === 'object' ? lead.name : 'Unknown');
+                                             })()}
+                                          </p>
+                                       </div>
+                                    </div>
+                                    <div>
+                                       <span className="text-xs text-gray-500 block mb-2">Assigned Members</span>
+                                       <div className="grid grid-cols-1 gap-2">
+                                          {selectedOrder.assignedMembers?.length > 0 ? (
+                                             selectedOrder.assignedMembers.map((m, i) => {
+                                                const uId = String(m._id || m.user?._id || m.user || m);
+                                                const companyId = String(selectedOrder.company?._id || selectedOrder.company || '');
+                                                const company = allCompanies.find(c => String(c._id) === companyId);
+                                                const empFound = (company?.employees || allUsers).find(e => String(e._id) === uId);
+
+                                                const userName = empFound?.name || m.name || m.user?.name || 'Unknown Member';
+                                                const userRole = empFound?.role || m.role || m.user?.role || 'Member';
+                                                return (
+                                                   <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md">
+                                                      <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
+                                                         {userName.charAt(0).toUpperCase()}
+                                                      </div>
+                                                      <div className="flex flex-col">
+                                                         <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
+                                                         <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
+                                                      </div>
+                                                   </div>
+                                                );
+                                             })
+                                          ) : <p className="text-gray-500 text-xs">No members assigned</p>}
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="border-t border-gray-800 pt-6">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                                 <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
+                                 Payment Information
+                              </h3>
+                              {(() => {
+                                 const payment = paymentsList.find(p => p.project?._id === selectedOrder._id || p.project === selectedOrder._id);
+                                 if (!payment) {
+                                    return (
+                                       <div className="bg-dark-tertiary rounded-lg p-6 border border-dashed border-gray-700 space-y-4">
+                                          <div className="text-center">
+                                             <p className="text-gray-500 text-sm">No payment has been created for this order yet.</p>
+                                          </div>
+                                          <div>
+                                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-semibold text-center">Select Payment Method</label>
+                                             <div className="grid grid-cols-2 gap-2">
+                                                <select
+                                                   value={paymentFormData.paymentMethod}
+                                                   onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                                                   className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
+                                                >
+                                                   <option value="bank_transfer">Bank Transfer</option>
+                                                   <option value="cash">Cash</option>
+                                                   <option value="card">Card</option>
+                                                   <option value="paypal">PayPal</option>
+                                                   <option value="crypto">Crypto</option>
+                                                   <option value="other">Other</option>
+                                                </select>
+                                                <button
+                                                   onClick={(e) => handleCreatePaymentManually(e, selectedOrder)}
+                                                   className="col-span-2 bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
+                                                >
+                                                   <i className="fa-solid fa-plus mr-2"></i>
+                                                   Create Initial Payment
+                                                </button>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    );
+                                 }
+
+                                 return (
+                                    <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
+                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                          <div>
+                                             <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
+                                             <div className="flex items-center space-x-2">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit
+                                                   ${payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                      payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
+                                                         'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                                   {payment.status}
+                                                </span>
+                                             </div>
+                                          </div>
+                                          <div>
+                                             <span className="text-xs text-gray-500 block mb-1">Amount</span>
+                                             <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
+                                          </div>
+                                       </div>
+
+                                       <div className="grid grid-cols-1 gap-4">
+                                          <div>
+                                             <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
+                                             <div className="flex items-center text-white text-sm bg-dark-secondary px-3 py-2 rounded-lg border border-gray-700">
+                                                <i className="fa-solid fa-wallet mr-2 text-gray-400"></i>
+                                                {payment.paymentMethod || 'bank_transfer'}
+                                             </div>
+                                          </div>
+                                       </div>
+
+                                       <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
+                                          {payment.status === 'pending' && (
+                                             <button
+                                                type="button"
+                                                disabled={isSubmitting}
+                                                onClick={async () => {
+                                                   setIsSubmitting(true);
+                                                   try {
+                                                      await confirmPayment(payment._id || payment.id);
+                                                      toast.success('Payment confirmed successfully!', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
+                                                   } catch (err) {
+                                                      toast.error('Failed to confirm: ' + err.message, {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
+                                                   } finally {
+                                                      setIsSubmitting(false);
+                                                   }
+                                                }}
+                                                className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                             >
+                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
+                                                {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
+                                             </button>
+                                          )}
+
+                                          {isSuperAdmin && payment.status !== 'completed' && (
+                                             <button
+                                                type="button"
+                                                disabled={isSubmitting}
+                                                onClick={async () => {
+                                                   setIsSubmitting(true);
+                                                   try {
+                                                      await completePayment(payment._id || payment.id);
+                                                      toast.success('Payment marked as paid!', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
+                                                   } catch (err) {
+                                                      toast.error('Failed to complete: ' + err.message, {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
+                                                   } finally {
+                                                      setIsSubmitting(false);
+                                                   }
+                                                }}
+                                                className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                             >
+                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-flag-checkered'} mr-1`}></i>
+                                                {isSubmitting ? 'Processing...' : (payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)')}
+                                             </button>
+                                          )}
+                                       </div>
+                                    </div>
+                                 );
+                              })()}
+                           </div>
+
+                           {selectedOrder.results?.length > 0 && (
+                              <div>
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
+                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
+                                    {selectedOrder.results.map((res, i) => (
+                                       <div key={i} className="flex items-center justify-between text-sm">
+                                          <span className="text-gray-300">{res.name}</span>
+                                          <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
+                                       </div>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
+
+                           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+                              <button
+                                 onClick={closeModal}
+                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                              >
+                                 Close
+                              </button>
+                              <div className="flex space-x-3">
+                                 <button
+                                    onClick={(e) => handleEditOrder(e, selectedOrder)}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                 >
+                                    <i className="fa-solid fa-edit"></i>
+                                    <span>Edit Order</span>
+                                 </button>
+                                 {selectedOrder.status === 'pending' && (
+                                    <button
+                                       onClick={(e) => handleAccept(e, selectedOrder._id)}
+                                       disabled={isSubmitting}
+                                       className={`bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                       <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
+                                       <span>{isSubmitting ? 'Accepting...' : 'Accept Order'}</span>
+                                    </button>
+                                 )}
+                              </div>
+                           </div>
+                        </div>
+                     )}
                   </div>
                </div>
-            )}
+            </div>
+         )}
       </div>
    );
 };
