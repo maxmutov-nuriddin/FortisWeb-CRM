@@ -47,9 +47,9 @@ const Orders = () => {
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
-   const { companies, getCompanies } = useCompanyStore();
+   const { companies, getCompanies, isLoading: companiesLoading } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
-   const { users, getUsersByCompany } = useUserStore();
+   const { users, getUsersByCompany, isLoading: usersLoading } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
 
@@ -490,7 +490,7 @@ const Orders = () => {
    };
 
    // Only show full-page loader on initial load (when no data exists)
-   if (projectsLoading && projectsList.length === 0) {
+   if (projectsLoading && usersLoading && companiesLoading && projectsList.length === 0) {
       return <PageLoader />;
    }
 

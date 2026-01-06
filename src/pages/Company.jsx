@@ -143,10 +143,6 @@ const Company = () => {
       return companiesList.reduce((sum, company) => sum + (company.employees?.length || 0), 0);
    }, [companiesList]);
 
-
-
-
-
    const handleViewDetails = (e, company) => {
       e.stopPropagation();
       setSelectedCompany(company);
