@@ -40,7 +40,7 @@ const Orders = () => {
    const userData = user?.data?.user || user?.user || user;
    const isSuperAdmin = userData?.role === 'super_admin';
 
-   const [viewCompanyId, setViewCompanyId] = useState(() => isSuperAdmin ? 'all' : '');
+   const [viewCompanyId, setViewCompanyId] = useState('all');
 
    const { companies, getCompanies } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
@@ -49,23 +49,12 @@ const Orders = () => {
    const { payments, getPaymentsByCompany } = usePaymentStore();
 
    const activeCompanyId = useMemo(() => {
-      let id = '';
-      if (isSuperAdmin) {
-         id = viewCompanyId; // 'all' or specific ID
-      } else {
-         id = userData?.company?._id || userData?.company;
-      }
-      return id;
+      if (isSuperAdmin) return viewCompanyId;
+      return userData?.company?._id || userData?.company || '';
    }, [isSuperAdmin, viewCompanyId, userData]);
 
    // Получаем список компаний в зависимости от структуры данных
    const allCompanies = companies?.data?.companies || companies?.companies || [];
-
-   useEffect(() => {
-      if (isSuperAdmin && !viewCompanyId) {
-         setViewCompanyId('all');
-      }
-   }, [isSuperAdmin, viewCompanyId]);
 
    useEffect(() => {
       if (isSuperAdmin) {
@@ -74,17 +63,23 @@ const Orders = () => {
    }, [isSuperAdmin, getCompanies]);
 
    useEffect(() => {
-      if (isSuperAdmin && viewCompanyId === 'all') {
-         if (allCompanies.length > 0) {
-            const ids = allCompanies.map(c => c._id);
-            getAllProjects(ids);
+      const fetchData = async () => {
+         if (isSuperAdmin && viewCompanyId === 'all') {
+            if (allCompanies.length > 0) {
+               const ids = allCompanies.map(c => c._id);
+               await getAllProjects(ids);
+            }
+         } else if (activeCompanyId && activeCompanyId !== 'all') {
+            await Promise.all([
+               getProjectsByCompany(activeCompanyId),
+               getPaymentsByCompany(activeCompanyId),
+               getUsersByCompany(activeCompanyId)
+            ]);
          }
-      } else if (activeCompanyId && activeCompanyId !== 'all') {
-         getProjectsByCompany(activeCompanyId);
-         getPaymentsByCompany(activeCompanyId);
-         getUsersByCompany(activeCompanyId);
-      }
-   }, [activeCompanyId, viewCompanyId, isSuperAdmin, getProjectsByCompany, getAllProjects, getPaymentsByCompany, getUsersByCompany, allCompanies]);
+      };
+
+      fetchData();
+   }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
 
    const allTeams = useMemo(() => {
       if (!activeCompanyId || activeCompanyId === 'all') return [];
@@ -441,7 +436,7 @@ const Orders = () => {
          await updateProject(orderId, { status: 'in_progress' });
          alert('Order accepted successfully!');
          if (activeCompanyId === 'all') {
-            getAllProjects();
+            getAllProjects(allCompanies.map(c => c._id));
          } else if (activeCompanyId) {
             getProjectsByCompany(activeCompanyId);
          }
@@ -468,12 +463,10 @@ const Orders = () => {
       resetForm();
    };
 
-
-   // Only show loading if we have no projects OR if we are explicitly fetching for the first time
-   // But don't block the whole UI if it's just a background refresh
-   if (projectsLoading && projectsList.length === 0) return (
-      <PageLoader />
-   );
+   // Only show full-page loader on initial load (when no data exists)
+   if (projectsLoading && projectsList.length === 0) {
+      return <PageLoader />;
+   }
 
    console.log(filteredOrders);
 
@@ -655,7 +648,14 @@ const Orders = () => {
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800">
+                  <tbody className="divide-y divide-gray-800 relative">
+                     {projectsLoading && projectsList.length > 0 && (
+                        <tr className="absolute top-0 left-0 w-full h-1 z-10">
+                           <td colSpan="8" className="p-0">
+                              <div className="h-0.5 bg-dark-accent animate-pulse w-full"></div>
+                           </td>
+                        </tr>
+                     )}
                      {filteredOrders.length > 0 ? (
                         filteredOrders.map((order) => (
                            <tr key={order._id} className="hover:bg-dark-tertiary transition">
