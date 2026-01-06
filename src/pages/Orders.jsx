@@ -51,7 +51,7 @@ const Orders = () => {
 
    const { companies, getCompanies, getCompanyById, selectedCompany, isLoading: companiesLoading } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, assignProject, isLoading: projectsLoading } = useProjectStore();
-   const { users, getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
+   const { getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
 
@@ -413,7 +413,24 @@ const Orders = () => {
                company: formData.selectedCompanyId || activeCompanyId || undefined
             };
 
-            await createProject(createData);
+            const result = await createProject(createData);
+            const newProjectId = result?.data?.project?._id || result?._id;
+
+            // Если при создании сразу выбрана команда, вызываем /assign (так как бэкенд createProject не сохраняет эти поля)
+            if (newProjectId && (formData.teamLead || formData.assignedTeam || formData.assignedMembers.length > 0)) {
+               try {
+                  const assignmentData = {
+                     teamLeadId: formData.teamLead || undefined,
+                     memberIds: formData.assignedMembers || [],
+                     assignedMembers: createData.assignedMembers,
+                     assignedTeamId: formData.assignedTeam || undefined
+                  };
+                  await assignProject(newProjectId, assignmentData);
+               } catch (assignError) {
+                  console.warn('Post-creation assignment failed (non-critical):', assignError);
+               }
+            }
+
             toast.success('Order created successfully!');
             closeModal();
          }
@@ -438,7 +455,6 @@ const Orders = () => {
                deadline: formData.deadline,
                priority: formData.priority,
                source: 'manual',
-               // Добавляем эти поля и сюда, на случай если /assign эндпоинт не работает
                teamLead: formData.teamLead || null,
                assignedTeam: formData.assignedTeam || null,
                assignedMembers: formData.assignedMembers?.map(userId => {
@@ -454,17 +470,13 @@ const Orders = () => {
                }
             };
 
-            // Пытаемся сохранить назначение через специальный эндпоинт, 
-            // но не блокируем основной процесс если он выдает 500.
-            // ВАЖНО: Бэкенд ждет teamLeadId и memberIds (простой массив ID)
+            // Пытаемся сохранить назначение через специальный эндпоинт
             if (formData.teamLead || formData.assignedTeam || formData.assignedMembers.length > 0) {
                try {
                   const assignmentData = {
                      teamLeadId: formData.teamLead || undefined,
-                     assignedMembers: formData.assignedMembers?.map(userId => {
-                        const member = availableMembers.find(m => String(m.id) === String(userId));
-                        return { user: userId, role: member?.role || 'member' };
-                     }) || [],
+                     memberIds: formData.assignedMembers || [],
+                     assignedMembers: updateData.assignedMembers,
                      assignedTeamId: formData.assignedTeam || undefined
                   };
                   await assignProject(selectedOrder._id, assignmentData);
@@ -639,9 +651,10 @@ const Orders = () => {
       e.stopPropagation();
       setIsSubmitting(true);
       try {
-         // Подготавливаем данные для специального эндпоинта (бэкенд ждет teamLeadId, memberIds и assignedTeamId)
+         // Сначала назначение
          const assignmentData = {
             teamLeadId: formData.teamLead || undefined,
+            memberIds: formData.assignedMembers || [],
             assignedMembers: formData.assignedMembers?.map(userId => {
                const member = availableMembers.find(m => String(m.id) === String(userId));
                return { user: userId, role: member?.role || 'member' };
@@ -649,7 +662,6 @@ const Orders = () => {
             assignedTeamId: formData.assignedTeam || undefined
          };
 
-         // Сначала пытаемся через специальный эндпоинт
          if (formData.teamLead || formData.assignedMembers.length > 0) {
             try {
                await assignProject(orderId, assignmentData);
@@ -658,15 +670,12 @@ const Orders = () => {
             }
          }
 
-         // Затем обновляем статус и ТАКЖЕ передаем данные о назначении в формате схемы (для надежности)
+         // Затем статус и остальные поля
          await updateProject(orderId, {
             status: 'in_progress',
-            teamLead: formData.teamLead || undefined,
-            assignedTeam: formData.assignedTeam || undefined,
-            assignedMembers: formData.assignedMembers?.map(userId => {
-               const member = availableMembers.find(m => String(m.id) === String(userId));
-               return { user: userId, role: member?.role || 'member' };
-            }) || []
+            teamLead: formData.teamLead || null,
+            assignedTeam: formData.assignedTeam || null,
+            assignedMembers: assignmentData.assignedMembers
          });
 
          toast.success('Order accepted and assigned successfully!');
@@ -1478,48 +1487,44 @@ const Orders = () => {
                                     <div>
                                        <span className="text-xs text-gray-500 block">Budget/Amount</span>
                                        <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                       <div className="mt-4">
+                                          <span className="text-xs text-gray-500 block">Date Created</span>
+                                          <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
+                                       </div>
+                                       <div className="mt-4">
+                                          <span className="text-xs text-gray-500 block">Source</span>
+                                          <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
+                                       </div>
                                     </div>
                                     <div>
-                                       <span className="text-xs text-gray-500 block mb-1">Time Remaining</span>
-                                       {(() => {
-                                          const now = new Date();
-                                          const deadline = new Date(selectedOrder.deadline);
-                                          const diff = deadline - now;
-                                          if (diff < 0) return <span className="text-red-500 text-xs font-bold uppercase">Overdue</span>;
+                                       <div>
+                                          <span className="text-xs text-gray-500 block mb-1">Time Remaining</span>
+                                          {(() => {
+                                             const now = new Date();
+                                             const deadline = new Date(selectedOrder.deadline);
+                                             const diff = deadline - now;
+                                             if (diff < 0) return <span className="text-red-500 text-xs font-bold uppercase">Overdue</span>;
 
-                                          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                                          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                             const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                             const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
-                                          if (days > 0) return <p className="text-green-500 text-sm font-bold">{days}d {hours}h left</p>;
-                                          return <p className="text-yellow-500 text-sm font-bold">{hours}h left</p>;
-                                       })()}
-                                    </div>
-                                 </div>
-
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Date Created</span>
-                                       <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Deadline</span>
-                                       <p className="text-white text-sm font-medium">{new Date(selectedOrder.deadline).toLocaleDateString()}</p>
-                                    </div>
-                                 </div>
-
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Source</span>
-                                       <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
-                                    </div>
-                                    <div>
-                                       <span className="text-xs text-gray-500 block">Priority</span>
-                                       <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
-                                         ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
-                                             selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
-                                                'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
-                                          {selectedOrder.priority || 'Medium'}
-                                       </span>
+                                             if (days > 0) return <p className="text-green-500 text-sm font-bold">{days}d {hours}h left</p>;
+                                             return <p className="text-yellow-500 text-sm font-bold">{hours}h left</p>;
+                                          })()}
+                                       </div>
+                                       <div className="mt-4">
+                                          <span className="text-xs text-gray-500 block">Deadline</span>
+                                          <p className="text-white text-sm font-medium">{new Date(selectedOrder.deadline).toLocaleDateString()}</p>
+                                       </div>
+                                       <div className="mt-4">
+                                          <span className="text-xs text-gray-500 block">Priority</span>
+                                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold
+                                             ${selectedOrder.priority === 'high' ? 'bg-red-500 bg-opacity-20 text-red-500' :
+                                                selectedOrder.priority === 'low' ? 'bg-green-500 bg-opacity-20 text-green-500' :
+                                                   'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                             {selectedOrder.priority || 'Medium'}
+                                          </span>
+                                       </div>
                                     </div>
                                  </div>
                               </div>
