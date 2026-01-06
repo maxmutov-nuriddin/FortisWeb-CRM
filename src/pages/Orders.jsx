@@ -50,7 +50,7 @@ const Orders = () => {
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
    const { companies, getCompanies, isLoading: companiesLoading } = useCompanyStore();
-   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, isLoading: projectsLoading } = useProjectStore();
+   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, assignProject, isLoading: projectsLoading } = useProjectStore();
    const { users, getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
@@ -395,8 +395,13 @@ const Orders = () => {
                source: 'manual',
                teamLead: formData.teamLead || undefined,
                assignedTeam: formData.assignedTeam || undefined,
-               assignedMembers: formData.assignedMembers?.map(userId => ({ user: userId })) || [],
-               ...(isSuperAdmin && formData.selectedCompanyId && { companyId: formData.selectedCompanyId })
+               assignedMembers: formData.assignedMembers?.map(userId => {
+                  const member = availableMembers.find(m => String(m.id) === String(userId));
+                  return { user: userId, role: member?.role || 'member' };
+               }) || [],
+               // backend expects 'company', but frontend sends 'companyId'?
+               // matching the schema: company: { ref: 'Company', required: true }
+               company: formData.selectedCompanyId || activeCompanyId || undefined
             };
 
             await createProject(createData);
@@ -424,9 +429,13 @@ const Orders = () => {
                deadline: formData.deadline,
                priority: formData.priority,
                source: 'manual',
-               teamLead: formData.teamLead || undefined,
-               assignedTeam: formData.assignedTeam || undefined,
-               assignedMembers: formData.assignedMembers?.map(userId => ({ user: userId })) || [],
+               // Добавляем эти поля и сюда, на случай если /assign эндпоинт не работает
+               teamLead: formData.teamLead || null,
+               assignedTeam: formData.assignedTeam || null,
+               assignedMembers: formData.assignedMembers?.map(userId => {
+                  const member = availableMembers.find(m => String(m.id) === String(userId));
+                  return { user: userId, role: member?.role || 'member' };
+               }) || [],
                client: {
                   name: formData.clientName || '',
                   username: formData.clientUsername || '',
@@ -436,14 +445,23 @@ const Orders = () => {
                }
             };
 
+            // Пытаемся сохранить назначение через специальный эндпоинт, 
+            // но не блокируем основной процесс если он выдает 500.
+            // ВАЖНО: Бэкенд ждет teamLeadId и memberIds (простой массив ID)
+            if (formData.teamLead || formData.assignedTeam || formData.assignedMembers.length > 0) {
+               try {
+                  const assignmentData = {
+                     teamLeadId: formData.teamLead || undefined,
+                     memberIds: formData.assignedMembers || []
+                  };
+                  await assignProject(selectedOrder._id, assignmentData);
+               } catch (assignError) {
+                  console.warn('Assignment specialized endpoint failed, falling back to general update:', assignError);
+               }
+            }
+
             await updateProject(selectedOrder._id, updateData);
-            toast.success('Order updated successfully!', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            toast.success('Order updated successfully!');
             closeModal();
          }
       } catch (error) {
@@ -513,7 +531,7 @@ const Orders = () => {
             setFormData(prev => ({
                ...prev,
                assignedTeam: value,
-               teamLead: team.lead?._id || team.lead || prev.teamLead,
+               teamLead: team.teamLead?._id || team.teamLead || prev.teamLead,
                assignedMembers: team.members?.map(m => m.user?._id || m.user || m._id || m) || []
             }));
          } else {
@@ -608,24 +626,37 @@ const Orders = () => {
       e.stopPropagation();
       setIsSubmitting(true);
       try {
-         await updateProject(orderId, { status: 'in_progress' });
-         toast.success('Order accepted successfully!', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
+         // Подготавливаем данные для специального эндпоинта (бэкенд ждет teamLeadId и memberIds)
+         const assignmentData = {
+            teamLeadId: formData.teamLead || undefined,
+            memberIds: formData.assignedMembers || []
+         };
+
+         // Сначала пытаемся через специальный эндпоинт
+         if (formData.teamLead || formData.assignedMembers.length > 0) {
+            try {
+               await assignProject(orderId, assignmentData);
+            } catch (assignErr) {
+               console.warn('Assignment specialized endpoint failed during accept:', assignErr);
+            }
+         }
+
+         // Затем обновляем статус и ТАКЖЕ передаем данные о назначении в формате схемы (для надежности)
+         await updateProject(orderId, {
+            status: 'in_progress',
+            teamLead: formData.teamLead || undefined,
+            assignedTeam: formData.assignedTeam || undefined,
+            assignedMembers: formData.assignedMembers?.map(userId => {
+               const member = availableMembers.find(m => String(m.id) === String(userId));
+               return { user: userId, role: member?.role || 'member' };
+            }) || []
          });
+
+         toast.success('Order accepted and assigned successfully!');
          closeModal();
       } catch (error) {
          console.error('Error accepting order:', error);
-         toast.error('Failed to accept order: ' + (error.response?.data?.message || error.message), {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error('Failed to accept: ' + (error.response?.data?.message || error.message));
       } finally {
          setIsSubmitting(false);
       }
@@ -685,12 +716,10 @@ const Orders = () => {
       resetForm();
    };
 
-   if (projectsLoading && usersLoading && companiesLoading && projectsList.length === 0) {
+   if (usersLoading && companiesLoading) {
       return <PageLoader />;
    }
 
-   console.log(filteredOrders);
-   
 
    return (
       <div className="p-8 space-y-8">
