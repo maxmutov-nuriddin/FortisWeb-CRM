@@ -44,7 +44,7 @@ const Header = ({ toggleSidebar }) => {
 
    return (
       <>
-         <header header id="header" className="bg-dark-secondary border-b border-gray-800 px-4 md:px-8 py-4 shrink-0 transition-all duration-300">
+         <header id="header" className="bg-dark-secondary border-b border-gray-800 px-4 md:px-8 py-4 shrink-0 transition-all duration-300">
             <div className="flex items-center justify-between gap-4">
 
                {/* Left Side: Hamburger & Search */}
