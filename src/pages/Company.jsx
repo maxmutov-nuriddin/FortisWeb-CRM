@@ -3,6 +3,7 @@ import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
 import PageLoader from '../components/loader/PageLoader';
 import { useAuthStore } from '../store/auth.store';
+import { useUserStore } from '../store/user.store';
 
 const Company = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -23,8 +24,13 @@ const Company = () => {
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
-console.log(companies);
+   const { users, getUsersByCompany } = useUserStore();
 
+   useEffect(() => {
+      if (isModalOpen && selectedCompany?._id) {
+         getUsersByCompany(selectedCompany._id);
+      }
+   }, [isModalOpen, selectedCompany]);
 
    useEffect(() => {
       const userData = user?.data?.user || user;
@@ -237,6 +243,9 @@ console.log(companies);
    if (isLoading) return (
       <PageLoader />
    );
+
+
+
 
 
    return (
@@ -544,29 +553,38 @@ console.log(companies);
                         <div>
                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Teams & Employees</h3>
                            <div className="bg-dark-tertiary rounded-lg p-4 space-y-4 max-h-[300px] overflow-y-auto">
-                              {selectedCompany.teams && selectedCompany.teams.length > 0 ? (
-                                 selectedCompany.teams.map((team, tIdx) => (
-                                    <div key={tIdx} className="border-b border-gray-700 pb-3 last:border-0 last:pb-0">
-                                       <div className="flex justify-between items-center mb-2">
-                                          <h4 className="text-indigo-400 font-medium text-sm">{team.name}</h4>
-                                          <span className="text-[10px] bg-indigo-500 bg-opacity-20 text-indigo-400 px-2 py-0.5 rounded">Team</span>
+                              {selectedCompany && selectedCompany.teams && selectedCompany.teams.length > 0 ? (
+                                 selectedCompany.teams.map((team, tIdx) => {
+                                    return (
+                                       <div key={tIdx} className="border-b border-gray-700 pb-3 last:border-0 last:pb-0">
+                                          <div className="flex justify-between items-center mb-2">
+                                             <h4 className="text-indigo-400 font-medium text-sm">{team.name}</h4>
+                                             <span className="text-[10px] bg-indigo-500 bg-opacity-20 text-indigo-400 px-2 py-0.5 rounded">Team</span>
+                                          </div>
+                                          <div className="space-y-1">
+                                             {team.members && team.members.length > 0 ? (
+                                                team.members.map((memberId, mIdx) => {
+                                                   // memberId это просто строка с ID
+                                                   const userData = users?.data?.users?.find(u => u._id === memberId);
+                                                   return (
+                                                      <div key={mIdx} className="flex items-center space-x-2 text-xs text-gray-400">
+                                                         <div className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[10px]">
+                                                            {userData?.name?.charAt(0) || userData?.username?.charAt(0) || 'U'}
+                                                         </div>
+                                                         <span>{userData?.name || userData?.username || `User ${memberId}`}</span>
+                                                         <span className="text-[10px] text-gray-600 uppercase italic">
+                                                            {userData?.role}
+                                                         </span>
+                                                      </div>
+                                                   );
+                                                })
+                                             ) : (
+                                                <p className="text-[10px] text-gray-600 italic">No members in this team</p>
+                                             )}
+                                          </div>
                                        </div>
-                                       <div className="space-y-1">
-                                          {team.members?.map((member, mIdx) => (
-                                             <div key={mIdx} className="flex items-center space-x-2 text-xs text-gray-400">
-                                                <div className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[10px]">
-                                                   {member.user?.name?.charAt(0) || 'U'}
-                                                </div>
-                                                <span>{member.user?.name || member.user?.username || 'Unknown Member'}</span>
-                                                <span className="text-[10px] text-gray-600 uppercase italic">({member.role})</span>
-                                             </div>
-                                          ))}
-                                          {(!team.members || team.members.length === 0) && (
-                                             <p className="text-[10px] text-gray-600 italic">No members in this team</p>
-                                          )}
-                                       </div>
-                                    </div>
-                                 ))
+                                    );
+                                 })
                               ) : (
                                  <div className="text-center py-4">
                                     <i className="fa-solid fa-users-slash text-gray-600 text-3xl mb-2 opacity-50"></i>
