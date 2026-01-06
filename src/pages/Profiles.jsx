@@ -497,11 +497,21 @@ const Profiles = () => {
                         <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Team Lead</p>
                         <div className="flex items-center space-x-3 bg-dark-tertiary p-3 rounded-lg">
                            <div className="w-10 h-10 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-purple-500 font-bold">
-                              {users?.data?.users?.find(u => u._id === (team.teamLead?._id || team.teamLead))?.name?.charAt(0) || '?'}
+                              {(() => {
+                                 const leadId = String(team.teamLead?._id || team.teamLead || '');
+                                 const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
+                                 const leadFound = (company?.employees || []).find(e => String(e._id) === leadId);
+                                 return (leadFound?.name || team.teamLead?.name || '?').charAt(0).toUpperCase();
+                              })()}
                            </div>
                            <div>
                               <p className="text-sm font-medium text-white">
-                                 {users?.data?.users?.find(u => u._id === (team.teamLead?._id || team.teamLead))?.name || 'Unassigned Lead'}
+                                 {(() => {
+                                    const leadId = String(team.teamLead?._id || team.teamLead || '');
+                                    const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
+                                    const leadFound = (company?.employees || []).find(e => String(e._id) === leadId);
+                                    return leadFound?.name || team.teamLead?.name || 'Unassigned Lead';
+                                 })()}
                               </p>
                               <p className="text-xs text-gray-500">Responsible for deliverables</p>
                            </div>
@@ -511,13 +521,17 @@ const Profiles = () => {
                         <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Members ({team.members?.length || 0})</p>
                         <div className="grid grid-cols-2 gap-2">
                            {team.members?.map((m, idx) => {
-                              const memberUser = users?.data?.users?.find(u => u._id === (m.user?._id || m.user));
+                              const uId = String(m?._id || m.user?._id || m.user || m);
+                              const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
+                              const empFound = (company?.employees || []).find(e => String(e._id) === uId);
+                              const name = empFound?.name || m.name || m.user?.name || 'Unknown Member';
+
                               return (
                                  <div key={idx} className="flex items-center space-x-2 bg-dark-tertiary p-2 rounded-lg">
                                     <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">
-                                       {memberUser?.name?.charAt(0) || '?'}
+                                       {name.charAt(0).toUpperCase() || '?'}
                                     </div>
-                                    <span className="text-xs text-gray-300 truncate">{memberUser?.name || 'Unknown'}</span>
+                                    <span className="text-xs text-gray-300 truncate">{name}</span>
                                  </div>
                               );
                            })}
