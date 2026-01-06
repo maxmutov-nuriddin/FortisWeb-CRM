@@ -56,11 +56,22 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await companiesApi.update(id, data);
-         set((state) => ({
-            companies: state.companies.map((c) => (c.id === id ? response.data : c)),
-            selectedCompany: state.selectedCompany?.id === id ? response.data : state.selectedCompany,
-            isLoading: false,
-         }));
+         const updatedCompany = response.data.data;
+
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: currentCompanies.map((c) => (c._id === id ? updatedCompany : c))
+                  }
+               },
+               selectedCompany: state.selectedCompany?._id === id ? updatedCompany : state.selectedCompany,
+               isLoading: false,
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update company', isLoading: false });
       }
@@ -70,10 +81,19 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          await companiesApi.updateStatus(id, status);
-         set((state) => ({
-            companies: state.companies.map((c) => (c.id === id ? { ...c, status } : c)),
-            isLoading: false,
-         }));
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: currentCompanies.map((c) => (c._id === id ? { ...c, isActive: status } : c))
+                  }
+               },
+               isLoading: false,
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update status', isLoading: false });
       }

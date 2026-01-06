@@ -14,10 +14,13 @@ const Company = () => {
       name: '',
       email: '',
       password: '',
-      address: ''
+      address: '',
+      isActive: true
    });
+   const [isEditMode, setIsEditMode] = useState(false);
+   const [editingCompanyId, setEditingCompanyId] = useState(null);
 
-   const { companies, getCompanies, createCompany, deleteCompany, isLoading } = useCompanyStore();
+   const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, isLoading } = useCompanyStore();
 
    useEffect(() => {
       getCompanies();
@@ -121,9 +124,8 @@ const Company = () => {
 
 
    const totalEmployees = useMemo(() => {
-      if (!Array.isArray(companies)) return 0;
-      return companies.reduce((sum, company) => sum + (company.employees?.length || 0), 0);
-   }, [companies]);
+      return companiesList.reduce((sum, company) => sum + (company.employees?.length || 0), 0);
+   }, [companiesList]);
 
 
 
@@ -140,14 +142,41 @@ const Company = () => {
       setSelectedCompany(null);
    };
 
+   const handleEditCompany = (e, company) => {
+      e.stopPropagation();
+      setFormData({
+         name: company.name || '',
+         email: company.email || '',
+         password: '', // Usually don't pre-fill password for edit
+         address: company.address || '',
+         isActive: company.isActive ?? true
+      });
+      setEditingCompanyId(company._id);
+      setIsEditMode(true);
+      setIsCreateModalOpen(true);
+   };
+
+   const handleStatusToggle = async (e, companyId, currentStatus) => {
+      e.stopPropagation();
+      try {
+         await updateCompanyStatus(companyId, !currentStatus);
+      } catch (error) {
+         console.error('Error toggling status:', error);
+      }
+   };
+
    const openCreateModal = () => {
-      setFormData({ name: '', email: '', password: '', address: '' });
+      setFormData({ name: '', email: '', password: '', address: '', isActive: true });
+      setIsEditMode(false);
+      setEditingCompanyId(null);
       setIsCreateModalOpen(true);
    };
 
    const closeCreateModal = () => {
       setIsCreateModalOpen(false);
-      setFormData({ name: '', email: '', password: '', address: '' });
+      setIsEditMode(false);
+      setEditingCompanyId(null);
+      setFormData({ name: '', email: '', password: '', address: '', isActive: true });
    };
 
    const handleInputChange = (e) => {
@@ -157,14 +186,24 @@ const Company = () => {
       });
    };
 
-   const handleCreateCompany = async (e) => {
+   const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-         await createCompany(formData);
+         if (isEditMode && editingCompanyId) {
+            // For update, we might not want to send password if it's empty
+            const updateData = { ...formData };
+            if (!updateData.password) delete updateData.password;
+            await updateCompany(editingCompanyId, updateData);
+            alert('Company updated successfully!');
+         } else {
+            await createCompany(formData);
+            alert('Company created successfully!');
+         }
          closeCreateModal();
          await getCompanies();
       } catch (error) {
-         console.error('Error creating company:', error);
+         console.error('Error submitting company:', error);
+         alert('Failed to save company: ' + (error.response?.data?.message || error.message));
       }
    };
 
@@ -331,32 +370,35 @@ const Company = () => {
                                  </div>
                               </td>
                               <td className="px-6 py-4">
-                                 {(() => {
-                                    let statusColor = 'text-gray-500 bg-gray-500';
-                                    let statusText = 'Unknown';
-
-                                    if (company.isActive === true || company.isActive === 'true') {
-                                       statusColor = 'text-green-500 bg-green-500';
-                                       statusText = 'Active';
-                                    } else if (company.isActive === false || company.isActive === 'false') {
-                                       statusColor = 'text-red-500 bg-red-500';
-                                       statusText = 'Inactive';
-                                    }
-
-                                    return (
-                                       <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium ${statusColor}`}>
-                                          {statusText}
-                                       </span>
-                                    );
-                                 })()}
+                                 <div className="flex items-center">
+                                    <button
+                                       onClick={(e) => handleStatusToggle(e, company._id, company.isActive)}
+                                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${company.isActive ? 'bg-green-500' : 'bg-gray-700'
+                                          }`}
+                                    >
+                                       <span
+                                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${company.isActive ? 'translate-x-6' : 'translate-x-1'
+                                             }`}
+                                       />
+                                    </button>
+                                    <span className={`ml-3 text-xs font-medium ${company.isActive ? 'text-green-500' : 'text-red-500'}`}>
+                                       {company.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                 </div>
                               </td>
                               <td className="px-6 py-4">
                                  <div className="flex items-center space-x-2">
                                     <button
                                        onClick={(e) => handleViewDetails(e, company)}
-                                       className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       View Details
+                                       View
+                                    </button>
+                                    <button
+                                       onClick={(e) => handleEditCompany(e, company)}
+                                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                    >
+                                       Edit
                                     </button>
                                     <button
                                        onClick={() => handleDeleteCompany(company._id)}
@@ -451,33 +493,80 @@ const Company = () => {
                         </div>
                      </div>
 
-                     <div>
-                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
-                        <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
-                           <div>
-                              <span className="text-xs text-gray-500 block">Company Name</span>
-                              <p className="text-white font-medium">{selectedCompany.name || 'No Name'}</p>
-                           </div>
-                           <div>
-                              <span className="text-xs text-gray-500 block">Email</span>
-                              <p className="text-gray-300 text-sm">{selectedCompany.email || 'No Email'}</p>
-                           </div>
-                           <div>
-                              <span className="text-xs text-gray-500 block">Address</span>
-                              <p className="text-gray-300 text-sm">{selectedCompany.address || 'No Address'}</p>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                           <div className="bg-dark-tertiary rounded-lg p-4 space-y-3 h-full">
                               <div>
-                                 <span className="text-xs text-gray-500 block">Created Date</span>
-                                 <p className="text-white text-sm">
-                                    {selectedCompany.createdAt ? new Date(selectedCompany.createdAt).toLocaleDateString() : 'N/A'}
-                                 </p>
+                                 <span className="text-xs text-gray-500 block">Company Name</span>
+                                 <p className="text-white font-medium">{selectedCompany.name || 'No Name'}</p>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block">Last Updated</span>
-                                 <p className="text-white text-sm">
-                                    {selectedCompany.updatedAt ? new Date(selectedCompany.updatedAt).toLocaleDateString() : 'N/A'}
-                                 </p>
+                                 <span className="text-xs text-gray-500 block">Email</span>
+                                 <p className="text-gray-300 text-sm">{selectedCompany.email || 'No Email'}</p>
+                              </div>
+                              <div>
+                                 <span className="text-xs text-gray-500 block">Address</span>
+                                 <p className="text-gray-300 text-sm">{selectedCompany.address || 'No Address'}</p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Created Date</span>
+                                    <p className="text-white text-sm">
+                                       {selectedCompany.createdAt ? new Date(selectedCompany.createdAt).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                 </div>
+                                 <div>
+                                    <span className="text-xs text-gray-500 block">Total Teams</span>
+                                    <p className="text-white text-sm font-bold">{selectedCompany.teams?.length || 0}</p>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div>
+                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Teams & Employees</h3>
+                           <div className="bg-dark-tertiary rounded-lg p-4 space-y-4 max-h-[300px] overflow-y-auto">
+                              {selectedCompany.teams && selectedCompany.teams.length > 0 ? (
+                                 selectedCompany.teams.map((team, tIdx) => (
+                                    <div key={tIdx} className="border-b border-gray-700 pb-3 last:border-0 last:pb-0">
+                                       <div className="flex justify-between items-center mb-2">
+                                          <h4 className="text-indigo-400 font-medium text-sm">{team.name}</h4>
+                                          <span className="text-[10px] bg-indigo-500 bg-opacity-20 text-indigo-400 px-2 py-0.5 rounded">Team</span>
+                                       </div>
+                                       <div className="space-y-1">
+                                          {team.members?.map((member, mIdx) => (
+                                             <div key={mIdx} className="flex items-center space-x-2 text-xs text-gray-400">
+                                                <div className="w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-[10px]">
+                                                   {member.user?.name?.charAt(0) || 'U'}
+                                                </div>
+                                                <span>{member.user?.name || member.user?.username || 'Unknown Member'}</span>
+                                                <span className="text-[10px] text-gray-600 uppercase italic">({member.role})</span>
+                                             </div>
+                                          ))}
+                                          {(!team.members || team.members.length === 0) && (
+                                             <p className="text-[10px] text-gray-600 italic">No members in this team</p>
+                                          )}
+                                       </div>
+                                    </div>
+                                 ))
+                              ) : (
+                                 <div className="text-center py-4">
+                                    <i className="fa-solid fa-users-slash text-gray-600 text-3xl mb-2 opacity-50"></i>
+                                    <p className="text-xs text-gray-500">No teams or members registered</p>
+                                 </div>
+                              )}
+                           </div>
+                           <div className="mt-4 p-3 bg-indigo-500 bg-opacity-10 border border-indigo-500 border-opacity-20 rounded-lg">
+                              <div className="flex justify-between items-center">
+                                 <span className="text-xs text-indigo-400">Current Status</span>
+                                 <button
+                                    onClick={(e) => handleStatusToggle(e, selectedCompany._id, selectedCompany.isActive)}
+                                    className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition ${selectedCompany.isActive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                                       }`}
+                                 >
+                                    {selectedCompany.isActive ? 'Active' : 'Inactive'}
+                                 </button>
                               </div>
                            </div>
                         </div>
@@ -502,50 +591,87 @@ const Company = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
                <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl">
                   <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                     <h2 className="text-xl font-bold text-white">Create New Company</h2>
+                     <h2 className="text-xl font-bold text-white">{isEditMode ? 'Edit Company' : 'Create New Company'}</h2>
                      <button onClick={closeCreateModal} className="text-gray-400 hover:text-white transition">
                         <i className="fa-solid fa-times text-xl"></i>
                      </button>
                   </div>
 
-                  <form onSubmit={handleCreateCompany} className="p-6 space-y-4">
-                     <div>
-                        <label className="text-sm text-gray-400 block mb-2">Company Name *</label>
-                        <input
-                           type="text"
-                           name="name"
-                           value={formData.name}
-                           onChange={handleInputChange}
-                           required
-                           className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                           placeholder="Enter company name"
-                        />
+                  <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                           <label className="text-sm text-gray-400 block mb-2">Company Name *</label>
+                           <input
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                              required
+                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                              placeholder="Enter company name"
+                           />
+                        </div>
+
+                        <div>
+                           <label className="text-sm text-gray-400 block mb-2">Email *</label>
+                           <input
+                              type="email"
+                              name="email"
+                              value={formData.email}
+                              onChange={handleInputChange}
+                              required
+                              disabled={isEditMode}
+                              className={`w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent ${isEditMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              placeholder="Enter email address"
+                           />
+                        </div>
                      </div>
 
-                     <div>
-                        <label className="text-sm text-gray-400 block mb-2">Email *</label>
-                        <input
-                           type="email"
-                           name="email"
-                           value={formData.email}
-                           onChange={handleInputChange}
-                           required
-                           className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                           placeholder="Enter email address"
-                        />
-                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                           <label className="text-sm text-gray-400 block mb-2">
+                              {isEditMode ? 'New Password (leave blank to keep current)' : 'Password *'}
+                           </label>
+                           <input
+                              type="password"
+                              name="password"
+                              value={formData.password}
+                              onChange={handleInputChange}
+                              required={!isEditMode}
+                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                              placeholder={isEditMode ? 'Enter new password' : 'Enter password'}
+                           />
+                        </div>
 
-                     <div>
-                        <label className="text-sm text-gray-400 block mb-2">Password *</label>
-                        <input
-                           type="password"
-                           name="password"
-                           value={formData.password}
-                           onChange={handleInputChange}
-                           required
-                           className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
-                           placeholder="Enter password"
-                        />
+                        <div>
+                           <label className="text-sm text-gray-400 block mb-2">Status</label>
+                           <div className="flex items-center space-x-4 mt-2">
+                              <label className="flex items-center cursor-pointer">
+                                 <input
+                                    type="radio"
+                                    name="isActive"
+                                    checked={formData.isActive === true}
+                                    onChange={() => setFormData({ ...formData, isActive: true })}
+                                    className="hidden"
+                                 />
+                                 <div className={`px-4 py-2 rounded-lg text-xs font-medium transition ${formData.isActive === true ? 'bg-green-500 text-white' : 'bg-dark-tertiary text-gray-400'}`}>
+                                    Active
+                                 </div>
+                              </label>
+                              <label className="flex items-center cursor-pointer">
+                                 <input
+                                    type="radio"
+                                    name="isActive"
+                                    checked={formData.isActive === false}
+                                    onChange={() => setFormData({ ...formData, isActive: false })}
+                                    className="hidden"
+                                 />
+                                 <div className={`px-4 py-2 rounded-lg text-xs font-medium transition ${formData.isActive === false ? 'bg-red-500 text-white' : 'bg-dark-tertiary text-gray-400'}`}>
+                                    Inactive
+                                 </div>
+                              </label>
+                           </div>
+                        </div>
                      </div>
 
                      <div>
@@ -573,8 +699,8 @@ const Company = () => {
                            type="submit"
                            className="bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
                         >
-                           <i className="fa-solid fa-plus"></i>
-                           <span>Create Company</span>
+                           <i className={`fa-solid ${isEditMode ? 'fa-save' : 'fa-plus'}`}></i>
+                           <span>{isEditMode ? 'Save Changes' : 'Create Company'}</span>
                         </button>
                      </div>
                   </form>
