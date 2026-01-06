@@ -27,17 +27,19 @@ const Company = () => {
 
    const statusData = [{
       type: 'pie',
-      labels: ['Active', 'Inactive', 'Pending'],
-      values: [companiesList.filter(c => c.status === 'active').length,
-      companiesList.filter(c => c.status === 'inactive').length,
-      companiesList.filter(c => c.status === 'pending').length],
+      labels: ['Active', 'Inactive'],  // better to use strings instead of booleans
+      values: [
+         companiesList.filter(c => c.isActive === true).length,
+         companiesList.filter(c => c.isActive === false).length
+      ],
       marker: {
-         colors: ['#10B981', '#EF4444', '#EAB308']
+         colors: ['#10B981', '#EF4444'] // green for active, red for inactive
       },
       textinfo: 'label+percent',
       textfont: { color: '#FFFFFF', size: 11 },
       hovertemplate: '%{label}: %{value} companies<extra></extra>'
    }];
+
 
    const statusLayout = {
       autosize: true,
@@ -47,16 +49,33 @@ const Company = () => {
       showlegend: false
    };
 
+   // 1. Создаем массив месяцев с начала года до текущего месяца
+   const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+   const currentMonthIndex = new Date().getMonth(); // 0 = Jan, 1 = Feb...
+   const months = monthOrder.slice(0, currentMonthIndex + 1);
+
+   // 2. Считаем количество компаний по месяцам
+   const yValues = months.map(month =>
+      companiesList.filter(c => {
+         if (!c.createdAt) return false;
+         const monthStr = new Date(c.createdAt).toLocaleString('en-US', { month: 'short' });
+         return monthStr === month;
+      }).length
+   );
+
+   // 3. Создаем график Plotly
    const trendData = [{
       type: 'scatter',
-      mode: 'lines',
+      mode: 'lines+markers',  // добавил точки, чтобы было видно, где значения
       name: 'Companies',
-      x: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
-      y: [5, 8, 12, 15, 18, companiesList.length],
+      x: months,
+      y: yValues,
       line: { color: '#FF0000', width: 3 },
       fill: 'tozeroy',
       fillcolor: 'rgba(255, 0, 0, 0.1)'
    }];
+
+
 
    const trendLayout = {
       autosize: true,
