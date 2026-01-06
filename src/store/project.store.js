@@ -34,12 +34,23 @@ export const useProjectStore = create((set) => ({
       }
    },
 
-   getAllProjects: async () => {
+   getAllProjects: async (companyIds) => {
+      if (!companyIds || companyIds.length === 0) {
+         set({ projects: [], isLoading: false });
+         return;
+      }
       set({ isLoading: true, error: null });
       try {
-         const response = await projectsApi.getAll();
-         const projectsArray = response.data.data?.projects || response.data.projects || (Array.isArray(response.data) ? response.data : []);
-         set({ projects: projectsArray, isLoading: false });
+         const promises = companyIds.map(id => projectsApi.getByCompany(id));
+         const results = await Promise.all(promises);
+         let allProjects = [];
+         results.forEach(res => {
+            const projectsArray = res.data.data?.projects || res.data.projects || (Array.isArray(res.data) ? res.data : []);
+            allProjects = [...allProjects, ...projectsArray];
+         });
+         // Sort by creation date descending
+         allProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+         set({ projects: allProjects, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch all projects', isLoading: false });
       }

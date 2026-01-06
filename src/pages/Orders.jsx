@@ -62,6 +62,12 @@ const Orders = () => {
    const allCompanies = companies?.data?.companies || companies?.companies || [];
 
    useEffect(() => {
+      if (isSuperAdmin && !viewCompanyId) {
+         setViewCompanyId('all');
+      }
+   }, [isSuperAdmin, viewCompanyId]);
+
+   useEffect(() => {
       if (isSuperAdmin) {
          getCompanies();
       }
@@ -69,13 +75,16 @@ const Orders = () => {
 
    useEffect(() => {
       if (isSuperAdmin && viewCompanyId === 'all') {
-         getAllProjects();
+         if (allCompanies.length > 0) {
+            const ids = allCompanies.map(c => c._id);
+            getAllProjects(ids);
+         }
       } else if (activeCompanyId && activeCompanyId !== 'all') {
          getProjectsByCompany(activeCompanyId);
          getPaymentsByCompany(activeCompanyId);
          getUsersByCompany(activeCompanyId);
       }
-   }, [activeCompanyId, viewCompanyId, isSuperAdmin, getProjectsByCompany, getAllProjects, getPaymentsByCompany, getUsersByCompany]);
+   }, [activeCompanyId, viewCompanyId, isSuperAdmin, getProjectsByCompany, getAllProjects, getPaymentsByCompany, getUsersByCompany, allCompanies]);
 
    const allTeams = useMemo(() => {
       if (!activeCompanyId || activeCompanyId === 'all') return [];
@@ -294,7 +303,7 @@ const Orders = () => {
 
             // Refresh list for the active company
             if (activeCompanyId === 'all') {
-               getAllProjects();
+               getAllProjects(allCompanies.map(c => c._id));
             } else if (activeCompanyId) {
                getProjectsByCompany(activeCompanyId);
             }
@@ -333,7 +342,7 @@ const Orders = () => {
             alert('Order updated successfully!');
 
             if (activeCompanyId === 'all') {
-               getAllProjects();
+               getAllProjects(allCompanies.map(c => c._id));
             } else if (activeCompanyId) {
                getProjectsByCompany(activeCompanyId);
             }
@@ -389,6 +398,9 @@ const Orders = () => {
       setIsEditMode(true);
       setIsCreateMode(false);
       setFormData({
+         title: order.title || '',
+         budget: order.budget || '',
+         description: order.description || '',
          status: order.status || 'pending',
          deadline: order.deadline ? new Date(order.deadline).toISOString().split('T')[0] : '',
          priority: order.priority || 'medium',
@@ -659,6 +671,9 @@ const Orders = () => {
                                     </div>
                                     <div>
                                        <div className="text-sm text-white font-medium">{order.client?.name || 'Unknown Client'}</div>
+                                       <div className="text-xs text-gray-400">
+                                          {allCompanies.find(c => c._id === (order.company?._id || order.company))?.name || 'Manual'}
+                                       </div>
                                        <div className="text-xs text-gray-500">{order.client?.username || 'No username'}</div>
                                     </div>
                                  </div>
@@ -1125,6 +1140,23 @@ const Orders = () => {
                                           selectedOrder.status === 'cancelled' ? 'text-red-500 bg-red-500' : 'text-blue-500 bg-blue-500'}`}>
                                     {selectedOrder.status.toUpperCase().replace('_', ' ')}
                                  </span>
+                              </div>
+                           </div>
+
+                           <div>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                              <div className="bg-dark-tertiary rounded-lg p-4">
+                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                       <i className="fa-solid fa-building text-indigo-500"></i>
+                                    </div>
+                                    <div>
+                                       <p className="text-white font-medium">
+                                          {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
+                                       </p>
+                                       <p className="text-xs text-gray-500 italic">Project source entity</p>
+                                    </div>
+                                 </div>
                               </div>
                            </div>
 
