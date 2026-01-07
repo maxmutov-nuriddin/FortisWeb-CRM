@@ -35,7 +35,6 @@ const Dashboard = () => {
    const [selectedProject, setSelectedProject] = useState(null)
    const [salaryTotals, setSalaryTotals] = useState({
       team: 0,
-      mainAdmin: 0,
       admin: 0,
       company: 0
    })
@@ -129,7 +128,6 @@ const Dashboard = () => {
       if (!filteredPayments) return
 
       let team = 0
-      let mainAdmin = 0
       let admin = 0
       let company = 0
 
@@ -137,20 +135,21 @@ const Dashboard = () => {
          if (!p.distribution) return
 
          team += Number(p.distribution.teamShare?.totalAmount || 0)
-         mainAdmin += Number(p.distribution.companyAdminShare?.amount || 0)
          admin += Number(p.distribution.adminShare?.amount || 0)
          company += Number(p.distribution.companyShare?.amount || 0)
       })
 
-      setSalaryTotals({ team, mainAdmin, admin, company })
+      setSalaryTotals({ team, admin, company })
    }, [filteredPayments])
+
+   console.log(filteredPayments);
+   
 
    const salaryData = [{
       type: 'pie',
-      labels: ['Team', 'Main Admin', 'Admin', 'Company'],
+      labels: ['Team', 'Admin', 'Company'],
       values: [
          salaryTotals.team,
-         salaryTotals.mainAdmin,
          salaryTotals.admin,
          salaryTotals.company
       ],
@@ -748,13 +747,6 @@ const Dashboard = () => {
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                           <span className="text-gray-400">Main Admin (10%)</span>
-                        </div>
-                        <span className="text-white font-medium">${salaryTotals.mainAdmin}</span>
-                     </div>
-                     <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                            <span className="text-gray-400">Admin (10%)</span>
                         </div>
@@ -763,7 +755,7 @@ const Dashboard = () => {
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                           <span className="text-gray-400">Company (10%)</span>
+                           <span className="text-gray-400">Company (20%)</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals.company}</span>
                      </div>

@@ -200,8 +200,8 @@ const Payments = () => {
 
    const distributionData = [{
       type: 'pie',
-      labels: ['Team Members (70%)', 'Main Admin (10%)', 'Admin (10%)', 'Company (10%)'],
-      values: [stats.totalRevenue * 0.7, stats.totalRevenue * 0.1, stats.totalRevenue * 0.1, stats.totalRevenue * 0.1],
+      labels: ['Team Members (70%)', 'Admin (10%)', 'Company (20%)'],
+      values: [stats.totalRevenue * 0.7, stats.totalRevenue * 0.1, stats.totalRevenue * 0.2],
       marker: {
          colors: ['#10B981', '#FF0000', '#3B82F6', '#F59E0B']
       },
