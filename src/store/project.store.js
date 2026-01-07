@@ -37,8 +37,10 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.getByCompany(companyId);
          set({ projects: response.data, isLoading: false });
+         return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch projects', isLoading: false });
+         return null;
       }
    },
 
@@ -65,8 +67,10 @@ export const useProjectStore = create((set) => ({
             },
             isLoading: false
          });
+         return { data: { projects: allProjects }, success: true };
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch all projects', isLoading: false });
+         return { data: { projects: [] }, success: false };
       }
    },
 

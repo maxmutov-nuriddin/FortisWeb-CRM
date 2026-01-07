@@ -47,14 +47,16 @@ export const useUserStore = create((set) => ({
             },
             isLoading: false
          });
+         return { data: { users: data }, success: true };
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch users', isLoading: false });
+         return null;
       }
    },
 
-   getAllUsers: async (companyIds) => {
+   getAllUsers: async (companyIds = []) => {
       const { blacklistedCompanies } = useUserStore.getState();
-      const validIds = companyIds.filter(id => !blacklistedCompanies.includes(id));
+      const validIds = Array.isArray(companyIds) ? companyIds.filter(id => !blacklistedCompanies.includes(id)) : [];
 
       if (validIds.length === 0) {
          if (companyIds.length > 0) {
@@ -94,8 +96,10 @@ export const useUserStore = create((set) => ({
             },
             isLoading: false
          }));
+         return { data: { users: allUsers }, success: true };
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch all users', isLoading: false });
+         return { data: { users: [] }, success: false };
       }
    },
 

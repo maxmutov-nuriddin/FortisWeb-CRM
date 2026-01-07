@@ -11,10 +11,50 @@ export const useTaskStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await tasksApi.create(data);
-         set((state) => ({ tasks: [...state.tasks, response.data], isLoading: false }));
-         return response.data;
+         const newTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks) ? [...state.tasks, newTask] : [newTask],
+            isLoading: false
+         }));
+         return newTask;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create task', isLoading: false });
+         throw error;
+      }
+   },
+
+   updateTask: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.update(id, data);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map(t => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
+            isLoading: false
+         }));
+         return updatedTask;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update task', isLoading: false });
+         throw error;
+      }
+   },
+
+   deleteTask: async (id) => {
+      set({ isLoading: true, error: null });
+      try {
+         await tasksApi.delete(id);
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.filter(t => t._id !== id && t.id !== id)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? null : state.selectedTask,
+            isLoading: false
+         }));
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete task', isLoading: false });
          throw error;
       }
    },
@@ -23,7 +63,8 @@ export const useTaskStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await tasksApi.getByProject(projectId);
-         set({ tasks: response.data, isLoading: false });
+         const tasks = response.data.data?.tasks || response.data.tasks || response.data;
+         set({ tasks, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch tasks', isLoading: false });
       }
@@ -33,9 +74,42 @@ export const useTaskStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await tasksApi.getByUser(userId);
-         set({ tasks: response.data, isLoading: false });
+         const tasks = response.data.data?.tasks || response.data.tasks || response.data;
+         set({ tasks, isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch user tasks', isLoading: false });
+      }
+   },
+
+   getTasksByCompany: async (companyId) => {
+      // If this endpoint is 404, we'll need to fetch projects first and then tasks.
+      // Handled in the UI for now, but keeping the action for compatibility if backend ever implements it.
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.getByCompany(companyId);
+         const tasks = response.data.data?.tasks || response.data.tasks || response.data;
+         set({ tasks, isLoading: false });
+      } catch (error) {
+         if (error.response?.status === 404) {
+            console.warn('getTasksByCompany 404, use getTasksByProjects instead');
+         }
+         set({ error: error.response?.data?.message || 'Failed to fetch company tasks', isLoading: false });
+      }
+   },
+
+   getAllTasks: async () => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.getAll();
+         const tasks = response.data.data?.tasks || response.data.tasks || response.data;
+         set({ tasks, isLoading: false });
+      } catch (error) {
+         if (error.response?.status === 404) {
+            console.warn('getAllTasks endpoint not found, returning empty list');
+            set({ tasks: [], isLoading: false });
+         } else {
+            set({ error: error.response?.data?.message || 'Failed to fetch all tasks', isLoading: false });
+         }
       }
    },
 
@@ -43,30 +117,79 @@ export const useTaskStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await tasksApi.updateStatus(id, status);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
          set((state) => ({
-            tasks: state.tasks.map((t) => (t.id === id ? response.data : t)),
-            // If selectedTask is the one updated
-            selectedTask: state.selectedTask?.id === id ? response.data : state.selectedTask,
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map((t) => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
             isLoading: false,
          }));
+         return updatedTask;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update task status', isLoading: false });
+         throw error;
       }
    },
 
-   addTaskComment: async (id, data) => {
+   updateTaskWeight: async (id, weight) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await tasksApi.addComment(id, data);
-         // Assuming response returns the comment or the updated task
-         // If it returns the updated task:
+         const response = await tasksApi.updateWeight(id, weight);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
          set((state) => ({
-            tasks: state.tasks.map(t => t.id === id ? response.data : t),
-            selectedTask: state.selectedTask?.id === id ? response.data : state.selectedTask,
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map((t) => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
+            isLoading: false,
+         }));
+         return updatedTask;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update task weight', isLoading: false });
+         throw error;
+      }
+   },
+
+   addTaskComment: async (id, text) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.addComment(id, text);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map(t => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
             isLoading: false
          }));
+         return updatedTask;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add comment', isLoading: false });
+         throw error;
+      }
+   },
+
+   getTasksByProjects: async (projectIds) => {
+      if (!projectIds || projectIds.length === 0) {
+         set({ tasks: [], isLoading: false });
+         return;
+      }
+      set({ isLoading: true, error: null });
+      try {
+         const promises = projectIds.map(id => tasksApi.getByProject(id).catch(err => {
+            console.error(`Error fetching tasks for project ${id}:`, err);
+            return { data: { tasks: [] } };
+         }));
+         const results = await Promise.all(promises);
+         let allTasks = [];
+         results.forEach(res => {
+            const data = res.data?.data?.tasks || res.data?.tasks || (Array.isArray(res.data) ? res.data : []);
+            allTasks = [...allTasks, ...data];
+         });
+         set({ tasks: allTasks, isLoading: false });
+      } catch (error) {
+         set({ error: 'Failed to fetch tasks for projects', isLoading: false });
       }
    }
 }));
