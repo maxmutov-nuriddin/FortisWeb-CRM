@@ -228,7 +228,7 @@ const Dashboard = () => {
          const userData = user?.data?.user || user;
          if (!userData) return;
 
-         const companyId = userData.company?._id;
+         const companyId = userData.company?._id || userData.company;
          const role = userData.role;
 
          if (role === 'super_admin') {

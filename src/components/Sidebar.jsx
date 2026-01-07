@@ -141,10 +141,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      <i className="fa-solid fa-chart-line w-5"></i>
                      <span className="font-medium">Dashboard</span>
                   </Link>
-                  <Link to="/company" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/company')}`}>
-                     <i className="fa-solid fa-building w-5"></i>
-                     <span className="font-medium">Company</span>
-                  </Link>
+                  {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
+                     <Link to="/company" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/company')}`}>
+                        <i className="fa-solid fa-building w-5"></i>
+                        <span className="font-medium">Company</span>
+                     </Link>
+                  )}
                   <Link to="/orders" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/orders')}`}>
                      <i className="fa-brands fa-telegram w-5"></i>
                      <span className="font-medium">Orders</span>

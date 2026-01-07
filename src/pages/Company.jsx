@@ -130,9 +130,11 @@ const Company = () => {
       const userData = user?.data?.user || user;
       const isAdmin = userData?.role === 'super_admin';
 
-      if (!isAdmin && userData?.company?._id) {
-         // Filter to only show the user's company
-         return companiesList.filter(c => c._id === userData.company._id);
+      if (!isAdmin) {
+         const userCompanyId = String(userData?.company?._id || userData?.company || '');
+         if (userCompanyId) {
+            return companiesList.filter(c => String(c._id) === userCompanyId);
+         }
       }
 
       return result;
