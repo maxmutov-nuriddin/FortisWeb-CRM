@@ -46,8 +46,9 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await companiesApi.getById(id);
-         set({ selectedCompany: response.data, isLoading: false });
-         return response.data;
+         const companyData = response.data.data?.company || response.data.company || response.data.data || response.data;
+         set({ selectedCompany: companyData, isLoading: false });
+         return companyData;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch company', isLoading: false });
       }
@@ -104,11 +105,12 @@ export const useCompanyStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await companiesApi.addTeam(id, data);
-         const newTeam = response.data.data?.team || response.data.team || response.data;
+         const newTeam = response.data.data?.team || response.data.team || response.data.data || response.data;
 
          set((state) => {
             const currentCompanies = state.companies?.data?.companies || (Array.isArray(state.companies) ? state.companies : []);
 
+            // If company list is empty, we might need to fetch it first, but here we at least try to update
             const updatedCompanies = currentCompanies.map(c => {
                if (c._id === id) {
                   return {
@@ -121,13 +123,9 @@ export const useCompanyStore = create((set) => ({
 
             const newState = {
                isLoading: false,
-               companies: {
-                  ...state.companies,
-                  data: {
-                     ...state.companies?.data,
-                     companies: updatedCompanies
-                  }
-               }
+               companies: state.companies?.data
+                  ? { ...state.companies, data: { ...state.companies.data, companies: updatedCompanies } }
+                  : updatedCompanies
             };
 
             if (state.selectedCompany?._id === id) {

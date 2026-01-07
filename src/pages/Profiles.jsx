@@ -12,8 +12,10 @@ const Profiles = () => {
    const userData = useMemo(() => currentUser?.data?.user || currentUser?.user || currentUser, [currentUser]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
-   const { users, isLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
-   const { companies, getCompanies, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
+   const { users, isLoading: usersLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
+   const { companies, selectedCompany, isLoading: companiesLoading, getCompanies, getCompanyById, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
+
+   const isLoading = usersLoading || companiesLoading;
 
    const [activeTab, setActiveTab] = useState('members');
    const [filter, setFilter] = useState('All Members');
@@ -49,7 +51,7 @@ const Profiles = () => {
    const fetchData = async () => {
       if (!userData) return;
 
-      const userCompanyId = userData.company?._id || userData.company;
+      const userCompanyId = String(userData.company?._id || userData.company || '');
 
       if (isSuperAdmin) {
          getCompanies().then(camps => {
@@ -62,6 +64,8 @@ const Profiles = () => {
             }
          });
       } else if (userCompanyId) {
+         // Non-super admins use getCompanyById because getCompanies might be restricted
+         getCompanyById(userCompanyId);
          getUsersByCompany(userCompanyId);
       }
    };
@@ -85,42 +89,62 @@ const Profiles = () => {
 
    const allTeams = useMemo(() => {
       if (!userData) return [];
-      const companyList = companies?.data?.companies || companies || [];
-      const userCompanyId = userData.company?._id || userData.company;
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const userCompanyId = String(userData.company?._id || userData.company || '');
+
+      // Merge selectedCompany if available. Some APIs might return it nested or as the obj itself.
+      let relevantCompanies = [...companyList];
+      const selComp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
+
+      if (selComp && String(selComp._id) === userCompanyId) {
+         if (!relevantCompanies.some(c => String(c._id) === userCompanyId)) {
+            relevantCompanies.push(selComp);
+         } else {
+            // Update existing company in list with potentially fresher data from selectedCompany
+            relevantCompanies = relevantCompanies.map(c => String(c._id) === userCompanyId ? selComp : c);
+         }
+      }
 
       if (isSuperAdmin) {
          let teams = [];
-         companyList.forEach(c => {
-            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: c._id }))];
+         relevantCompanies.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: String(c._id) }))];
          });
          return teams;
       } else {
-         const company = companyList.find(c => c._id === userCompanyId);
-         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: company._id })) || [];
-         if (userData?.role === 'team_lead') {
-            const currentUserId = String(userData?._id || '');
-            return companyTeams.filter(t => String(t.teamLead || t.teamLead?._id || '') === currentUserId);
+         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
+
+         if (userData?.role === 'company_admin') {
+            return companyTeams;
          }
-         return companyTeams;
+
+         const currentUserId = String(userData?._id || '');
+         return companyTeams.filter(t =>
+            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
+            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
+         );
       }
-   }, [companies, userData, isSuperAdmin]);
+   }, [companies, selectedCompany, userData, isSuperAdmin]);
 
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
       // Filter out super_admin for everyone else
       let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
 
-      if (userData?.role === 'team_lead') {
-         // Show only members of their team
-         const myTeam = allTeams.find(t => String(t.teamLead || t.teamLead?._id || '') === String(userData?._id));
-         if (myTeam) {
-            const memberIds = new Set(myTeam.members?.map(m => String(m._id || m.user?._id || m.user || m)) || []);
-            memberIds.add(String(userData?._id)); // Include self
-            filtered = filtered.filter(u => memberIds.has(String(u._id)));
-         } else {
-            // If no team found, show only self
-            filtered = filtered.filter(u => String(u._id) === String(userData?._id));
-         }
+      if (!isSuperAdmin && userData?.role !== 'company_admin') {
+         // Show only members of their teams (team_lead and employees)
+         const myTeams = allTeams;
+         const memberIds = new Set();
+         myTeams.forEach(t => {
+            if (t.members) {
+               t.members.forEach(m => memberIds.add(String(m?._id || m.user?._id || m.user || m)));
+            }
+            memberIds.add(String(t.teamLead?._id || t.teamLead || ''));
+         });
+         memberIds.add(String(userData?._id)); // Always include self
+
+         filtered = filtered.filter(u => memberIds.has(String(u._id)));
       }
       return filtered;
    }, [users, isSuperAdmin, userData, allTeams]);
@@ -332,52 +356,141 @@ const Profiles = () => {
    };
 
    const handleDelete = async (userId) => {
-      if (window.confirm('Are you sure you want to delete this member?')) {
-         try {
-            await deleteUser(userId);
-            toast.success('User deleted successfully', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
-         } catch (error) {
-            toast.error('Failed to delete user', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
-         }
-      }
+      const ToastContent = ({ closeToast }) => (
+         <div>
+            <p>Are you sure you want to delete this member?</p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+               <button
+                  onClick={async () => {
+                     closeToast();
+                     try {
+                        await deleteUser(userId);
+                        toast.success('User deleted successfully', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     } catch (error) {
+                        toast.error('Failed to delete user', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     }
+                  }}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#ef4444',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer',
+                     fontSize: '14px'
+                  }}
+               >
+                  Delete
+               </button>
+               <button
+                  onClick={closeToast}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#6b7280',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer',
+                     fontSize: '14px'
+                  }}
+               >
+                  Cancel
+               </button>
+            </div>
+         </div>
+      );
+
+      toast.info(<ToastContent />, {
+         position: 'top-right',
+         autoClose: false,
+         closeOnClick: false,
+         draggable: false,
+         theme: 'dark',
+      });
    };
 
    const handleDeleteTeam = async (companyId, teamId) => {
-      if (window.confirm('Are you sure you want to delete this team? This will NOT delete team members, only the team organization.')) {
-         try {
-            await deleteTeamAction(companyId, teamId);
-            toast.success('Team deleted successfully', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
-         } catch (error) {
-            console.error('Delete team error:', error);
-            toast.error(error.response?.data?.message || 'Failed to delete team', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
-         }
-      }
-   };
+      const ToastContent = ({ closeToast }) => (
+         <div>
+            <p>Are you sure you want to delete this team?</p>
+            <p style={{ fontSize: '12px', opacity: 0.8, marginTop: '5px' }}>
+               This will NOT delete team members, only the team organization.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+               <button
+                  onClick={async () => {
+                     closeToast();
+                     try {
+                        await deleteTeamAction(companyId, teamId);
+                        toast.success('Team deleted successfully', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     } catch (error) {
+                        console.error('Delete team error:', error);
+                        toast.error(error.response?.data?.message || 'Failed to delete team', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     }
+                  }}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#ef4444',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer',
+                     fontSize: '14px'
+                  }}
+               >
+                  Delete
+               </button>
+               <button
+                  onClick={closeToast}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#6b7280',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer',
+                     fontSize: '14px'
+                  }}
+               >
+                  Cancel
+               </button>
+            </div>
+         </div>
+      );
 
+      toast.info(<ToastContent />, {
+         position: 'top-right',
+         autoClose: false,
+         closeOnClick: false,
+         draggable: false,
+         theme: 'dark',
+      });
+   };
+   
    const toggleStatus = async (userId) => {
       try {
          await updateUserStatus(userId);
