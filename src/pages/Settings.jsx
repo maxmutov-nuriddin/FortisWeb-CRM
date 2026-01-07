@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import { useCompanyStore } from '../store/company.store';
