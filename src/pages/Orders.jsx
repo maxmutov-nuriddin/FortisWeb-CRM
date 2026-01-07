@@ -24,6 +24,7 @@ const Orders = () => {
       paymentMethod: 'bank_transfer',
       status: 'pending'
    });
+   const [resultFormData, setResultFormData] = useState({ name: '', url: '' });
 
    const [formData, setFormData] = useState({
       title: '',
@@ -50,10 +51,13 @@ const Orders = () => {
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
    const { companies, getCompanies, getCompanyById, selectedCompany, isLoading: companiesLoading } = useCompanyStore();
-   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, assignProject, isLoading: projectsLoading } = useProjectStore();
+   const {
+      projects, getProjectsByCompany, getAllProjects, createProject, updateProject,
+      deleteProject, assignProject, addResults, requestRevision, isLoading: projectsLoading
+   } = useProjectStore();
    const { getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
-   const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment } = usePaymentStore();
+   const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment, updatePayment } = usePaymentStore();
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
@@ -392,6 +396,7 @@ const Orders = () => {
                title: formData.title,
                description: formData.description || '',
                budget: parseFloat(formData.budget),
+               status: 'pending', // Явно указываем статус "pending"
                deadline: formData.deadline,
                priority: formData.priority,
                client: {
@@ -416,6 +421,24 @@ const Orders = () => {
             const result = await createProject(createData);
             const newProjectId = result?.data?.project?._id || result?._id;
 
+            // Пытаемся автоматически создать платеж для нового проекта
+            if (newProjectId) {
+               try {
+                  await createPayment({
+                     amount: createData.budget,
+                     project: newProjectId,
+                     company: createData.company || activeCompanyId || null,
+                     status: 'pending',
+                     paymentMethod: paymentFormData.paymentMethod || 'bank_transfer',
+                     description: `Initial payment for project: ${createData.title}`
+                  });
+                  // Принудительно обновляем данные
+                  await fetchData();
+               } catch (payErr) {
+                  console.warn('Auto-payment creation failed during project creation:', payErr);
+               }
+            }
+
             // Если при создании сразу выбрана команда, вызываем /assign (так как бэкенд createProject не сохраняет эти поля)
             if (newProjectId && (formData.teamLead || formData.assignedTeam || formData.assignedMembers.length > 0)) {
                try {
@@ -423,9 +446,13 @@ const Orders = () => {
                      teamLeadId: formData.teamLead || undefined,
                      memberIds: formData.assignedMembers || [],
                      assignedMembers: createData.assignedMembers,
-                     assignedTeamId: formData.assignedTeam || undefined
+                     assignedTeamId: formData.assignedTeam || undefined,
+                     status: 'pending' // Принудительно держим статус pending
                   };
                   await assignProject(newProjectId, assignmentData);
+                  // Сразу после назначения принудительно устанавливаем pending, 
+                  // на случай если бэкенд перевел его в in_progress при получении команды
+                  await updateProject(newProjectId, { status: 'pending' });
                } catch (assignError) {
                   console.warn('Post-creation assignment failed (non-critical):', assignError);
                }
@@ -588,6 +615,10 @@ const Orders = () => {
          assignedTeam: '',
          assignedMembers: []
       });
+      setPaymentFormData({
+         paymentMethod: 'bank_transfer',
+         status: 'pending'
+      });
    };
 
    const handleCreateOrder = () => {
@@ -670,25 +701,36 @@ const Orders = () => {
             }
          }
 
-         // Затем статус и остальные поля
+         // Затем статус и остальные поля. Статус оставляем pending до подтверждения оплаты
          await updateProject(orderId, {
-            status: 'in_progress',
+            status: 'pending',
             teamLead: formData.teamLead || null,
             assignedTeam: formData.assignedTeam || null,
             assignedMembers: assignmentData.assignedMembers
          });
 
-         // Пытаемся автоматически подтвердить соответствующий платеж, если он есть
+         // Пытаемся автоматически создать платеж, если его нет. НО НЕ ПОДТВЕРЖДАЕМ его.
          try {
             const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-            const paymentToConfirm = paymentsList.find(p => String(p.project?._id || p.project || '') === String(orderId));
-            if (paymentToConfirm && paymentToConfirm.status === 'pending') {
-               await confirmPayment(paymentToConfirm._id);
-            }
-         } catch (payErr) {
-            console.warn('Auto-payment confirmation failed (non-critical):', payErr);
-         }
+            const existingPayment = paymentsList.find(p => String(p.project?._id || p.project || '') === String(orderId));
 
+            if (!existingPayment) {
+               // Создаем только новый платеж
+               await createPayment({
+                  amount: formData.budget || 0,
+                  project: orderId,
+                  company: activeCompanyId || null,
+                  status: 'pending',
+                  paymentMethod: paymentFormData.paymentMethod || 'bank_transfer',
+                  description: `Initial payment for project: ${formData.title || 'Project'}`
+               });
+            }
+
+            // После создания платежа обновляем список
+            await fetchData();
+         } catch (payErr) {
+            console.warn('Auto-payment creation failed (non-critical):', payErr);
+         }
          toast.success('Order accepted and assigned successfully!');
          closeModal();
       } catch (error) {
@@ -716,6 +758,8 @@ const Orders = () => {
             draggable: false,
             theme: 'dark',
          });
+         // После создания платежа, принудительно обновляем список платежей в store
+         await fetchData();
       } catch (error) {
          console.error('Error creating payment:', error);
          toast.error('Failed to create payment: ' + (error.response?.data?.message || error.message), {
@@ -734,11 +778,16 @@ const Orders = () => {
       setIsEditMode(false);
       setIsCreateMode(false);
 
-      const payment = paymentsList.find(p => p.project?._id === order._id || p.project === order._id);
+      const payment = (paymentsList || []).find(p => String(p.project?._id || p.project || '') === String(order._id));
       if (payment) {
          setPaymentFormData({
             paymentMethod: payment.paymentMethod || 'bank_transfer',
             status: payment.status || 'pending'
+         });
+      } else {
+         setPaymentFormData({
+            paymentMethod: 'bank_transfer',
+            status: 'pending'
          });
       }
 
@@ -1429,6 +1478,26 @@ const Orders = () => {
                               </div>
                            </div>
 
+                           <div className="border-t border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Initial Payment Info</h3>
+                              <div>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">Payment Method</label>
+                                 <select
+                                    name="paymentMethod"
+                                    value={paymentFormData.paymentMethod}
+                                    onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 >
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="paypal">PayPal</option>
+                                    <option value="crypto">Crypto</option>
+                                    <option value="other">Other</option>
+                                 </select>
+                              </div>
+                           </div>
+
                            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
                               <button
                                  type="button"
@@ -1448,6 +1517,10 @@ const Orders = () => {
                         </form>
                      ) : (
                         <div className="space-y-6">
+                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
+                              <i className="fa-solid fa-circle-info mr-2 text-dark-accent"></i>
+                              Order Details
+                           </h3>
                            <div className="flex flex-col sm:flex-row justify-between gap-4">
                               <div>
                                  <span className="text-xs text-gray-500 block mb-1">Order ID</span>
@@ -1636,19 +1709,31 @@ const Orders = () => {
                                  Payment Information
                               </h3>
                               {(() => {
-                                 const payment = paymentsList.find(p => p.project?._id === selectedOrder._id || p.project === selectedOrder._id);
+                                 const payment = paymentsList.find(p => {
+                                    const pProjectId = String(p.project?._id || p.project || '');
+                                    const sOrderId = String(selectedOrder._id || '');
+                                    return pProjectId === sOrderId;
+                                 });
                                  if (!payment) {
                                     return (
-                                       <div className="bg-dark-tertiary rounded-lg p-6 border border-dashed border-gray-700 space-y-4">
-                                          <div className="text-center">
-                                             <p className="text-gray-500 text-sm">No payment has been created for this order yet.</p>
+                                       <div className="bg-dark-tertiary rounded-xl p-8 border border-dashed border-gray-700/50 flex flex-col items-center justify-center text-center space-y-4">
+                                          <div className="w-16 h-16 bg-dark-secondary rounded-full flex items-center justify-center text-gray-600 mb-2 border border-gray-800">
+                                             <i className="fa-solid fa-file-invoice-dollar text-2xl"></i>
                                           </div>
-                                          <div>
-                                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-semibold text-center">Select Payment Method</label>
+                                          <div className="max-w-xs">
+                                             <h4 className="text-white font-semibold text-sm mb-1">Missing Payment Record</h4>
+                                             <p className="text-gray-500 text-xs">A financial record is required to track this project's revenue and team payouts.</p>
+                                          </div>
+                                          <div className="w-full max-w-sm pt-2">
+                                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-bold">Select Payment Method</label>
                                              <div className="grid grid-cols-2 gap-2">
                                                 <select
-                                                   value={paymentFormData.paymentMethod}
-                                                   onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                                                   value={paymentFormData.paymentMethod || 'bank_transfer'}
+                                                   onChange={(e) => {
+                                                      const val = e.target.value;
+                                                      setPaymentFormData(prev => ({ ...prev, paymentMethod: val }));
+                                                   }}
+
                                                    className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
                                                 >
                                                    <option value="bank_transfer">Bank Transfer</option>
@@ -1694,9 +1779,29 @@ const Orders = () => {
                                        <div className="grid grid-cols-1 gap-4">
                                           <div>
                                              <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
-                                             <div className="flex items-center text-white text-sm bg-dark-secondary px-3 py-2 rounded-lg border border-gray-700">
-                                                <i className="fa-solid fa-wallet mr-2 text-gray-400"></i>
-                                                {payment.paymentMethod || 'bank_transfer'}
+                                             <div className="flex items-center space-x-2">
+                                                <select
+                                                   value={paymentFormData.paymentMethod || payment.paymentMethod || 'bank_transfer'}
+                                                   disabled={payment.status !== 'pending' || isSubmitting}
+                                                   onChange={async (e) => {
+                                                      const newVal = e.target.value;
+                                                      setPaymentFormData(prev => ({ ...prev, paymentMethod: newVal }));
+                                                      try {
+                                                         await updatePayment(payment._id || payment.id, { paymentMethod: newVal });
+                                                         toast.success(`Payment method updated to ${newVal}`);
+                                                      } catch (err) {
+                                                         toast.error('Failed to update payment method');
+                                                      }
+                                                   }}
+                                                   className="flex-1 bg-dark-secondary text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                   <option value="bank_transfer">Bank Transfer</option>
+                                                   <option value="cash">Cash</option>
+                                                   <option value="card">Card</option>
+                                                   <option value="paypal">PayPal</option>
+                                                   <option value="crypto">Crypto</option>
+                                                   <option value="other">Other</option>
+                                                </select>
                                              </div>
                                           </div>
                                        </div>
@@ -1710,6 +1815,13 @@ const Orders = () => {
                                                    setIsSubmitting(true);
                                                    try {
                                                       await confirmPayment(payment._id || payment.id);
+                                                      await fetchData().then(() => {
+                                                         // Sync selectedOrder with the fresh data from projectsList
+                                                         if (selectedOrder) {
+                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                            if (freshOrder) setSelectedOrder(freshOrder);
+                                                         }
+                                                      });
                                                       toast.success('Payment confirmed successfully!', {
                                                          position: 'top-right',
                                                          autoClose: 5000,
@@ -1736,37 +1848,35 @@ const Orders = () => {
                                              </button>
                                           )}
 
-                                          {isSuperAdmin && payment.status !== 'completed' && (
+
+
+                                          {/* START PROJECT ACTION: If payment is confirmed/completed but project is still pending */}
+                                          {(payment.status === 'confirmed' || payment.status === 'completed') && selectedOrder.status === 'pending' && (
                                              <button
                                                 type="button"
                                                 disabled={isSubmitting}
                                                 onClick={async () => {
                                                    setIsSubmitting(true);
                                                    try {
-                                                      await completePayment(payment._id || payment.id);
-                                                      toast.success('Payment marked as paid!', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
+                                                      await updateProject(selectedOrder._id, { status: 'in_progress' });
+                                                      await fetchData().then(() => {
+                                                         // Sync selectedOrder
+                                                         if (selectedOrder) {
+                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                            if (freshOrder) setSelectedOrder(freshOrder);
+                                                         }
                                                       });
+                                                      toast.success('Project started! Status changed to In Progress.');
                                                    } catch (err) {
-                                                      toast.error('Failed to complete: ' + err.message, {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      });
+                                                      toast.error('Failed to start project: ' + err.message);
                                                    } finally {
                                                       setIsSubmitting(false);
                                                    }
                                                 }}
-                                                className={`w-full ${payment.status === 'pending' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`w-full bg-dark-accent hover:bg-red-600 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                              >
-                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-flag-checkered'} mr-1`}></i>
-                                                {isSubmitting ? 'Processing...' : (payment.status === 'pending' ? 'Admin: Force Mark as Paid' : 'Finalize Payment (Mark Paid)')}
+                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-play'} mr-1`}></i>
+                                                {isSubmitting ? 'Starting...' : 'Start Translation (Move to In Progress)'}
                                              </button>
                                           )}
                                        </div>
@@ -1804,16 +1914,6 @@ const Orders = () => {
                                     <i className="fa-solid fa-edit"></i>
                                     <span>Edit Order</span>
                                  </button>
-                                 {selectedOrder.status === 'pending' && (
-                                    <button
-                                       onClick={(e) => handleAccept(e, selectedOrder._id)}
-                                       disabled={isSubmitting}
-                                       className={`bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                       <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
-                                       <span>{isSubmitting ? 'Accepting...' : 'Accept Order'}</span>
-                                    </button>
-                                 )}
                               </div>
                            </div>
                         </div>

@@ -10,7 +10,7 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.create(data);
-         const newPayment = response.data;
+         const newPayment = response.data?.data?.payment || response.data?.payment || response.data;
          set((state) => {
             const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
             return {
@@ -24,7 +24,7 @@ export const usePaymentStore = create((set) => ({
                isLoading: false
             };
          });
-         return response.data;
+         return newPayment;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to create payment', isLoading: false });
          throw error;
@@ -35,7 +35,7 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.confirm(id);
-         const updatedPayment = response.data;
+         const updatedPayment = response.data?.data?.payment || response.data?.payment || response.data;
          set((state) => {
             const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
             return {
@@ -43,7 +43,7 @@ export const usePaymentStore = create((set) => ({
                   ...state.payments,
                   data: {
                      ...state.payments?.data,
-                     payments: currentList.map((p) => (p.id === id || p._id === id ? updatedPayment : p))
+                     payments: currentList.map((p) => (String(p.id || p._id) === String(id) ? updatedPayment : p))
                   }
                },
                isLoading: false
@@ -58,7 +58,7 @@ export const usePaymentStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await paymentsApi.complete(id);
-         const updatedPayment = response.data;
+         const updatedPayment = response.data?.data?.payment || response.data?.payment || response.data;
          set((state) => {
             const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
             return {
@@ -66,7 +66,7 @@ export const usePaymentStore = create((set) => ({
                   ...state.payments,
                   data: {
                      ...state.payments?.data,
-                     payments: currentList.map((p) => (p.id === id || p._id === id ? updatedPayment : p))
+                     payments: currentList.map((p) => (String(p.id || p._id) === String(id) ? updatedPayment : p))
                   }
                },
                isLoading: false
@@ -74,6 +74,31 @@ export const usePaymentStore = create((set) => ({
          });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to complete payment', isLoading: false });
+      }
+   },
+
+   updatePayment: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await paymentsApi.update(id, data);
+         const updatedPayment = response.data?.data?.payment || response.data?.payment || response.data;
+         set((state) => {
+            const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+            return {
+               payments: {
+                  ...state.payments,
+                  data: {
+                     ...state.payments?.data,
+                     payments: currentList.map((p) => (String(p.id || p._id) === String(id) ? updatedPayment : p))
+                  }
+               },
+               isLoading: false
+            };
+         });
+         return updatedPayment;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update payment', isLoading: false });
+         throw error;
       }
    },
 

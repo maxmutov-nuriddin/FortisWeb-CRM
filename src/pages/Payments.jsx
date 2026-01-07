@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { useAuthStore } from '../store/auth.store';
 import { usePaymentStore } from '../store/payment.store';
 import { useCompanyStore } from '../store/company.store';
+import { useUserStore } from '../store/user.store';
 import PageLoader from '../components/loader/PageLoader';
 
 const Payments = () => {
@@ -11,10 +12,13 @@ const Payments = () => {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [statusFilter, setStatusFilter] = useState('All Statuses');
    const [viewCompanyId, setViewCompanyId] = useState('all');
+   const [timePeriod, setTimePeriod] = useState('6m');
+   const [searchQuery, setSearchQuery] = useState('');
 
    const { user } = useAuthStore();
    const { companies, getCompanies } = useCompanyStore();
-   const { payments, getAllPayments, getPaymentsByCompany, confirmPayment, completePayment, isLoading } = usePaymentStore();
+   const { users, getAllUsers, getUsersByCompany } = useUserStore();
+   const { payments, getAllPayments, getPaymentsByCompany, confirmPayment, completePayment, updatePayment, isLoading } = usePaymentStore();
 
    const userData = user?.data?.user || user?.user || user;
    const isSuperAdmin = userData?.role === 'super_admin';
@@ -38,10 +42,25 @@ const Payments = () => {
          if (isSuperAdmin && viewCompanyId === 'all') {
             if (allCompanies.length > 0) {
                const ids = allCompanies.map(c => c._id);
-               await getAllPayments(ids);
+               await Promise.all([
+                  getAllPayments(ids),
+                  getAllUsers(ids)
+               ]);
+            } else {
+               // If no companies exist for super admin and 'all' is selected, fetch nothing or handle appropriately
+               // For now, we'll just ensure payments are cleared if no companies are found
+               // This might need adjustment based on exact backend behavior for 'all' payments
+               await getAllPayments([]); // Pass an empty array to clear payments if no companies
             }
          } else if (activeCompanyId && activeCompanyId !== 'all') {
-            await getPaymentsByCompany(activeCompanyId);
+            await Promise.all([
+               getPaymentsByCompany(activeCompanyId),
+               getUsersByCompany(activeCompanyId)
+            ]);
+         } else if (!isSuperAdmin && !activeCompanyId) {
+            // Non-super admin with no company assigned
+            // This case should ideally not happen if user always has a company, but good for robustness
+            await getPaymentsByCompany(null); // Or handle as no payments
          }
       } catch (error) {
          console.error('Error fetching payments:', error);
@@ -60,7 +79,8 @@ const Payments = () => {
    }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
 
    const paymentsList = useMemo(() => {
-      return payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
+      const list = payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
+      return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
    }, [payments]);
 
 
@@ -69,21 +89,31 @@ const Payments = () => {
       if (statusFilter !== 'All Statuses') {
          result = result.filter(p => p.status === statusFilter.toLowerCase());
       }
+      if (searchQuery) {
+         const q = searchQuery.toLowerCase();
+         result = result.filter(p => {
+            const amount = (Number(p.totalAmount) || Number(p.amount) || 0).toString();
+            const description = (p.description || '').toLowerCase();
+            const clientName = (typeof p.client === 'object' ? p.client?.name : '').toLowerCase();
+            const projectId = (p._id || '').toLowerCase();
+            return amount.includes(q) || description.includes(q) || clientName.includes(q) || projectId.includes(q);
+         });
+      }
       return result;
-   }, [paymentsList, statusFilter]);
+   }, [paymentsList, statusFilter, searchQuery]);
 
    // Statistics Calculation
    const stats = useMemo(() => {
-      const totalRevenue = paymentsList.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const totalRevenue = paymentsList.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
       const pendingPayments = paymentsList.filter(p => p.status === 'pending');
-      const pendingAmount = pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const pendingAmount = pendingPayments.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
 
       const now = new Date();
       const thisMonthPayments = paymentsList.filter(p => {
          const d = new Date(p.createdAt);
          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       });
-      const thisMonthAmount = thisMonthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const thisMonthAmount = thisMonthPayments.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
 
       const teamPayouts = totalRevenue * 0.70; // 70% rule
 
@@ -111,17 +141,46 @@ const Payments = () => {
       showlegend: false
    };
 
-   // Revenue Trend (Mock logic based on real counts per month could be added, simplifying for now)
+   // Dynamic Revenue Trend logic
+   const revenueTrend = useMemo(() => {
+      const map = {};
+      const now = new Date();
+      const months = [];
+
+      const count = timePeriod === '6m' ? 6 : timePeriod === '1y' ? 12 : 24;
+
+      for (let i = count - 1; i >= 0; i--) {
+         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+         const label = d.toLocaleString('en', { month: 'short' });
+         const key = `${d.getFullYear()}-${d.getMonth()}`;
+         months.push({ label, key });
+         map[key] = 0;
+      }
+
+      paymentsList.forEach(p => {
+         const d = new Date(p.createdAt);
+         const key = `${d.getFullYear()}-${d.getMonth()}`;
+         if (map[key] !== undefined) {
+            map[key] += (Number(p.totalAmount) || Number(p.amount) || 0);
+         }
+      });
+
+      return {
+         labels: months.map(m => m.label),
+         values: months.map(m => map[m.key])
+      };
+   }, [paymentsList, timePeriod]);
+
    const revenueData = [{
       type: 'scatter',
-      mode: 'lines',
-      x: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'], // Fixed for now, can be dynamic
-      y: [32000, 38000, 35000, 42000, 45000, stats.totalRevenue || 48250],
-      line: { color: '#10B981', width: 3 },
+      mode: 'lines+markers',
+      x: revenueTrend.labels,
+      y: revenueTrend.values,
+      line: { color: '#10B981', width: 3, shape: 'spline' },
+      marker: { size: 6, color: '#10B981' },
       fill: 'tozeroy',
       fillcolor: 'rgba(16, 185, 129, 0.1)'
    }];
-
    const revenueLayout = {
       autosize: true,
       xaxis: { gridcolor: '#2A2A2A', color: '#9CA3AF' },
@@ -147,6 +206,7 @@ const Payments = () => {
             draggable: false,
             theme: 'dark',
          });
+         fetchData(); // Re-fetch data to update the list
       } catch (error) {
          console.error(error);
          toast.error('Failed to confirm payment', {
@@ -172,6 +232,7 @@ const Payments = () => {
             draggable: false,
             theme: 'dark',
          });
+         fetchData(); // Re-fetch data to update the list
       } catch (error) {
          console.error(error);
          toast.error('Failed to complete payment', {
@@ -374,6 +435,16 @@ const Payments = () => {
                   <p className="text-sm text-gray-400">Manage all transactions</p>
                </div>
                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                     <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                     <input
+                        type="text"
+                        placeholder="Search payments..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
+                     />
+                  </div>
                   <select
                      className="bg-dark-tertiary border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
                      value={statusFilter}
@@ -413,24 +484,58 @@ const Payments = () => {
                               </td>
                               <td className="py-4 px-4">
                                  <div className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white">
-                                       {payment.client?.name ? payment.client.name.charAt(0) : '?'}
-                                    </div>
-                                    <div>
-                                       <p className="text-sm text-white">{payment.client?.name || 'Unknown'}</p>
-                                    </div>
+                                    {(() => {
+                                       const usersList = users?.data?.users || (Array.isArray(users) ? users : []);
+                                       // Поиск ID клиента: сначала из поля client, затем из создателя проекта
+                                       const clientRef = payment.client?._id || payment.client || payment.project?.createdBy?._id || payment.project?.createdBy;
+                                       const clientId = String(clientRef || '');
+
+                                       const clientData = usersList.find(u => String(u._id) === clientId);
+                                       const name = clientData?.name || (typeof payment.client === 'object' ? payment.client?.name : null) || (typeof payment.project?.createdBy === 'object' ? payment.project?.createdBy?.name : null) || 'Unknown';
+
+                                       return (
+                                          <>
+                                             <div className="w-8 h-8 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold border border-dark-accent/10">
+                                                {name.charAt(0).toUpperCase()}
+                                             </div>
+                                             <div>
+                                                <p className="text-sm text-white font-medium">{name}</p>
+                                                {clientData?.email && <p className="text-[10px] text-gray-500">{clientData.email}</p>}
+                                             </div>
+                                          </>
+                                       );
+                                    })()}
                                  </div>
                               </td>
-                              <td className="py-4 px-4"><p className="text-sm text-white font-semibold">${(payment.amount || 0).toLocaleString()}</p></td>
+                              <td className="py-4 px-4"><p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p></td>
                               <td className="py-4 px-4">
                                  <div className="flex items-center space-x-2">
-                                    <i className="fa-solid fa-wallet text-gray-400"></i>
-                                    <span className="text-sm text-gray-300 capitalize">{payment.paymentMethod || 'manual'}</span>
+                                    <select
+                                       value={payment.paymentMethod || 'bank_transfer'}
+                                       disabled={payment.status !== 'pending' || isSubmitting}
+                                       onChange={async (e) => {
+                                          const newVal = e.target.value;
+                                          try {
+                                             await updatePayment(payment._id, { paymentMethod: newVal });
+                                             toast.success(`Method updated to ${newVal}`);
+                                          } catch (err) {
+                                             toast.error('Update failed');
+                                          }
+                                       }}
+                                       className="bg-dark-secondary text-gray-300 text-xs px-2 py-1 rounded border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50"
+                                    >
+                                       <option value="bank_transfer">Bank Transfer</option>
+                                       <option value="cash">Cash</option>
+                                       <option value="card">Card</option>
+                                       <option value="paypal">PayPal</option>
+                                       <option value="crypto">Crypto</option>
+                                       <option value="other">Other</option>
+                                    </select>
                                  </div>
                               </td>
                               <td className="py-4 px-4">
-                                 <span className={`px-2 py-1 rounded text-xs font-medium uppercase
-                                        ${payment.status === 'pending' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
+                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit tracking-wider
+                                         ${payment.status === 'pending' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
                                        payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
                                           payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
                                              'bg-gray-500 bg-opacity-20 text-gray-500'}`}>
@@ -438,24 +543,29 @@ const Payments = () => {
                                  </span>
                               </td>
                               <td className="py-4 px-4">
-                                 <div className="flex items-center space-x-2">
-                                    {payment.status === 'pending' && (
+                                 <div className="flex items-center gap-2">
+                                    {payment.status === 'pending' ? (
                                        <button
                                           onClick={() => handleConfirm(payment._id)}
                                           disabled={isSubmitting}
-                                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-50"
+                                          className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
+                                          title="Confirm Receipt"
                                        >
-                                          <i className="fa-solid fa-check mr-1"></i>Confirm
+                                          <i className="fa-solid fa-check"></i>
+                                          Confirm
                                        </button>
-                                    )}
-                                    {isSuperAdmin && payment.status !== 'completed' && (
+                                    ) : payment.status === 'confirmed' && isSuperAdmin ? (
                                        <button
                                           onClick={() => handleComplete(payment._id)}
                                           disabled={isSubmitting}
-                                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-50"
+                                          className="bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
+                                          title="Mark as Paid to Team"
                                        >
-                                          <i className="fa-solid fa-flag-checkered mr-1"></i>Paid
+                                          <i className="fa-solid fa-flag-checkered"></i>
+                                          Complete
                                        </button>
+                                    ) : (
+                                       <span className="text-xs text-gray-500 italic px-2">No actions</span>
                                     )}
                                  </div>
                               </td>
@@ -490,7 +600,7 @@ const Payments = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-sm text-white font-semibold">${(payment.amount || 0).toLocaleString()}</p>
+                           <p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p>
                            <p className="text-xs text-green-500">Distributed</p>
                         </div>
                      </div>
@@ -502,9 +612,19 @@ const Payments = () => {
             </div>
 
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
-               <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Revenue Trends</h3>
-                  <p className="text-sm text-gray-400">Past 6 months</p>
+               <div className="flex items-center justify-between mb-6">
+                  <div>
+                     <h3 className="text-lg font-semibold text-white mb-1">Revenue Trends</h3>
+                     <p className="text-sm text-gray-400">Past performance</p>
+                  </div>
+                  <select
+                     value={timePeriod}
+                     onChange={(e) => setTimePeriod(e.target.value)}
+                     className="bg-dark-tertiary border border-gray-700 rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-dark-accent"
+                  >
+                     <option value="6m">Last 6 Months</option>
+                     <option value="1y">Last Year</option>
+                  </select>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
