@@ -111,33 +111,9 @@ const Settings = () => {
                               <p className="text-gray-400 text-sm">Set the default language for the system</p>
                            </div>
                            <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent">
-                              <option>English (US)</option>
-                              <option>English (UK)</option>
-                              <option>Spanish</option>
-                              <option>French</option>
-                           </select>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <div>
-                              <h4 className="text-white font-medium">Timezone</h4>
-                              <p className="text-gray-400 text-sm">Your current timezone setting</p>
-                           </div>
-                           <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent">
-                              <option>UTC-8 (Pacific Time)</option>
-                              <option>UTC-5 (Eastern Time)</option>
-                              <option>UTC+0 (GMT)</option>
-                              <option>UTC+1 (CET)</option>
-                           </select>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <div>
-                              <h4 className="text-white font-medium">Date Format</h4>
-                              <p className="text-gray-400 text-sm">How dates are displayed</p>
-                           </div>
-                           <select className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent">
-                              <option>MM/DD/YYYY</option>
-                              <option>DD/MM/YYYY</option>
-                              <option>YYYY-MM-DD</option>
+                              <option>English</option>
+                              <option>Russion</option>
+                              <option>Uzbek</option>
                            </select>
                         </div>
                      </div>
@@ -173,18 +149,8 @@ const Settings = () => {
                      <div className="space-y-4">
                         <div className="flex items-center justify-between">
                            <div>
-                              <h4 className="text-white font-medium">Auto Backup</h4>
-                              <p className="text-gray-400 text-sm">Automatically backup system data daily</p>
-                           </div>
-                           <label className="relative inline-flex items-center cursor-pointer">
-                              <input type="checkbox" defaultChecked className="sr-only peer" />
-                              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-dark-accent"></div>
-                           </label>
-                        </div>
-                        <div className="flex items-center justify-between">
-                           <div>
-                              <h4 className="text-white font-medium">Two-Factor Authentication</h4>
-                              <p className="text-gray-400 text-sm">Require 2FA for all admin accounts</p>
+                              <h4 className="text-white font-medium">Dark Mode</h4>
+                              <p className="text-gray-400 text-sm">Dark Mode system</p>
                            </div>
                            <label className="relative inline-flex items-center cursor-pointer">
                               <input type="checkbox" defaultChecked className="sr-only peer" />
@@ -193,7 +159,6 @@ const Settings = () => {
                         </div>
                      </div>
                   </div>
-
                </div>
             </div>
          </div>
