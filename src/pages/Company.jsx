@@ -13,26 +13,41 @@ const Company = () => {
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-   
+
    const [formData, setFormData] = useState({
       name: '',
       email: '',
       password: '',
       address: '',
-      isActive: true
+      isActive: true,
+      subscriptionTier: 'standard'
    });
    const [isEditMode, setIsEditMode] = useState(false);
    const [editingCompanyId, setEditingCompanyId] = useState(null);
 
-   const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, isLoading } = useCompanyStore();
+   const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, updateDistributionRates, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
    const { users, getUsersByCompany } = useUserStore();
+
+   // Local state for rates editing in modal
+   const [isRatesEditing, setIsRatesEditing] = useState(false);
+   const [ratesData, setRatesData] = useState({
+      adminRate: 10,
+      teamRate: 70,
+      companyRate: 20
+   });
 
    useEffect(() => {
       if (isModalOpen && selectedCompany?._id) {
          getUsersByCompany(selectedCompany._id);
+         setRatesData({
+            adminRate: selectedCompany.distributionRates?.adminRate || 10,
+            teamRate: selectedCompany.distributionRates?.teamRate || 70,
+            companyRate: selectedCompany.distributionRates?.companyRate || 20
+         });
+         setIsRatesEditing(false);
       }
-   }, [isModalOpen, selectedCompany]);
+   }, [isModalOpen, selectedCompany, getUsersByCompany]);
 
    useEffect(() => {
       const userData = user?.data?.user || user;
@@ -45,13 +60,13 @@ const Company = () => {
 
    const statusData = [{
       type: 'pie',
-      labels: ['Active', 'Inactive'],  // better to use strings instead of booleans
+      labels: ['Active', 'Inactive'],
       values: [
          companiesList.filter(c => c.isActive === true).length,
          companiesList.filter(c => c.isActive === false).length
       ],
       marker: {
-         colors: ['#10B981', '#EF4444'] // green for active, red for inactive
+         colors: ['#10B981', '#EF4444']
       },
       textinfo: 'label+percent',
       textfont: { color: '#FFFFFF', size: 11 },
@@ -67,12 +82,10 @@ const Company = () => {
       showlegend: false
    };
 
-   // 1. Создаем массив месяцев с начала года до текущего месяца
    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-   const currentMonthIndex = new Date().getMonth(); // 0 = Jan, 1 = Feb...
+   const currentMonthIndex = new Date().getMonth();
    const months = monthOrder.slice(0, currentMonthIndex + 1);
 
-   // 2. Считаем количество компаний по месяцам
    const yValues = months.map(month =>
       companiesList.filter(c => {
          if (!c.createdAt) return false;
@@ -81,10 +94,9 @@ const Company = () => {
       }).length
    );
 
-   // 3. Создаем график Plotly
    const trendData = [{
       type: 'scatter',
-      mode: 'lines+markers',  // добавил точки, чтобы было видно, где значения
+      mode: 'lines+markers',
       name: 'Companies',
       x: months,
       y: yValues,
@@ -92,8 +104,6 @@ const Company = () => {
       fill: 'tozeroy',
       fillcolor: 'rgba(255, 0, 0, 0.1)'
    }];
-
-
 
    const trendLayout = {
       autosize: true,
@@ -148,8 +158,6 @@ const Company = () => {
    const inactiveCompanies = useMemo(() =>
       companiesList.filter(c => c.isActive === false), [companiesList]);;
 
-
-
    const totalEmployees = useMemo(() => {
       return companiesList.reduce((sum, company) => sum + (company.employees?.length || 0), 0);
    }, [companiesList]);
@@ -172,7 +180,8 @@ const Company = () => {
          email: company.email || '',
          password: '', // Usually don't pre-fill password for edit
          address: company.address || '',
-         isActive: company.isActive ?? true
+         isActive: company.isActive ?? true,
+         subscriptionTier: company.subscriptionType || 'standard'
       });
       setEditingCompanyId(company._id);
       setIsEditMode(true);
@@ -189,7 +198,7 @@ const Company = () => {
    };
 
    const openCreateModal = () => {
-      setFormData({ name: '', email: '', password: '', address: '', isActive: true });
+      setFormData({ name: '', email: '', password: '', address: '', isActive: true, subscriptionTier: 'standard' });
       setIsEditMode(false);
       setEditingCompanyId(null);
       setIsCreateModalOpen(true);
@@ -199,7 +208,7 @@ const Company = () => {
       setIsCreateModalOpen(false);
       setIsEditMode(false);
       setEditingCompanyId(null);
-      setFormData({ name: '', email: '', password: '', address: '', isActive: true });
+      setFormData({ name: '', email: '', password: '', address: '', isActive: true, subscriptionTier: 'standard' });
    };
 
    const handleInputChange = (e) => {
@@ -217,39 +226,20 @@ const Company = () => {
             const updateData = { ...formData };
             if (!updateData.password) delete updateData.password;
             await updateCompany(editingCompanyId, updateData);
-            toast.success(formData.name + " Company updated successfully", {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            toast.success(formData.name + " Company updated successfully");
          } else {
             await createCompany(formData);
-            toast.success(formData.name + " Company created successfully", {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            toast.success(formData.name + " Company created successfully");
          }
          closeCreateModal();
          await getCompanies();
       } catch (error) {
          console.error('Error submitting company:', error);
-         toast.error('Failed to save company:' + (error.response?.data?.message || error.message), {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error('Failed to save company:' + (error.response?.data?.message || error.message));
       }
    };
 
    const handleDeleteCompany = async (companyId) => {
-      // Показываем toast с кнопками подтверждения
       const ToastContent = ({ closeToast }) => (
          <div>
             <p>Are you sure you want to delete this company?</p>
@@ -261,22 +251,10 @@ const Company = () => {
                         await deleteCompany(companyId);
                         closeModal();
                         await getCompanies();
-                        toast.success('Company deleted successfully', {
-                           position: 'top-right',
-                           autoClose: 5000,
-                           closeOnClick: false,
-                           draggable: false,
-                           theme: 'dark',
-                        });
+                        toast.success('Company deleted successfully');
                      } catch (error) {
                         console.error('Error deleting company:', error);
-                        toast.error('Failed to delete company', {
-                           position: 'top-right',
-                           autoClose: 5000,
-                           closeOnClick: false,
-                           draggable: false,
-                           theme: 'dark',
-                        });
+                        toast.error('Failed to delete company');
                      }
                   }}
                   style={{
@@ -316,15 +294,24 @@ const Company = () => {
       });
    };
 
+   const handleSaveRates = async () => {
+      try {
+         await updateDistributionRates(selectedCompany._id, ratesData);
+         toast.success('Distribution rates updated');
+         setIsRatesEditing(false);
+         // Update selected company locally
+         setSelectedCompany(prev => ({
+            ...prev,
+            distributionRates: { ...ratesData }
+         }));
+         getCompanies();
+      } catch (error) {
+         console.error(error);
+         toast.error(error.response?.data?.message || 'Failed to update rates');
+      }
+   };
 
-
-   if (isLoading) return (
-      <PageLoader />
-   );
-
-
-
-
+   if (isLoading) return <PageLoader />;
 
    return (
       <div className="p-8 space-y-8">
@@ -469,9 +456,6 @@ const Company = () => {
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-400">
                                  <div>{company.createdAt ? new Date(company.createdAt).toLocaleDateString() : 'N/A'}</div>
-                                 <div className="text-xs text-gray-500">
-                                    {company.createdAt ? new Date(company.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                 </div>
                               </td>
                               <td className="px-6 py-4">
                                  <div className="flex items-center">
@@ -587,11 +571,7 @@ const Company = () => {
                                     selectedCompany.isActive === false ? 'text-red-500 bg-red-500' :
                                        'text-gray-500 bg-gray-500'}`}
                            >
-                              {selectedCompany.isActive === true
-                                 ? 'Active'
-                                 : selectedCompany.isActive === false
-                                    ? 'Inactive'
-                                    : 'UNKNOWN'}
+                              {selectedCompany.isActive ? 'Active' : 'Inactive'}
                            </span>
 
                         </div>
@@ -613,7 +593,81 @@ const Company = () => {
                                  <span className="text-xs text-gray-500 block">Address</span>
                                  <p className="text-gray-300 text-sm">{selectedCompany.address || 'No Address'}</p>
                               </div>
-                              <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                 <span className="text-xs text-gray-500 block">Subscription Tier</span>
+                                 <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase border ${selectedCompany.subscriptionType === 'enterprise' ? 'border-purple-500 text-purple-400' :
+                                       selectedCompany.subscriptionType === 'premium' ? 'border-yellow-500 text-yellow-400' :
+                                          'border-gray-500 text-gray-400'
+                                    }`}>
+                                    {selectedCompany.subscriptionType || 'Standard'}
+                                 </span>
+                              </div>
+                              <div className="pt-3 border-t border-gray-700">
+                                 <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs text-gray-400 uppercase font-semibold">Distribution Rates</span>
+                                    {user?.data?.user?.role === 'super_admin' && (
+                                       !isRatesEditing ? (
+                                          <button onClick={() => setIsRatesEditing(true)} className="text-dark-accent text-xs hover:underline">Edit</button>
+                                       ) : (
+                                          <div className="flex space-x-2">
+                                             <button onClick={handleSaveRates} className="text-green-500 text-xs hover:underline">Save</button>
+                                             <button onClick={() => setIsRatesEditing(false)} className="text-gray-400 text-xs hover:underline">Cancel</button>
+                                          </div>
+                                       )
+                                    )}
+                                 </div>
+
+                                 {!isRatesEditing ? (
+                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                       <div className="bg-gray-800 p-2 rounded">
+                                          <span className="block text-[10px] text-gray-500">Admin</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.adminRate || 10}%</span>
+                                       </div>
+                                       <div className="bg-gray-800 p-2 rounded">
+                                          <span className="block text-[10px] text-gray-500">Team</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.teamRate || 70}%</span>
+                                       </div>
+                                       <div className="bg-gray-800 p-2 rounded">
+                                          <span className="block text-[10px] text-gray-500">Company</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.companyRate || 20}%</span>
+                                       </div>
+                                    </div>
+                                 ) : (
+                                    <div className="space-y-2">
+                                       <div className="flex items-center justify-between">
+                                          <label className="text-xs text-gray-400">Admin %</label>
+                                          <input
+                                             type="number"
+                                             value={ratesData.adminRate}
+                                             onChange={e => setRatesData({ ...ratesData, adminRate: Number(e.target.value) })}
+                                             className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
+                                          />
+                                       </div>
+                                       <div className="flex items-center justify-between">
+                                          <label className="text-xs text-gray-400">Team %</label>
+                                          <input
+                                             type="number"
+                                             value={ratesData.teamRate}
+                                             onChange={e => setRatesData({ ...ratesData, teamRate: Number(e.target.value) })}
+                                             className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
+                                          />
+                                       </div>
+                                       <div className="flex items-center justify-between">
+                                          <label className="text-xs text-gray-400">Company %</label>
+                                          <input
+                                             type="number"
+                                             value={ratesData.companyRate}
+                                             onChange={e => setRatesData({ ...ratesData, companyRate: Number(e.target.value) })}
+                                             className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
+                                          />
+                                       </div>
+                                       <div className="text-[10px] text-gray-500 text-right">
+                                          Total: {ratesData.adminRate + ratesData.teamRate + ratesData.companyRate}%
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 mt-3">
                                  <div>
                                     <span className="text-xs text-gray-500 block">Created Date</span>
                                     <p className="text-white text-sm">
@@ -642,7 +696,6 @@ const Company = () => {
                                           <div className="space-y-1">
                                              {team.members && team.members.length > 0 ? (
                                                 team.members.map((memberId, mIdx) => {
-                                                   // memberId это просто строка с ID
                                                    const userData = users?.data?.users?.find(u => u._id === memberId);
                                                    return (
                                                       <div key={mIdx} className="flex items-center space-x-2 text-xs text-gray-400">
@@ -786,6 +839,19 @@ const Company = () => {
                            </div>
                         </div>
                      </div>
+                     <div>
+                        <label className="text-sm text-gray-400 block mb-2">Subscription Tier</label>
+                        <select
+                           name="subscriptionTier"
+                           value={formData.subscriptionTier}
+                           onChange={handleInputChange}
+                           className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                        >
+                           <option value="standard">Standard</option>
+                           <option value="premium">Premium</option>
+                           <option value="enterprise">Enterprise</option>
+                        </select>
+                     </div>
 
                      <div>
                         <label className="text-sm text-gray-400 block mb-2">Address *</label>
@@ -800,20 +866,19 @@ const Company = () => {
                         />
                      </div>
 
-                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                     <div className="flex justify-end space-x-3 pt-4">
                         <button
                            type="button"
                            onClick={closeCreateModal}
-                           className="bg-dark-tertiary hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition"
+                           className="bg-transparent hover:bg-gray-700 text-gray-300 px-6 py-2.5 rounded-lg text-sm font-medium transition border border-gray-600"
                         >
                            Cancel
                         </button>
                         <button
                            type="submit"
-                           className="bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                           className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition shadow-lg shadow-red-900/20"
                         >
-                           <i className={`fa-solid ${isEditMode ? 'fa-save' : 'fa-plus'}`}></i>
-                           <span>{isEditMode ? 'Save Changes' : 'Create Company'}</span>
+                           {isEditMode ? 'Update Company' : 'Create Company'}
                         </button>
                      </div>
                   </form>

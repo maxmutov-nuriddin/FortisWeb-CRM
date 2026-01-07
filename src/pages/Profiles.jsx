@@ -29,6 +29,10 @@ const Profiles = () => {
    const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState(null);
    const [memberToAddId, setMemberToAddId] = useState('');
    const [openMenuUserId, setOpenMenuUserId] = useState(null);
+   // Move Team State
+   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+   const [moveUserId, setMoveUserId] = useState(null);
+   const [newTeamId, setNewTeamId] = useState('');
    const [showPassword, setShowPassword] = useState(false);
 
    const [formData, setFormData] = useState({
@@ -511,6 +515,32 @@ const Profiles = () => {
       });
    };
 
+   const openMoveTeamModal = (userId) => {
+      setMoveUserId(userId);
+      setNewTeamId('');
+      setOpenMenuUserId(null); // Close menu
+      setIsMoveModalOpen(true);
+   };
+
+   const handleConfirmMoveTeam = async () => {
+      if (!newTeamId) {
+         toast.error('Please select a team');
+         return;
+      }
+      setIsSubmitting(true);
+      try {
+         await updateUser(moveUserId, { team: newTeamId });
+         toast.success('User moved to new team');
+         setIsMoveModalOpen(false);
+         fetchData(); // Refresh list
+      } catch (error) {
+         console.error(error);
+         toast.error(error.response?.data?.message || 'Failed to move user');
+      } finally {
+         setIsSubmitting(false);
+      }
+   };
+
    const toggleStatus = async (userId) => {
       try {
          await updateUserStatus(userId);
@@ -721,6 +751,13 @@ const Profiles = () => {
                                        >
                                           <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
                                           {item.isActive ? 'Deactivate' : 'Activate'}
+                                       </button>
+                                       <button
+                                          onClick={() => openMoveTeamModal(item._id)}
+                                          className="w-full text-left px-4 py-3 text-xs text-blue-400 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
+                                       >
+                                          <i className="fa-solid fa-people-arrows mr-2"></i>
+                                          Move to Team
                                        </button>
                                        <button
                                           onClick={() => {
@@ -1133,6 +1170,43 @@ const Profiles = () => {
                </div>
             )
          }
+
+         {/* Move Team Modal */}
+         {isMoveModalOpen && (
+            <div className={styles.modalOverlay}>
+               <div className={styles.modalContent + " max-w-md"}>
+                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-white">Move User to Team</h2>
+                     <button onClick={() => setIsMoveModalOpen(false)} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                     <div>
+                        <label className={styles.label}>Select Target Team</label>
+                        <select
+                           className={styles.input}
+                           value={newTeamId} onChange={e => setNewTeamId(e.target.value)}
+                        >
+                           <option value="">Choose a team...</option>
+                           {allTeams.map(t => (
+                              <option key={t._id} value={t._id}>{t.name} ({t.companyName})</option>
+                           ))}
+                        </select>
+                     </div>
+                     <div className="pt-4 flex justify-end space-x-3">
+                        <button onClick={() => setIsMoveModalOpen(false)} className={styles.btnSecondary}>Cancel</button>
+                        <button
+                           onClick={handleConfirmMoveTeam}
+                           disabled={isSubmitting || !newTeamId}
+                           className={styles.btnPrimary}
+                        >
+                           {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
+                           Confirm Move
+                        </button>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
       </div>
    );
 };

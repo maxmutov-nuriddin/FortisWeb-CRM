@@ -7,6 +7,7 @@ import Profiles from './pages/Profiles';
 import Tasks from './pages/Tasks';
 import Settings from './pages/Settings';
 import Payments from './pages/Payments';
+import Projects from './pages/Projects';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
@@ -129,7 +130,7 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="payments" element={<Payments />} />
               <Route path="team-chats" element={<Placeholder title="Team Chats" />} />
-              <Route path="projects" element={<Placeholder title="Projects" />} />
+              <Route path="projects" element={<Projects />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

@@ -22,7 +22,7 @@ const Payments = () => {
    const { user } = useAuthStore();
    const { companies, selectedCompany, getCompanies, getCompanyById } = useCompanyStore();
    const { users, getAllUsers, getUsersByCompany } = useUserStore();
-   const { payments, getAllPayments, getPaymentsByCompany, getPaymentsByUser, confirmPayment, completePayment, updatePayment, isLoading } = usePaymentStore();
+   const { payments, getAllPayments, getPaymentsByCompany, getPaymentsByUser, confirmPayment, completePayment, updatePayment, exportPaymentHistory, isLoading } = usePaymentStore();
    const { projects, getProjectsByCompany } = useProjectStore(); // Added getProjectsByCompany
    const { tasks, getTasksByProjects, getTasksByUser } = useTaskStore(); // Added getTasksByUser
 
@@ -430,6 +430,15 @@ const Payments = () => {
       }
    };
 
+   const handleExport = async () => {
+      try {
+         await exportPaymentHistory();
+         toast.success('Export started!');
+      } catch (error) {
+         // Error should be handled by store logic
+      }
+   }
+
    if (isLoading && paymentsList.length === 0) return <PageLoader />;
 
    return (
@@ -453,7 +462,9 @@ const Payments = () => {
                         ))}
                      </select>
                   )}
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
+                  <button
+                     onClick={handleExport}
+                     className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
                      <i className="fa-solid fa-download"></i>
                      <span>Export Report</span>
                   </button>
