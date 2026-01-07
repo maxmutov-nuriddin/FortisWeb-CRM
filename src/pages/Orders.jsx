@@ -1076,18 +1076,22 @@ const Orders = () => {
                                     >
                                        View
                                     </button>
-                                    <button
-                                       onClick={(e) => handleEditOrder(e, order)}
-                                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
-                                    >
-                                       Edit
-                                    </button>
-                                    <button
-                                       onClick={(e) => handleDeleteOrder(e, order._id)}
-                                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
-                                    >
-                                       Delete
-                                    </button>
+                                    {(isSuperAdmin || isCompanyAdmin) && (
+                                       <button
+                                          onClick={(e) => handleEditOrder(e, order)}
+                                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       >
+                                          Edit
+                                       </button>
+                                    )}
+                                    {(isSuperAdmin || isCompanyAdmin) && (
+                                       <button
+                                          onClick={(e) => handleDeleteOrder(e, order._id)}
+                                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       >
+                                          Delete
+                                       </button>)
+                                    }
                                  </div>
                               </td>
                            </tr>
@@ -1919,15 +1923,17 @@ const Orders = () => {
                               >
                                  Close
                               </button>
-                              <div className="flex space-x-3">
-                                 <button
-                                    onClick={(e) => handleEditOrder(e, selectedOrder)}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
-                                 >
-                                    <i className="fa-solid fa-edit"></i>
-                                    <span>Edit Order</span>
-                                 </button>
-                              </div>
+                              {(isSuperAdmin || isCompanyAdmin) && (
+                                 <div className="flex space-x-3">
+                                    <button
+                                       onClick={(e) => handleEditOrder(e, selectedOrder)}
+                                       className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                                    >
+                                       <i className="fa-solid fa-edit"></i>
+                                       <span>Edit Order</span>
+                                    </button>
+                                 </div>
+                              )}
                            </div>
                         </div>
                      )}
