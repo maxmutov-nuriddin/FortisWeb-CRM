@@ -13,6 +13,7 @@ const Company = () => {
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+   
    const [formData, setFormData] = useState({
       name: '',
       email: '',
