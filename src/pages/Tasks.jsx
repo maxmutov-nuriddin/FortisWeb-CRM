@@ -200,8 +200,8 @@ const Tasks = () => {
       }
    };
 
-   const handleDeleteTask = async (task) => {
-      const id = task?._id || task?.id || task;
+   const handleDeleteTask = async (taskOrId) => {
+      const id = taskOrId?._id || taskOrId?.id || taskOrId;
       if (window.confirm('Are you sure you want to delete this task?')) {
          try {
             await deleteTask(id);
@@ -241,23 +241,7 @@ const Tasks = () => {
       setIsEditModalOpen(true);
    };
 
-   const handleSubmit = async (e) => {
-      e.preventDefault();
-      try {
-         if (isEditModalOpen) {
-            const id = currentTask?._id || currentTask?.id;
-            await updateTask(id, formData);
-            toast.success('Task updated');
-         } else {
-            await createTask(formData);
-            toast.success('Task created');
-         }
-         setIsCreateModalOpen(false);
-         setIsEditModalOpen(false);
-      } catch (error) {
-         toast.error(error.message || 'Operation failed');
-      }
-   };
+
 
    const canManageTasks = ['super_admin', 'company_admin', 'team_lead'].includes(role);
 
@@ -511,7 +495,8 @@ const Tasks = () => {
                         }
 
                         if (isEditModalOpen) {
-                           await updateTask(currentTask._id, finalData);
+                           const id = currentTask?._id || currentTask?.id;
+                           await updateTask(id, finalData);
                            toast.success('Task updated');
                         } else {
                            await createTask(finalData);

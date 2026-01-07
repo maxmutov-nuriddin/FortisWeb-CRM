@@ -2,7 +2,7 @@ import api from './axios.api';
 
 export const tasksApi = {
    create: (data) => api.post('/api/tasks', data),
-   update: (id, data) => api.patch(`/api/tasks/${id}`, data),
+   update: (id, data) => api.put(`/api/tasks/${id}`, data),
    delete: (id) => api.delete(`/api/tasks/${id}`),
    getByProject: (projectId) => api.get(`/api/tasks/project/${projectId}`),
    getByUser: (userId) => api.get(userId ? `/api/tasks/user/${userId}` : '/api/tasks/user'),
