@@ -34,7 +34,8 @@ const Dashboard = () => {
    const [period, setPeriod] = useState('6m')
    const [selectedProject, setSelectedProject] = useState(null)
    const [salaryTotals, setSalaryTotals] = useState({
-      team: 0,
+      execution: 0,
+      leadManagement: 0,
       admin: 0,
       company: 0
    })
@@ -741,28 +742,28 @@ const Dashboard = () => {
                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
                            <span className="text-gray-400">Execution Pool (56%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.execution.toFixed(2)}</span>
+                        <span className="text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                            <span className="text-gray-400">Lead Management (14%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.leadManagement.toFixed(2)}</span>
+                        <span className="text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
                            <span className="text-gray-400">Admin (10%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.admin.toFixed(2)}</span>
+                        <span className="text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                            <span className="text-gray-400">Company (20%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.company}</span>
+                        <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
                      </div>
                   </div>
                </div>

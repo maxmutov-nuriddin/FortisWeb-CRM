@@ -62,15 +62,23 @@ const Payments = () => {
          } else if (userData?._id || userData?.id) {
             const userId = userData._id || userData.id;
             const companyId = userData.company?._id || userData.company || '';
-            // Team Lead / Member: Fetch their own payments AND tasks AND company projects
-            const promises = [
-               getPaymentsByUser(userId),
-               getTasksByUser(userId)
-            ];
-            if (companyId) {
-               promises.push(getProjectsByCompany(companyId));
+            // Team Lead: Needs visibility of Project Payouts (Client -> Company) to see revenue
+            if (userData.role === 'team_lead') {
+               const promises = [
+                  getPaymentsByCompany(companyId),
+                  getTasksByUser(userId)
+               ];
+               if (companyId) promises.push(getProjectsByCompany(companyId));
+               await Promise.all(promises);
+            } else {
+               // Team Member: Fetch their own payments AND tasks AND company projects
+               const promises = [
+                  getPaymentsByUser(userId),
+                  getTasksByUser(userId)
+               ];
+               if (companyId) promises.push(getProjectsByCompany(companyId));
+               await Promise.all(promises);
             }
-            await Promise.all(promises);
          }
       } catch (error) {
          console.error('Error fetching payments:', error);
@@ -171,8 +179,53 @@ const Payments = () => {
       // Identify Team Lead robustly
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
       const fullProject = projectList.find(p => String(p._id || p.id) === projectId) || projectObj;
-      const teamLeadId = String(fullProject.team?.teamLead?._id || fullProject.team?.teamLead || '');
+
+      let teamLeadId = '';
+      const teamRef = fullProject.team;
+
+      // Case A: team is populated object
+      if (teamRef && typeof teamRef === 'object' && (teamRef.teamLead || teamRef.teamLeadId)) {
+         teamLeadId = String(teamRef.teamLead?._id || teamRef.teamLead || teamRef.teamLeadId || '');
+      }
+      // Case B: team is just ID, look it up in companies
+      else if (teamRef) {
+         const teamId = String(teamRef._id || teamRef);
+         const allCompaniesList = companies?.data?.companies || companies || [];
+
+         for (const comp of allCompaniesList) {
+            const foundTeam = comp.teams?.find(t => String(t._id) === teamId);
+            if (foundTeam?.teamLead) {
+               teamLeadId = String(foundTeam.teamLead._id || foundTeam.teamLead);
+               break;
+            }
+         }
+      }
+      // Case C: No team ref on project? Scan all companies for this project ID!
+      else {
+         const allCompaniesList = companies?.data?.companies || companies || [];
+         // Scan all teams in all companies to see if this project belongs to one
+         outerLoop:
+         for (const comp of allCompaniesList) {
+            if (comp.teams) {
+               for (const t of comp.teams) {
+                  // Project might be in t.projects (if populated) or we assume connection? 
+                  // Actually, usually projects have 'team' field. 
+                  // If project is missing 'team', maybe we can find the project in the team's project list?
+                  if (t.projects && t.projects.some(p => String(p._id || p) === projectId)) {
+                     if (t.teamLead) {
+                        teamLeadId = String(t.teamLead._id || t.teamLead);
+                        break outerLoop;
+                     }
+                  }
+               }
+            }
+         }
+      }
+
       const isLead = currentUserId === teamLeadId;
+
+      // Debug log
+      console.log('Calc Share:', { projectId, teamLeadId, currentUserId, isLead, teamRefType: typeof teamRef, projectListLen: projectList.length });
 
       // Robust task list retrieval
       const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
@@ -210,8 +263,18 @@ const Payments = () => {
          share += (executionPool * (myWeight / totalWeight));
       }
 
+      // 3. Add Admin Share if Company Admin (10%)
+      if (userData.role === 'company_admin') {
+         share += (totalAmount * 0.10);
+      }
+
+      // 4. Add Company Share if Super Admin (20%) - Optional view
+      if (userData.role === 'super_admin') {
+         share += (totalAmount * 0.20);
+      }
+
       return share;
-   }, [userData, tasks]);
+   }, [userData, tasks, projects]);
 
    const stats = useMemo(() => {
       const activeList = filteredPayments;
@@ -228,8 +291,13 @@ const Payments = () => {
       });
       const thisMonthAmount = thisMonthPayments.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
 
-      // Individual Earnings for Worker/Non-Admin
-      const myTotalEarnings = activeList.reduce((sum, p) => sum + calculateMyShare(p), 0);
+      // Individual Earnings for Worker/Non-Admin (Confirmed + Completed)
+      const myTotalEarnings = activeList.reduce((sum, p) => {
+         if (p.status === 'completed' || p.status === 'confirmed') {
+            return sum + calculateMyShare(p);
+         }
+         return sum;
+      }, 0);
 
       // Calculate Estimated Share from Projects for non-admins
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
@@ -688,7 +756,7 @@ const Payments = () => {
                               </td>
                               <td className="py-4 px-4">
                                  <div className="flex items-center gap-2">
-                                    {payment.status === 'pending' ? (
+                                    {(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? (
                                        <button
                                           onClick={() => handleConfirm(payment._id)}
                                           disabled={isSubmitting}
@@ -698,7 +766,7 @@ const Payments = () => {
                                           <i className="fa-solid fa-check"></i>
                                           Confirm
                                        </button>
-                                    ) : payment.status === 'confirmed' && isSuperAdmin ? (
+                                    ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
                                        <button
                                           onClick={() => handleComplete(payment._id)}
                                           disabled={isSubmitting}
