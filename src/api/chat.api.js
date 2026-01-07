@@ -8,5 +8,5 @@ export const chatApi = {
    updateMessage: (chatId, messageId, data) => api.put(`/api/chat/${chatId}/messages/${messageId}`, data),
    deleteMessage: (chatId, messageId) => api.delete(`/api/chat/${chatId}/messages/${messageId}`),
    markRead: (chatId) => api.put(`/api/chat/${chatId}/read`),
-   clearChat: (chatId) => api.delete(`/api/chat/${chatId}/clear`),
+   clearChat: (chatId) => api.delete(`/api/chat/${chatId}`),
 };

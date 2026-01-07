@@ -217,14 +217,25 @@ const Chat = () => {
       }
    };
 
+   const handleDelete = async (msgId) => {
+      if (window.confirm('Delete this message?')) {
+         try {
+            await deleteMessage(selectedChat._id, msgId);
+            toast.success('Deleted');
+         } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to delete');
+         }
+      }
+   };
+
    const handleClearChat = async () => {
       if (window.confirm('Delete chat history?')) {
          try {
             await clearChat(selectedChat._id);
-            toast.success('Cleared');
+            toast.success('Chat cleared');
             getChatMessages(selectedChat._id);
          } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed');
+            toast.error(error.response?.data?.message || 'Failed to clear chat');
          }
       }
    };
