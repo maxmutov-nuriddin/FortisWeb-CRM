@@ -5,7 +5,7 @@ import { useProjectStore } from '../store/project.store';
 import { useChatStore } from '../store/chat.store';
 
 const Header = ({ toggleSidebar }) => {
-   const { user, error: authError, getMe } = useAuthStore();
+   const { user, error: authError } = useAuthStore();
    const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
    const { chats, error: chatsError } = useChatStore();
 
