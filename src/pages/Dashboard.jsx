@@ -13,7 +13,7 @@ import { toast } from 'react-toastify';
 
 const Dashboard = () => {
    //! DATA
-   const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
+   const { user, isLoading: authLoading, error: authError } = useAuthStore();
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
    const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
