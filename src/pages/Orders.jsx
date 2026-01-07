@@ -47,6 +47,7 @@ const Orders = () => {
    const { user } = useAuthStore();
    const userData = user?.data?.user || user?.user || user;
    const isSuperAdmin = userData?.role === 'super_admin';
+   const isCompanyAdmin = userData?.role === 'company_admin';
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
@@ -1650,92 +1651,138 @@ const Orders = () => {
                               </div>
                            </div>
 
-                           <div className="border-t border-gray-800 pt-6">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                                 <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
-                                 Payment Information
-                              </h3>
-                              {(() => {
-                                 const payment = paymentsList.find(p => {
-                                    const pProjectId = String(p.project?._id || p.project || '');
-                                    const sOrderId = String(selectedOrder._id || '');
-                                    return pProjectId === sOrderId;
-                                 });
-                                 if (!payment) {
+                           {(isSuperAdmin || isCompanyAdmin) && (
+                              <div className="border-t border-gray-800 pt-6">
+                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                                    <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
+                                    Payment Information
+                                 </h3>
+                                 {(() => {
+                                    const payment = paymentsList.find(p => {
+                                       const pProjectId = String(p.project?._id || p.project || '');
+                                       const sOrderId = String(selectedOrder._id || '');
+                                       return pProjectId === sOrderId;
+                                    });
+                                    if (!payment) {
+                                       return (
+                                          <div className="bg-dark-tertiary rounded-xl p-8 border border-dashed border-gray-700/50 flex flex-col items-center justify-center text-center space-y-4">
+                                             <div className="w-16 h-16 bg-dark-secondary rounded-full flex items-center justify-center text-gray-600 mb-2 border border-gray-800">
+                                                <i className="fa-solid fa-file-invoice-dollar text-2xl"></i>
+                                             </div>
+                                             <div className="max-w-xs">
+                                                <h4 className="text-white font-semibold text-sm mb-1">Missing Payment Record</h4>
+                                                <p className="text-gray-500 text-xs">A financial record is required to track this project's revenue and team payouts.</p>
+                                             </div>
+                                             <div className="w-full max-w-sm pt-2">
+                                                <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-bold">Select Payment Method</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                   <select
+                                                      value={paymentFormData.paymentMethod || 'bank_transfer'}
+                                                      onChange={(e) => {
+                                                         const val = e.target.value;
+                                                         setPaymentFormData(prev => ({ ...prev, paymentMethod: val }));
+                                                      }}
+
+                                                      className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
+                                                   >
+                                                      <option value="bank_transfer">Bank Transfer</option>
+                                                      <option value="cash">Cash</option>
+                                                      <option value="card">Card</option>
+                                                      <option value="paypal">PayPal</option>
+                                                      <option value="crypto">Crypto</option>
+                                                      <option value="other">Other</option>
+                                                   </select>
+                                                   <button
+                                                      onClick={(e) => handleCreatePaymentManually(e, selectedOrder)}
+                                                      className="col-span-2 bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
+                                                   >
+                                                      <i className="fa-solid fa-plus mr-2"></i>
+                                                      Create Initial Payment
+                                                   </button>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       );
+                                    }
+
                                     return (
-                                       <div className="bg-dark-tertiary rounded-xl p-8 border border-dashed border-gray-700/50 flex flex-col items-center justify-center text-center space-y-4">
-                                          <div className="w-16 h-16 bg-dark-secondary rounded-full flex items-center justify-center text-gray-600 mb-2 border border-gray-800">
-                                             <i className="fa-solid fa-file-invoice-dollar text-2xl"></i>
-                                          </div>
-                                          <div className="max-w-xs">
-                                             <h4 className="text-white font-semibold text-sm mb-1">Missing Payment Record</h4>
-                                             <p className="text-gray-500 text-xs">A financial record is required to track this project's revenue and team payouts.</p>
-                                          </div>
-                                          <div className="w-full max-w-sm pt-2">
-                                             <label className="text-[10px] text-gray-500 uppercase tracking-wider mb-2 block font-bold">Select Payment Method</label>
-                                             <div className="grid grid-cols-2 gap-2">
-                                                <select
-                                                   value={paymentFormData.paymentMethod || 'bank_transfer'}
-                                                   onChange={(e) => {
-                                                      const val = e.target.value;
-                                                      setPaymentFormData(prev => ({ ...prev, paymentMethod: val }));
-                                                   }}
-
-                                                   className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
-                                                >
-                                                   <option value="bank_transfer">Bank Transfer</option>
-                                                   <option value="cash">Cash</option>
-                                                   <option value="card">Card</option>
-                                                   <option value="paypal">PayPal</option>
-                                                   <option value="crypto">Crypto</option>
-                                                   <option value="other">Other</option>
-                                                </select>
-                                                <button
-                                                   onClick={(e) => handleCreatePaymentManually(e, selectedOrder)}
-                                                   className="col-span-2 bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center"
-                                                >
-                                                   <i className="fa-solid fa-plus mr-2"></i>
-                                                   Create Initial Payment
-                                                </button>
-                                             </div>
-                                          </div>
-                                       </div>
-                                    );
-                                 }
-
-                                 return (
-                                    <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
-                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                          <div>
-                                             <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
-                                             <div className="flex items-center space-x-2">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit
+                                       <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
+                                                <div className="flex items-center space-x-2">
+                                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit
                                                    ${payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
-                                                      payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
-                                                         'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
-                                                   {payment.status}
-                                                </span>
+                                                         payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
+                                                            'bg-yellow-500 bg-opacity-20 text-yellow-500'}`}>
+                                                      {payment.status}
+                                                   </span>
+                                                </div>
+                                             </div>
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Amount</span>
+                                                <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
                                              </div>
                                           </div>
-                                          <div>
-                                             <span className="text-xs text-gray-500 block mb-1">Amount</span>
-                                             <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
-                                          </div>
-                                       </div>
 
-                                       <div className="grid grid-cols-1 gap-4">
-                                          <div>
-                                             <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
-                                             <div className="flex items-center space-x-2">
-                                                <select
-                                                   value={paymentFormData.paymentMethod || payment.paymentMethod || 'bank_transfer'}
-                                                   disabled={payment.status !== 'pending' || isSubmitting}
-                                                   onChange={async (e) => {
-                                                      const newVal = e.target.value;
-                                                      setPaymentFormData(prev => ({ ...prev, paymentMethod: newVal }));
+                                          <div className="grid grid-cols-1 gap-4">
+                                             <div>
+                                                <span className="text-xs text-gray-500 block mb-1">Payment Method</span>
+                                                <div className="flex items-center space-x-2">
+                                                   <select
+                                                      value={paymentFormData.paymentMethod || payment.paymentMethod || 'bank_transfer'}
+                                                      disabled={payment.status !== 'pending' || isSubmitting}
+                                                      onChange={async (e) => {
+                                                         const newVal = e.target.value;
+                                                         setPaymentFormData(prev => ({ ...prev, paymentMethod: newVal }));
+                                                         try {
+                                                            await updatePayment(payment._id || payment.id, { paymentMethod: newVal });
+                                                            toast.success(`Payment method updated to ${newVal}`, {
+                                                               position: 'top-right',
+                                                               autoClose: 5000,
+                                                               closeOnClick: false,
+                                                               draggable: false,
+                                                               theme: 'dark',
+                                                            });
+                                                         } catch (err) {
+                                                            toast.error('Failed to update payment method', {
+                                                               position: 'top-right',
+                                                               autoClose: 5000,
+                                                               closeOnClick: false,
+                                                               draggable: false,
+                                                               theme: 'dark',
+                                                            });
+                                                         }
+                                                      }}
+                                                      className="flex-1 bg-dark-secondary text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                                                   >
+                                                      <option value="bank_transfer">Bank Transfer</option>
+                                                      <option value="cash">Cash</option>
+                                                      <option value="card">Card</option>
+                                                      <option value="paypal">PayPal</option>
+                                                      <option value="crypto">Crypto</option>
+                                                      <option value="other">Other</option>
+                                                   </select>
+                                                </div>
+                                             </div>
+                                          </div>
+
+                                          <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
+                                             {payment.status === 'pending' && (
+                                                <button
+                                                   type="button"
+                                                   disabled={isSubmitting}
+                                                   onClick={async () => {
+                                                      setIsSubmitting(true);
                                                       try {
-                                                         await updatePayment(payment._id || payment.id, { paymentMethod: newVal });
-                                                         toast.success(`Payment method updated to ${newVal}`, {
+                                                         await confirmPayment(payment._id || payment.id);
+                                                         await fetchData().then(() => {
+                                                            if (selectedOrder) {
+                                                               const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                               if (freshOrder) setSelectedOrder(freshOrder);
+                                                            }
+                                                         });
+                                                         toast.success('Payment confirmed successfully!', {
                                                             position: 'top-right',
                                                             autoClose: 5000,
                                                             closeOnClick: false,
@@ -1743,157 +1790,113 @@ const Orders = () => {
                                                             theme: 'dark',
                                                          });
                                                       } catch (err) {
-                                                         toast.error('Failed to update payment method', {
+                                                         toast.error('Failed to confirm: ', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         } + err.message);
+                                                      } finally {
+                                                         setIsSubmitting(false);
+                                                      }
+                                                   }}
+                                                   className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'} mr-1`}></i>
+                                                   {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
+                                                </button>
+                                             )}
+
+
+
+                                             {/* STEP 2: Start Project */}
+                                             {payment.status === 'confirmed' && selectedOrder.status === 'pending' && (
+                                                <button
+                                                   type="button"
+                                                   disabled={isSubmitting}
+                                                   onClick={async () => {
+                                                      setIsSubmitting(true);
+                                                      try {
+                                                         await updateProject(selectedOrder._id, { status: 'in_progress' });
+                                                         await fetchData().then(() => {
+                                                            if (selectedOrder) {
+                                                               const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                               if (freshOrder) setSelectedOrder(freshOrder);
+                                                            }
+                                                         });
+                                                         toast.success('Project started! Status changed to In Progress.', {
                                                             position: 'top-right',
                                                             autoClose: 5000,
                                                             closeOnClick: false,
                                                             draggable: false,
                                                             theme: 'dark',
                                                          });
+                                                      } catch (err) {
+                                                         toast.error('Failed to start project: ', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         } + err.message);
+                                                      } finally {
+                                                         setIsSubmitting(false);
                                                       }
                                                    }}
-                                                   className="flex-1 bg-dark-secondary text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                                                   className={`w-full bg-dark-accent hover:bg-red-600 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
-                                                   <option value="bank_transfer">Bank Transfer</option>
-                                                   <option value="cash">Cash</option>
-                                                   <option value="card">Card</option>
-                                                   <option value="paypal">PayPal</option>
-                                                   <option value="crypto">Crypto</option>
-                                                   <option value="other">Other</option>
-                                                </select>
-                                             </div>
+                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-play'} mr-1`}></i>
+                                                   {isSubmitting ? 'Starting...' : 'Start Translation (Move to In Progress)'}
+                                                </button>
+                                             )}
+
+                                             {/* STEP 3: Complete Payment */}
+                                             {payment.status === 'confirmed' && selectedOrder.status === 'in_progress' && (
+                                                <button
+                                                   type="button"
+                                                   disabled={isSubmitting}
+                                                   onClick={async () => {
+                                                      setIsSubmitting(true);
+                                                      try {
+                                                         await completePayment(payment._id || payment.id);
+                                                         await fetchData().then(() => {
+                                                            if (selectedOrder) {
+                                                               const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                               if (freshOrder) setSelectedOrder(freshOrder);
+                                                            }
+                                                         });
+                                                         toast.success('Payment completed and salaries distributed!', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         });
+                                                      } catch (err) {
+                                                         toast.error('Failed to complete payment: ', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         } + err.message);
+                                                      } finally {
+                                                         setIsSubmitting(false);
+                                                      }
+                                                   }}
+                                                   className={`w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                   <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
+                                                   {isSubmitting ? 'Completing...' : 'Complete Payment (Distribute Salaries)'}
+                                                </button>
+                                             )}
                                           </div>
                                        </div>
-
-                                       <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
-                                          {payment.status === 'pending' && (
-                                             <button
-                                                type="button"
-                                                disabled={isSubmitting}
-                                                onClick={async () => {
-                                                   setIsSubmitting(true);
-                                                   try {
-                                                      await confirmPayment(payment._id || payment.id);
-                                                      await fetchData().then(() => {
-                                                         if (selectedOrder) {
-                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
-                                                            if (freshOrder) setSelectedOrder(freshOrder);
-                                                         }
-                                                      });
-                                                      toast.success('Payment confirmed successfully!', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      });
-                                                   } catch (err) {
-                                                      toast.error('Failed to confirm: ', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      } + err.message);
-                                                   } finally {
-                                                      setIsSubmitting(false);
-                                                   }
-                                                }}
-                                                className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                             >
-                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'} mr-1`}></i>
-                                                {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
-                                             </button>
-                                          )}
-
-
-
-                                          {/* STEP 2: Start Project */}
-                                          {payment.status === 'confirmed' && selectedOrder.status === 'pending' && (
-                                             <button
-                                                type="button"
-                                                disabled={isSubmitting}
-                                                onClick={async () => {
-                                                   setIsSubmitting(true);
-                                                   try {
-                                                      await updateProject(selectedOrder._id, { status: 'in_progress' });
-                                                      await fetchData().then(() => {
-                                                         if (selectedOrder) {
-                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
-                                                            if (freshOrder) setSelectedOrder(freshOrder);
-                                                         }
-                                                      });
-                                                      toast.success('Project started! Status changed to In Progress.', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      });
-                                                   } catch (err) {
-                                                      toast.error('Failed to start project: ', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      } + err.message);
-                                                   } finally {
-                                                      setIsSubmitting(false);
-                                                   }
-                                                }}
-                                                className={`w-full bg-dark-accent hover:bg-red-600 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                             >
-                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-play'} mr-1`}></i>
-                                                {isSubmitting ? 'Starting...' : 'Start Translation (Move to In Progress)'}
-                                             </button>
-                                          )}
-
-                                          {/* STEP 3: Complete Payment */}
-                                          {payment.status === 'confirmed' && selectedOrder.status === 'in_progress' && (
-                                             <button
-                                                type="button"
-                                                disabled={isSubmitting}
-                                                onClick={async () => {
-                                                   setIsSubmitting(true);
-                                                   try {
-                                                      await completePayment(payment._id || payment.id);
-                                                      await fetchData().then(() => {
-                                                         if (selectedOrder) {
-                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
-                                                            if (freshOrder) setSelectedOrder(freshOrder);
-                                                         }
-                                                      });
-                                                      toast.success('Payment completed and salaries distributed!', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      });
-                                                   } catch (err) {
-                                                      toast.error('Failed to complete payment: ', {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      } + err.message);
-                                                   } finally {
-                                                      setIsSubmitting(false);
-                                                   }
-                                                }}
-                                                className={`w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                             >
-                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
-                                                {isSubmitting ? 'Completing...' : 'Complete Payment (Distribute Salaries)'}
-                                             </button>
-                                          )}
-                                       </div>
-                                    </div>
-                                 );
-                              })()}
-                           </div>
+                                    );
+                                 })()}
+                              </div>
+                           )}
 
                            {selectedOrder.results?.length > 0 && (
                               <div>
