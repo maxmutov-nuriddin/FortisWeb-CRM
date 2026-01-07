@@ -18,15 +18,55 @@ const Payments = () => {
    const [searchQuery, setSearchQuery] = useState('');
 
    const { user } = useAuthStore();
-   const { companies, getCompanies } = useCompanyStore();
+   const { companies, selectedCompany, getCompanies, getCompanyById } = useCompanyStore();
    const { users, getAllUsers, getUsersByCompany } = useUserStore();
    const { payments, getAllPayments, getPaymentsByCompany, confirmPayment, completePayment, updatePayment, isLoading } = usePaymentStore();
 
-   const userData = user?.data?.user || user?.user || user;
-   const isSuperAdmin = userData?.role === 'super_admin';
+   const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
+   const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
-   // Get companies for filter
-   const allCompanies = companies?.data?.companies || companies?.companies || [];
+   const allCompanies = useMemo(() => {
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      return companyList;
+   }, [companies]);
+
+   const allTeams = useMemo(() => {
+      if (!userData) return [];
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const userCompanyId = String(userData.company?._id || userData.company || '');
+
+      let relevantCompanies = [...companyList];
+      const selComp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
+
+      if (selComp && String(selComp._id) === userCompanyId) {
+         if (!relevantCompanies.some(c => String(c._id) === userCompanyId)) {
+            relevantCompanies.push(selComp);
+         } else {
+            relevantCompanies = relevantCompanies.map(c => String(c._id) === userCompanyId ? selComp : c);
+         }
+      }
+
+      if (isSuperAdmin) {
+         let teams = [];
+         relevantCompanies.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: String(c._id) }))];
+         });
+         return teams;
+      } else {
+         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
+
+         if (userData?.role === 'company_admin') {
+            return companyTeams;
+         }
+
+         const currentUserId = String(userData?._id || '');
+         return companyTeams.filter(t =>
+            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
+            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
+         );
+      }
+   }, [companies, selectedCompany, userData, isSuperAdmin]);
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
@@ -36,8 +76,10 @@ const Payments = () => {
    useEffect(() => {
       if (isSuperAdmin) {
          getCompanies();
+      } else if (activeCompanyId) {
+         getCompanyById(activeCompanyId);
       }
-   }, [isSuperAdmin, getCompanies]);
+   }, [isSuperAdmin, getCompanies, getCompanyById, activeCompanyId]);
 
    const fetchData = async () => {
       try {
@@ -82,8 +124,30 @@ const Payments = () => {
 
    const paymentsList = useMemo(() => {
       const list = payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
-      return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-   }, [payments]);
+
+      // Role-based filtering
+      let result = [...list];
+      if (!isSuperAdmin && userData?.role !== 'company_admin') {
+         const myTeams = allTeams;
+         const myTeamIds = new Set(myTeams.map(t => String(t._id)));
+         const currentUserId = String(userData?._id || '');
+
+         result = result.filter(p => {
+            // If user is creator or client (already handled by API mostly, but for store state consistency)
+            // or if project belongs to their team
+            const projectTeamId = String(p.project?.team?._id || p.project?.team || '');
+            if (myTeamIds.has(projectTeamId)) return true;
+
+            // Member assignment
+            const isAssigned = p.project?.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
+            if (isAssigned) return true;
+
+            return false;
+         });
+      }
+
+      return result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+   }, [payments, isSuperAdmin, userData, allTeams]);
 
 
    const filteredPayments = useMemo(() => {

@@ -17,7 +17,7 @@ const Dashboard = () => {
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
    const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
-   const { companies, getCompanies, isLoading: companiesLoading, } = useCompanyStore();
+   const { companies, selectedCompany, getCompanies, getCompanyById, isLoading: companiesLoading, } = useCompanyStore();
 
    //! State
    const [newOrder, setNewOrder] = useState([])
@@ -40,16 +40,100 @@ const Dashboard = () => {
       company: 0
    })
 
+   const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
+   const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
+
+   const allTeams = useMemo(() => {
+      if (!userData) return [];
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const userCompanyId = String(userData.company?._id || userData.company || '');
+
+      let relevantCompanies = [...companyList];
+      const selComp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
+
+      if (selComp && String(selComp._id) === userCompanyId) {
+         if (!relevantCompanies.some(c => String(c._id) === userCompanyId)) {
+            relevantCompanies.push(selComp);
+         } else {
+            relevantCompanies = relevantCompanies.map(c => String(c._id) === userCompanyId ? selComp : c);
+         }
+      }
+
+      if (isSuperAdmin) {
+         let teams = [];
+         relevantCompanies.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: String(c._id) }))];
+         });
+         return teams;
+      } else {
+         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
+
+         if (userData?.role === 'company_admin') {
+            return companyTeams;
+         }
+
+         const currentUserId = String(userData?._id || '');
+         return companyTeams.filter(t =>
+            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
+            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
+         );
+      }
+   }, [companies, selectedCompany, userData, isSuperAdmin]);
+
+   const filteredProjects = useMemo(() => {
+      const all = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+      if (isSuperAdmin || userData?.role === 'company_admin') return all;
+
+      const currentUserId = String(userData?._id || '');
+      const myTeamIds = new Set(allTeams.map(t => String(t._id)));
+
+      return all.filter(p => {
+         const isAssigned = p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
+         if (isAssigned) return true;
+
+         const projectTeamId = String(p.team?._id || p.team || '');
+         if (myTeamIds.has(projectTeamId)) return true;
+
+         return false;
+      });
+   }, [projects, isSuperAdmin, userData, allTeams]);
+
+   const filteredPayments = useMemo(() => {
+      const all = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+      if (isSuperAdmin || userData?.role === 'company_admin') return all;
+
+      const visibleProjectIds = new Set(filteredProjects.map(p => String(p._id)));
+      return all.filter(p => {
+         const pId = String(p.project?._id || p.project || '');
+         return visibleProjectIds.has(pId);
+      });
+   }, [payments, isSuperAdmin, userData, filteredProjects]);
+
+   const filteredUsers = useMemo(() => {
+      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      if (isSuperAdmin || userData?.role === 'company_admin') return all;
+
+      const memberIds = new Set();
+      allTeams.forEach(t => {
+         if (t.members) t.members.forEach(m => memberIds.add(String(m?._id || m.user?._id || m.user || m)));
+         memberIds.add(String(t.teamLead?._id || t.teamLead || ''));
+      });
+      memberIds.add(String(userData?._id));
+
+      return all.filter(u => memberIds.has(String(u._id)));
+   }, [users, isSuperAdmin, userData, allTeams]);
+
    // Grafik 2
    useEffect(() => {
-      if (!payments?.data?.payments) return
+      if (!filteredPayments) return
 
       let team = 0
       let mainAdmin = 0
       let admin = 0
       let company = 0
 
-      payments.data.payments.forEach(p => {
+      filteredPayments.forEach(p => {
          if (!p.distribution) return
 
          team += Number(p.distribution.teamShare?.totalAmount || 0)
@@ -59,7 +143,7 @@ const Dashboard = () => {
       })
 
       setSalaryTotals({ team, mainAdmin, admin, company })
-   }, [payments])
+   }, [filteredPayments])
 
    const salaryData = [{
       type: 'pie',
@@ -132,15 +216,15 @@ const Dashboard = () => {
    }
 
    const revenueChart = useMemo(() => {
-      if (!payments?.data?.payments) return { labels: [], values: [] }
+      if (!filteredPayments) return { labels: [], values: [] }
 
       const filtered = filterPaymentsByPeriod(
-         payments.data.payments,
+         filteredPayments,
          period
       )
 
       return getMonthlyRevenue(filtered)
-   }, [payments, period])
+   }, [filteredPayments, period])
 
    const revenueData = [{
       type: 'scatter',
@@ -164,14 +248,12 @@ const Dashboard = () => {
 
    // ===================== USERS =====================
    useEffect(() => {
-      let usersList = users?.data?.users || (Array.isArray(users) ? users : [])
-      if (!usersList || usersList.length === 0) return
-
-      const userData = user?.data?.user || user;
-      const isAdmin = userData?.role === 'super_admin';
-
-      if (!isAdmin) {
-         usersList = usersList.filter(u => u.role !== 'super_admin');
+      let usersList = filteredUsers;
+      if (!usersList || usersList.length === 0) {
+         setActiveRoles(0)
+         setTotalMembers(0)
+         setOnlineMembers(0)
+         return
       }
 
       const activeRolesCount = new Set(
@@ -187,13 +269,18 @@ const Dashboard = () => {
       setActiveRoles(activeRolesCount)
       setTotalMembers(usersList.length)
       setOnlineMembers(onlineCount)
-   }, [users])
+   }, [filteredUsers])
 
 
    // ===================== PAYMENTS =====================
    useEffect(() => {
-      const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : [])
-      if (!paymentsList || paymentsList.length === 0) return
+      const paymentsList = filteredPayments;
+      if (!paymentsList || paymentsList.length === 0) {
+         setTodayRevenue(0)
+         setRevenuePercent(0)
+         setTodayProjectsCount(0)
+         return
+      }
 
       // 💰 Сегодня
       const todayPayments = paymentsList.filter(p =>
@@ -223,7 +310,7 @@ const Dashboard = () => {
       setTodayRevenue(todaySum)
       setRevenuePercent(percent)
       setTodayProjectsCount(projectsCount)
-   }, [payments])
+   }, [filteredPayments])
 
 
 
@@ -232,7 +319,6 @@ const Dashboard = () => {
    // ===================== DATA INITIALIZATION =====================
    useEffect(() => {
       const initDashboard = async () => {
-         const userData = user?.data?.user || user;
          if (!userData) return;
 
          const companyId = userData.company?._id || userData.company;
@@ -240,11 +326,8 @@ const Dashboard = () => {
 
          if (role === 'super_admin') {
             try {
-               // Super admin needs all companies first
                const res = await getCompanies();
                const companiesList = res?.data?.companies || res?.companies || (Array.isArray(res) ? res : []);
-
-               // Fallback to store state if return value is missing
                const finalCompanies = companiesList.length > 0 ? companiesList : (companies?.data?.companies || []);
                const companyIds = finalCompanies.map(c => c._id).filter(Boolean);
 
@@ -257,7 +340,7 @@ const Dashboard = () => {
                console.error('Error fetching data for super_admin:', error);
             }
          } else if (companyId) {
-            // Company admin or regular admin/user
+            getCompanyById(companyId);
             getProjectsByCompany(companyId);
             getPaymentsByCompany(companyId);
             getUsersByCompany(companyId);
@@ -265,7 +348,7 @@ const Dashboard = () => {
       };
 
       initDashboard();
-   }, [user, getCompanies, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany]);
+   }, [userData, getCompanies, getCompanyById, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany]);
 
    useEffect(() => {
       if (users?.partialFailure) {
@@ -279,7 +362,7 @@ const Dashboard = () => {
 
    // ===================== PROJECTS =====================
    useEffect(() => {
-      const projectsData = projects?.data?.projects || (Array.isArray(projects) ? projects : [])
+      const projectsData = filteredProjects;
       if (!Array.isArray(projectsData) || projectsData.length === 0) {
          setTodayProjects([])
          setNewOrder(0)
@@ -308,24 +391,23 @@ const Dashboard = () => {
       )
 
       setTotalProjects(projectsData.length)
-   }, [projects])
+   }, [filteredProjects])
 
 
    //! Recent Order
 
    const recentOrders = useMemo(() => {
-      const projectsData = projects?.data?.projects || (Array.isArray(projects) ? projects : [])
-      if (!projectsData || projectsData.length === 0) return []
+      if (!filteredProjects || filteredProjects.length === 0) return []
 
-      return [...projectsData]
+      return [...filteredProjects]
          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
          .slice(0, 5)
-   }, [projects])
+   }, [filteredProjects])
 
    const getAmountByProject = (project) => {
-      if (!project.payment || !payments?.data?.payments) return '—'
+      if (!project.payment || !filteredPayments) return '—'
 
-      const payment = payments.data.payments.find(
+      const payment = filteredPayments.find(
          p => p._id === project.payment
       )
 
