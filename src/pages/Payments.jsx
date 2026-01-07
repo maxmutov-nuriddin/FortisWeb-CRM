@@ -60,17 +60,22 @@ const Payments = () => {
             return companyTeams;
          }
 
-         const currentUserId = String(userData?._id || '');
-         return companyTeams.filter(t =>
-            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
-            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
-         );
+         const currentUserId = String(userData?._id || userData?.id || '');
+         return companyTeams.filter(t => {
+            const teamLeadId = String(t.teamLead?._id || t.teamLead || '');
+            const isLead = teamLeadId && teamLeadId === currentUserId;
+            const isMember = t.members?.some(m => {
+               const mId = String(m?._id || m.user?._id || m.user || m || '');
+               return mId && mId === currentUserId;
+            });
+            return isLead || isMember;
+         });
       }
    }, [companies, selectedCompany, userData, isSuperAdmin]);
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
-      return userData?.company?._id || userData?.company || '';
+      return userData?.company?._id || userData?.company?.id || userData?.company || '';
    }, [isSuperAdmin, viewCompanyId, userData]);
 
    useEffect(() => {
@@ -128,22 +133,28 @@ const Payments = () => {
       // Role-based filtering
       let result = [...list];
       if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         const myTeams = allTeams;
-         const myTeamIds = new Set(myTeams.map(t => String(t._id)));
-         const currentUserId = String(userData?._id || '');
+         const currentUserId = String(userData?._id || userData?.id || '');
 
-         result = result.filter(p => {
-            // If user is creator or client (already handled by API mostly, but for store state consistency)
-            // or if project belongs to their team
-            const projectTeamId = String(p.project?.team?._id || p.project?.team || '');
-            if (myTeamIds.has(projectTeamId)) return true;
+         if (userData?.role === 'team_lead') {
+            // Team leads see payments related to teams they lead or belong to
+            const myTeams = allTeams;
+            const myTeamIds = new Set(myTeams.map(t => String(t._id || t.id || '')));
 
-            // Member assignment
-            const isAssigned = p.project?.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
-            if (isAssigned) return true;
-
-            return false;
-         });
+            result = result.filter(p => {
+               const projectTeamId = String(p.project?.team?._id || p.project?.team || '');
+               return projectTeamId && myTeamIds.has(projectTeamId);
+            });
+         } else {
+            // Other roles (backend, frontend, marketer, designer, employee) 
+            // see only payments for projects they are directly assigned to
+            result = result.filter(p => {
+               const isAssigned = p.project?.assignedMembers?.some(m => {
+                  const mId = String(m.user?._id || m.user || m || '');
+                  return mId && mId === currentUserId;
+               });
+               return isAssigned;
+            });
+         }
       }
 
       return result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));

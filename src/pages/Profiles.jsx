@@ -51,7 +51,7 @@ const Profiles = () => {
    const fetchData = async () => {
       if (!userData) return;
 
-      const userCompanyId = String(userData.company?._id || userData.company || '');
+      const userCompanyId = String(userData.company?._id || userData.company?.id || userData.company || '');
 
       if (isSuperAdmin) {
          getCompanies().then(camps => {
@@ -90,7 +90,7 @@ const Profiles = () => {
    const allTeams = useMemo(() => {
       if (!userData) return [];
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      const userCompanyId = String(userData.company?._id || userData.company || '');
+      const userCompanyId = String(userData.company?._id || userData.company?.id || userData.company || '');
 
       // Merge selectedCompany if available. Some APIs might return it nested or as the obj itself.
       let relevantCompanies = [...companyList];
@@ -112,18 +112,24 @@ const Profiles = () => {
          });
          return teams;
       } else {
-         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
-         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
+         const company = relevantCompanies.find(c => String(c._id || c.id || '') === userCompanyId);
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id || company.id || '') })) || [];
 
          if (userData?.role === 'company_admin') {
             return companyTeams;
          }
 
-         const currentUserId = String(userData?._id || '');
-         return companyTeams.filter(t =>
-            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
-            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
-         );
+         const currentUserId = String(userData?._id || userData?.id || '');
+         // For team_lead, backend, frontend, marketer, designer, employee - show teams they are part of
+         return companyTeams.filter(t => {
+            const teamLeadId = String(t.teamLead?._id || t.teamLead || '');
+            const isLead = teamLeadId && teamLeadId === currentUserId;
+            const isMember = t.members?.some(m => {
+               const mId = String(m?._id || m.user?._id || m.user || m || '');
+               return mId && mId === currentUserId;
+            });
+            return isLead || isMember;
+         });
       }
    }, [companies, selectedCompany, userData, isSuperAdmin]);
 
@@ -133,18 +139,27 @@ const Profiles = () => {
       let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
 
       if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         // Show only members of their teams (team_lead and employees)
+         // Show only members of their teams (team_lead, backend, frontend, marketer, designer, employee)
          const myTeams = allTeams;
          const memberIds = new Set();
          myTeams.forEach(t => {
             if (t.members) {
-               t.members.forEach(m => memberIds.add(String(m?._id || m.user?._id || m.user || m)));
+               t.members.forEach(m => {
+                  const mId = String(m?._id || m.user?._id || m.user || m || '');
+                  if (mId) memberIds.add(mId);
+               });
             }
-            memberIds.add(String(t.teamLead?._id || t.teamLead || ''));
+            const leadId = String(t.teamLead?._id || t.teamLead || '');
+            if (leadId) memberIds.add(leadId);
          });
-         memberIds.add(String(userData?._id)); // Always include self
 
-         filtered = filtered.filter(u => memberIds.has(String(u._id)));
+         const currentUserId = String(userData?._id || userData?.id || '');
+         if (currentUserId) memberIds.add(currentUserId); // Always include self
+
+         filtered = filtered.filter(u => {
+            const uId = String(u._id || u.id || '');
+            return uId && memberIds.has(uId);
+         });
       }
       return filtered;
    }, [users, isSuperAdmin, userData, allTeams]);
@@ -163,7 +178,7 @@ const Profiles = () => {
    }, [rawUserList, filter]);
 
    const stats = useMemo(() => {
-      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      const all = rawUserList;
       return {
          total: all.length,
          active: all.filter(u => u.isActive).length,
@@ -171,10 +186,10 @@ const Profiles = () => {
          leave: all.filter(u => !u.isActive).length,
          teams: allTeams.length
       };
-   }, [users, allTeams]);
+   }, [rawUserList, allTeams]);
 
    const roleData = useMemo(() => {
-      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      const all = rawUserList;
       const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
       const labels = ['Backend', 'Frontend', 'Team Leads', 'Admins', 'Marketing'];
       const values = roles.map(r => all.filter(u => u.role === r).length);
@@ -188,7 +203,7 @@ const Profiles = () => {
          textfont: { color: '#FFFFFF', size: 11 },
          hovertemplate: '%{label}: %{value} members<extra></extra>'
       }];
-   }, [users]);
+   }, [rawUserList]);
 
    const roleLayout = {
       autosize: true,
@@ -490,7 +505,7 @@ const Profiles = () => {
          theme: 'dark',
       });
    };
-   
+
    const toggleStatus = async (userId) => {
       try {
          await updateUserStatus(userId);
