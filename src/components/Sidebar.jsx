@@ -93,7 +93,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                                     .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
                               });
                            closeToast()
-                           navigate('/login')
+                           navigate('/signin')
                         } catch (e) {
                            console.error(e)
                         }
