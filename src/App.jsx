@@ -19,6 +19,7 @@ import { useAuthStore } from './store/auth.store';
 import { useUserStore } from './store/user.store';
 import PageLoader from './components/loader/PageLoader';
 import Company from './pages/Company';
+import Chat from './pages/Chat';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const Placeholder = ({ title }) => (
@@ -129,7 +130,7 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="settings" element={<Settings />} />
               <Route path="payments" element={<Payments />} />
-              <Route path="team-chats" element={<Placeholder title="Team Chats" />} />
+              <Route path="team-chats" element={<Chat />} />
               <Route path="projects" element={<Projects />} />
             </Route>
           </Route>
