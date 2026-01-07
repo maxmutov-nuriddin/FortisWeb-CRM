@@ -7,6 +7,8 @@ import { useAuthStore } from '../store/auth.store';
 import { usePaymentStore } from '../store/payment.store';
 import { useCompanyStore } from '../store/company.store';
 import { useUserStore } from '../store/user.store';
+import { useProjectStore } from '../store/project.store';
+import { useTaskStore } from '../store/task.store';
 import PageLoader from '../components/loader/PageLoader';
 
 const Payments = () => {
@@ -20,74 +22,28 @@ const Payments = () => {
    const { user } = useAuthStore();
    const { companies, selectedCompany, getCompanies, getCompanyById } = useCompanyStore();
    const { users, getAllUsers, getUsersByCompany } = useUserStore();
-   const { payments, getAllPayments, getPaymentsByCompany, confirmPayment, completePayment, updatePayment, isLoading } = usePaymentStore();
+   const { payments, getAllPayments, getPaymentsByCompany, getPaymentsByUser, confirmPayment, completePayment, updatePayment, isLoading } = usePaymentStore();
+   const { projects, getProjectsByCompany } = useProjectStore(); // Added getProjectsByCompany
+   const { tasks, getTasksByProjects, getTasksByUser } = useTaskStore(); // Added getTasksByUser
 
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
-   const allCompanies = useMemo(() => {
-      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      return companyList;
-   }, [companies]);
-
-   const allTeams = useMemo(() => {
-      if (!userData) return [];
-      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      const userCompanyId = String(userData.company?._id || userData.company || '');
-
-      let relevantCompanies = [...companyList];
-      const selComp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
-
-      if (selComp && String(selComp._id) === userCompanyId) {
-         if (!relevantCompanies.some(c => String(c._id) === userCompanyId)) {
-            relevantCompanies.push(selComp);
-         } else {
-            relevantCompanies = relevantCompanies.map(c => String(c._id) === userCompanyId ? selComp : c);
-         }
-      }
-
-      if (isSuperAdmin) {
-         let teams = [];
-         relevantCompanies.forEach(c => {
-            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: String(c._id) }))];
-         });
-         return teams;
-      } else {
-         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
-         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
-
-         if (userData?.role === 'company_admin') {
-            return companyTeams;
-         }
-
-         const currentUserId = String(userData?._id || userData?.id || '');
-         return companyTeams.filter(t => {
-            const teamLeadId = String(t.teamLead?._id || t.teamLead || '');
-            const isLead = teamLeadId && teamLeadId === currentUserId;
-            const isMember = t.members?.some(m => {
-               const mId = String(m?._id || m.user?._id || m.user || m || '');
-               return mId && mId === currentUserId;
-            });
-            return isLead || isMember;
-         });
-      }
-   }, [companies, selectedCompany, userData, isSuperAdmin]);
-
-   const activeCompanyId = useMemo(() => {
-      if (isSuperAdmin) return viewCompanyId;
-      return userData?.company?._id || userData?.company?.id || userData?.company || '';
-   }, [isSuperAdmin, viewCompanyId, userData]);
+   const allCompanies = useMemo(() => companies?.data?.companies || (Array.isArray(companies) ? companies : []), [companies]);
+   const activeCompanyId = useMemo(() => isSuperAdmin ? viewCompanyId : (userData?.company?._id || userData?.company || ''), [isSuperAdmin, viewCompanyId, userData]);
 
    useEffect(() => {
-      if (isSuperAdmin) {
-         getCompanies();
-      } else if (activeCompanyId) {
-         getCompanyById(activeCompanyId);
-      }
-   }, [isSuperAdmin, getCompanies, getCompanyById, activeCompanyId]);
+      getCompanies();
+   }, [getCompanies]);
 
+   useEffect(() => {
+      fetchData();
+   }, [activeCompanyId, viewCompanyId, isSuperAdmin, userData]);
+
+   // Update fetchData to include task fetching
    const fetchData = async () => {
       try {
+         let fetchedPayments = [];
          if (isSuperAdmin && viewCompanyId === 'all') {
             if (allCompanies.length > 0) {
                const ids = allCompanies.map(c => c._id);
@@ -96,107 +52,186 @@ const Payments = () => {
                   getAllUsers(ids)
                ]);
             } else {
-               // If no companies exist for super admin and 'all' is selected, fetch nothing or handle appropriately
-               // For now, we'll just ensure payments are cleared if no companies are found
-               // This might need adjustment based on exact backend behavior for 'all' payments
-               await getAllPayments([]); // Pass an empty array to clear payments if no companies
+               await getAllPayments([]);
             }
          } else if (activeCompanyId && activeCompanyId !== 'all') {
             await Promise.all([
                getPaymentsByCompany(activeCompanyId),
                getUsersByCompany(activeCompanyId)
             ]);
-         } else if (!isSuperAdmin && !activeCompanyId) {
-            // Non-super admin with no company assigned
-            // This case should ideally not happen if user always has a company, but good for robustness
-            await getPaymentsByCompany(null); // Or handle as no payments
+         } else if (userData?._id || userData?.id) {
+            const userId = userData._id || userData.id;
+            const companyId = userData.company?._id || userData.company || '';
+            // Team Lead / Member: Fetch their own payments AND tasks AND company projects
+            const promises = [
+               getPaymentsByUser(userId),
+               getTasksByUser(userId)
+            ];
+            if (companyId) {
+               promises.push(getProjectsByCompany(companyId));
+            }
+            await Promise.all(promises);
          }
       } catch (error) {
          console.error('Error fetching payments:', error);
-         toast.error('Failed to load payments', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error('Failed to load payments');
       }
    };
 
+   // Fetch tasks when payments change
    useEffect(() => {
-      fetchData();
-   }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
+      const fetchRelatedTasks = async () => {
+         const list = payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
+         // Ensure we get string IDs and filter out any non-id objects
+         const projectIds = [...new Set(list.map(p => {
+            const id = p.project?._id || p.project?.id || p.project;
+            return typeof id === 'string' ? id : (id?._id || id?.id || null);
+         }).filter(Boolean))];
+
+         if (projectIds.length > 0) {
+            await getTasksByProjects(projectIds);
+         }
+      };
+
+      if (payments) {
+         fetchRelatedTasks();
+      }
+   }, [payments, getTasksByProjects]);
 
    const paymentsList = useMemo(() => {
       const list = payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []);
+      const currentUserId = String(userData?._id || userData?.id || '');
 
-      // Role-based filtering
-      let result = [...list];
-      if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         const currentUserId = String(userData?._id || userData?.id || '');
-
-         if (userData?.role === 'team_lead') {
-            // Team leads see payments related to teams they lead or belong to
-            const myTeams = allTeams;
-            const myTeamIds = new Set(myTeams.map(t => String(t._id || t.id || '')));
-
-            result = result.filter(p => {
-               const projectTeamId = String(p.project?.team?._id || p.project?.team || '');
-               return projectTeamId && myTeamIds.has(projectTeamId);
-            });
-         } else {
-            // Other roles (backend, frontend, marketer, designer, employee) 
-            // see only payments for projects they are directly assigned to
-            result = result.filter(p => {
-               const isAssigned = p.project?.assignedMembers?.some(m => {
-                  const mId = String(m.user?._id || m.user || m || '');
-                  return mId && mId === currentUserId;
-               });
-               return isAssigned;
-            });
-         }
+      // 1. Super Admin: Filter by viewCompanyId if not 'all'
+      if (isSuperAdmin) {
+         if (viewCompanyId === 'all') return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+         return list.filter(p => {
+            const pCompId = String(p.company?._id || p.company || '');
+            return pCompId === viewCompanyId;
+         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
-      return result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-   }, [payments, isSuperAdmin, userData, allTeams]);
+      // 2. Company Admin: Sees everything fetched
+      if (userData?.role === 'company_admin') {
+         const userCompanyId = String(userData.company?._id || userData.company || '');
+         return list.filter(p => {
+            const pCompId = String(p.company?._id || p.company || '');
+            return pCompId === userCompanyId;
+         }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
 
+      // 3. Team Lead
+      if (userData?.role === 'team_lead') {
+         return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+
+      // 4. Team Member (Regular user)
+      return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+   }, [payments, isSuperAdmin, userData, viewCompanyId]);
 
    const filteredPayments = useMemo(() => {
-      let result = [...paymentsList];
+      let result = paymentsList;
+
       if (statusFilter !== 'All Statuses') {
          result = result.filter(p => p.status === statusFilter.toLowerCase());
       }
-      if (searchQuery) {
-         const q = searchQuery.toLowerCase();
-         result = result.filter(p => {
-            const amount = (Number(p.totalAmount) || Number(p.amount) || 0).toString();
-            const description = (p.description || '').toLowerCase();
-            const clientName = (typeof p.client === 'object' ? p.client?.name : '').toLowerCase();
-            const projectId = (p._id || '').toLowerCase();
-            return amount.includes(q) || description.includes(q) || clientName.includes(q) || projectId.includes(q);
-         });
-      }
-      return result;
-   }, [paymentsList, statusFilter, searchQuery]);
 
-   // Statistics Calculation
+      if (searchQuery) {
+         const query = searchQuery.toLowerCase();
+         result = result.filter(p =>
+            p.description?.toLowerCase().includes(query) ||
+            String(p.totalAmount || p.amount || '').includes(query) ||
+            (p.client?.name && p.client.name.toLowerCase().includes(query))
+         );
+      }
+
+      if (timePeriod !== 'all') {
+         const now = new Date();
+         const past = new Date();
+         if (timePeriod === '7d') past.setDate(now.getDate() - 7);
+         if (timePeriod === '30d') past.setDate(now.getDate() - 30);
+         if (timePeriod === '3m') past.setMonth(now.getMonth() - 3);
+         if (timePeriod === '6m') past.setMonth(now.getMonth() - 6);
+         if (timePeriod === '1y') past.setFullYear(now.getFullYear() - 1);
+
+         result = result.filter(p => new Date(p.createdAt) >= past);
+      }
+
+      return result;
+   }, [paymentsList, statusFilter, searchQuery, timePeriod]);
+
+   // Helper to calculate My Share (moved up for use in stats)
+   const calculateMyShare = React.useCallback((payment) => {
+      if (!userData) return 0;
+      const projectId = String(payment.project?._id || payment.project?.id || payment.project || '');
+      const currentUserId = String(userData._id || userData.id || '');
+
+      // Robust task list retrieval
+      const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
+
+      // 1. Find all completed tasks for this project
+      const projectTasks = allTasks.filter(t =>
+         String(t.project?._id || t.project?.id || t.project || '') === projectId &&
+         t.status === 'completed'
+      );
+
+      if (projectTasks.length === 0) return 0;
+
+      // 2. Sum Total Weight
+      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+      if (totalWeight === 0) return 0;
+
+      // 3. Sum My Weight
+      const myTasks = projectTasks.filter(t =>
+         String(t.assignedTo?._id || t.assignedTo?.id || t.assignedTo || '') === currentUserId
+      );
+      const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+
+      // 4. Calculate Share (70% of total amount * weight fraction)
+      const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
+      const teamShare = totalAmount * 0.70;
+
+      return (teamShare * (myWeight / totalWeight));
+   }, [userData, tasks]);
+
    const stats = useMemo(() => {
-      const totalRevenue = paymentsList.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
-      const pendingPayments = paymentsList.filter(p => p.status === 'pending');
+      const activeList = filteredPayments;
+
+      const totalRevenue = activeList.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+      const pendingPayments = activeList.filter(p => p.status === 'pending');
       const pendingAmount = pendingPayments.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
+      const pendingCount = pendingPayments.length;
 
       const now = new Date();
-      const thisMonthPayments = paymentsList.filter(p => {
+      const thisMonthPayments = activeList.filter(p => {
          const d = new Date(p.createdAt);
          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       });
       const thisMonthAmount = thisMonthPayments.reduce((sum, p) => sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0);
 
+      // Individual Earnings for Worker/Non-Admin
+      const myTotalEarnings = activeList.reduce((sum, p) => sum + calculateMyShare(p), 0);
+
+      // Calculate Estimated Share from Projects for non-admins
+      const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
+      const myEstimatedShare = !isSuperAdmin ? projectList.reduce((sum, proj) => {
+         // Only look at non-completed projects for estimation
+         if (proj.status === 'completed') return sum;
+
+         // Mock a payment object for the share calculator
+         const mockPayment = {
+            project: proj,
+            totalAmount: proj.budget || 0,
+            status: 'pending'
+         };
+         return sum + calculateMyShare(mockPayment);
+      }, 0) : 0;
+
       const teamPayouts = totalRevenue * 0.70; // 70% rule
 
-      return { totalRevenue, pendingAmount, pendingCount: pendingPayments.length, thisMonthAmount, teamPayouts };
-   }, [paymentsList]);
-
+      return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare };
+   }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin]);
 
    const distributionData = [{
       type: 'pie',
@@ -234,7 +269,8 @@ const Payments = () => {
          map[key] = 0;
       }
 
-      paymentsList.forEach(p => {
+      const list = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+      list.forEach(p => {
          const d = new Date(p.createdAt);
          const key = `${d.getFullYear()}-${d.getMonth()}`;
          if (map[key] !== undefined) {
@@ -246,7 +282,7 @@ const Payments = () => {
          labels: months.map(m => m.label),
          values: months.map(m => map[m.key])
       };
-   }, [paymentsList, timePeriod]);
+   }, [payments, timePeriod]);
 
    const revenueData = [{
       type: 'scatter',
@@ -258,6 +294,7 @@ const Payments = () => {
       fill: 'tozeroy',
       fillcolor: 'rgba(16, 185, 129, 0.1)'
    }];
+
    const revenueLayout = {
       autosize: true,
       xaxis: { gridcolor: '#2A2A2A', color: '#9CA3AF' },
@@ -276,23 +313,11 @@ const Payments = () => {
       setIsSubmitting(true);
       try {
          await confirmPayment(id);
-         toast.success('Payment confirmed successfully!', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
-         fetchData(); // Re-fetch data to update the list
+         toast.success('Payment confirmed successfully!');
+         fetchData();
       } catch (error) {
          console.error(error);
-         toast.error('Failed to confirm payment', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error('Failed to confirm payment');
       } finally {
          setIsSubmitting(false);
       }
@@ -302,23 +327,11 @@ const Payments = () => {
       setIsSubmitting(true);
       try {
          await completePayment(id);
-         toast.success('Payment marked as paid!', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
-         fetchData(); // Re-fetch data to update the list
+         toast.success('Payment marked as paid!');
+         fetchData();
       } catch (error) {
          console.error(error);
-         toast.error('Failed to complete payment', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error('Failed to complete payment');
       } finally {
          setIsSubmitting(false);
       }
@@ -362,9 +375,11 @@ const Payments = () => {
                      <i className="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Total Revenue</h3>
-               <p className="text-2xl font-bold text-white">${stats.totalRevenue.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">All time earnings</p>
+               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? 'My Total Earnings' : 'Total Revenue'}</h3>
+               <p className="text-2xl font-bold text-white">
+                  ${(!isSuperAdmin ? (stats?.myTotalEarnings || 0) : (stats?.totalRevenue || 0)).toLocaleString()}
+               </p>
+               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? 'Confirmed payouts' : 'All time earnings'}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-yellow-500 transition">
                <div className="flex items-center justify-between mb-3">
@@ -374,7 +389,7 @@ const Payments = () => {
                   <span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} pending</span>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">Pending Payments</h3>
-               <p className="text-2xl font-bold text-white">${stats.pendingAmount.toLocaleString()}</p>
+               <p className="text-2xl font-bold text-white">${stats?.pendingAmount?.toLocaleString()}</p>
                <p className="text-xs text-gray-500 mt-1">Awaiting confirmation</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-blue-500 transition">
@@ -384,7 +399,7 @@ const Payments = () => {
                   </div>
                </div>
                <h3 className="text-gray-400 text-xs mb-1">This Month</h3>
-               <p className="text-2xl font-bold text-white">${stats.thisMonthAmount.toLocaleString()}</p>
+               <p className="text-2xl font-bold text-white">${stats?.thisMonthAmount?.toLocaleString()}</p>
                <p className="text-xs text-gray-500 mt-1">Current Month</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-purple-500 transition">
@@ -393,9 +408,11 @@ const Payments = () => {
                      <i className="fa-solid fa-users text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Team Payouts</h3>
-               <p className="text-2xl font-bold text-white">${stats.teamPayouts.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">70% of revenue</p>
+               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? 'My Estimated Share' : 'Team Payouts'}</h3>
+               <p className="text-2xl font-bold text-white">
+                  ${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}
+               </p>
+               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? 'From active projects' : '70% of revenue'}</p>
             </div>
          </div>
 
@@ -414,24 +431,6 @@ const Payments = () => {
                </div>
 
                <div className="space-y-4">
-                  <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-dark-accent transition">
-                     <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                           <div className="w-10 h-10 bg-dark-accent bg-opacity-20 rounded-lg flex items-center justify-center">
-                              <i className="fa-solid fa-user-shield text-dark-accent"></i>
-                           </div>
-                           <div>
-                              <p className="text-white font-medium">Main Admin</p>
-                              <p className="text-xs text-gray-400">10% of total</p>
-                           </div>
-                        </div>
-                        <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * 0.10).toLocaleString()}</p>
-                           <p className="text-xs text-dark-accent">10%</p>
-                        </div>
-                     </div>
-                  </div>
-
                   <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-blue-500 transition">
                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
@@ -458,12 +457,12 @@ const Payments = () => {
                            </div>
                            <div>
                               <p className="text-white font-medium">Company</p>
-                              <p className="text-xs text-gray-400">10% of total</p>
+                              <p className="text-xs text-gray-400">20% of total</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * 0.10).toLocaleString()}</p>
-                           <p className="text-xs text-yellow-500">10%</p>
+                           <p className="text-xl font-bold text-white">${(projectAmount * 0.20).toLocaleString()}</p>
+                           <p className="text-xs text-yellow-500">20%</p>
                         </div>
                      </div>
                   </div>
@@ -542,6 +541,7 @@ const Payments = () => {
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Description</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Client</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Amount</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">My Salary</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Method</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Status</th>
                         <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Action</th>
@@ -585,6 +585,20 @@ const Payments = () => {
                                  </div>
                               </td>
                               <td className="py-4 px-4"><p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p></td>
+                              <td className="py-4 px-4">
+                                 {(() => {
+                                    const share = calculateMyShare(payment);
+                                    if (share > 0) {
+                                       return (
+                                          <div>
+                                             <p className="text-sm text-green-400 font-bold">+${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                             <p className="text-[10px] text-gray-500">From tasks</p>
+                                          </div>
+                                       );
+                                    }
+                                    return <span className="text-xs text-gray-600">—</span>;
+                                 })()}
+                              </td>
                               <td className="py-4 px-4">
                                  <div className="flex items-center space-x-2">
                                     <select
@@ -662,7 +676,7 @@ const Payments = () => {
                         ))
                      ) : (
                         <tr>
-                           <td colSpan="7" className="text-center py-8 text-gray-500">No payments found</td>
+                           <td colSpan="8" className="text-center py-8 text-gray-500">No payments found</td>
                         </tr>
                      )}
                   </tbody>
