@@ -458,7 +458,13 @@ const Orders = () => {
                }
             }
 
-            toast.success('Order created successfully!');
+            toast.success('Order created successfully!', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
             closeModal();
          }
          else if (isEditMode && selectedOrder) {
@@ -513,12 +519,24 @@ const Orders = () => {
             }
 
             await updateProject(selectedOrder._id, updateData);
-            toast.success('Order updated successfully!');
+            toast.success('Order updated successfully!', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
             closeModal();
          }
       } catch (error) {
          console.error('Error saving order:', error);
-         toast.error('Failed to save order: ' + (error.response?.data?.message || error.message));
+         toast.error('Failed to save order: ', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         } + (error.response?.data?.message || error.message));
       } finally {
          setIsSubmitting(false);
       }
@@ -1707,9 +1725,21 @@ const Orders = () => {
                                                       setPaymentFormData(prev => ({ ...prev, paymentMethod: newVal }));
                                                       try {
                                                          await updatePayment(payment._id || payment.id, { paymentMethod: newVal });
-                                                         toast.success(`Payment method updated to ${newVal}`);
+                                                         toast.success(`Payment method updated to ${newVal}`, {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         });
                                                       } catch (err) {
-                                                         toast.error('Failed to update payment method');
+                                                         toast.error('Failed to update payment method', {
+                                                            position: 'top-right',
+                                                            autoClose: 5000,
+                                                            closeOnClick: false,
+                                                            draggable: false,
+                                                            theme: 'dark',
+                                                         });
                                                       }
                                                    }}
                                                    className="flex-1 bg-dark-secondary text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1748,7 +1778,13 @@ const Orders = () => {
                                                          theme: 'dark',
                                                       });
                                                    } catch (err) {
-                                                      toast.error('Failed to confirm: ' + err.message);
+                                                      toast.error('Failed to confirm: ', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      } + err.message);
                                                    } finally {
                                                       setIsSubmitting(false);
                                                    }
@@ -1777,9 +1813,21 @@ const Orders = () => {
                                                             if (freshOrder) setSelectedOrder(freshOrder);
                                                          }
                                                       });
-                                                      toast.success('Project started! Status changed to In Progress.');
+                                                      toast.success('Project started! Status changed to In Progress.', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
                                                    } catch (err) {
-                                                      toast.error('Failed to start project: ' + err.message);
+                                                      toast.error('Failed to start project: ', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      } + err.message);
                                                    } finally {
                                                       setIsSubmitting(false);
                                                    }
@@ -1806,9 +1854,21 @@ const Orders = () => {
                                                             if (freshOrder) setSelectedOrder(freshOrder);
                                                          }
                                                       });
-                                                      toast.success('Payment completed and salaries distributed!');
+                                                      toast.success('Payment completed and salaries distributed!', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      });
                                                    } catch (err) {
-                                                      toast.error('Failed to complete payment: ' + err.message);
+                                                      toast.error('Failed to complete payment: ', {
+                                                         position: 'top-right',
+                                                         autoClose: 5000,
+                                                         closeOnClick: false,
+                                                         draggable: false,
+                                                         theme: 'dark',
+                                                      } + err.message);
                                                    } finally {
                                                       setIsSubmitting(false);
                                                    }
