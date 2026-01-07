@@ -55,6 +55,16 @@ const Chat = () => {
 
    const attemptRef = useRef(new Set());
 
+   // Ensure users are loaded for role lookup
+   useEffect(() => {
+      if (userData?.company) {
+         const companyId = userData.company._id || userData.company;
+         // Only fetch if we don't have users yet or logic requires it
+         // Since userMap depends on 'users', this triggers the update
+         getUsersByCompany(companyId);
+      }
+   }, [userData?.company, getUsersByCompany]);
+
    // Auto-select or Auto-create chat based on tab
    useEffect(() => {
       const initChat = async () => {
@@ -374,8 +384,8 @@ const Chat = () => {
                                        <div className="flex items-baseline space-x-2 mb-1">
                                           <span className="text-xs font-bold text-gray-300">{senderInfo.name || 'Unknown'}</span>
                                           <span className={`text-[10px] px-1.5 py-0.5 rounded border ${senderInfo.role === 'super_admin' ? 'bg-red-900/30 text-red-400 border-red-500/30' :
-                                                senderInfo.role === 'company_admin' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
-                                                   'bg-gray-800 text-gray-400 border-gray-700'
+                                             senderInfo.role === 'company_admin' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
+                                                'bg-gray-800 text-gray-400 border-gray-700'
                                              }`}>
                                              {roleLabel}
                                           </span>
@@ -383,8 +393,8 @@ const Chat = () => {
                                     )}
 
                                     <div className={`relative px-5 py-3.5 rounded-2xl text-sm shadow-md transition-shadow hover:shadow-lg ${isMe
-                                          ? 'bg-indigo-600 text-white rounded-br-none'
-                                          : 'bg-dark-tertiary text-gray-200 rounded-bl-none border border-gray-700/50'
+                                       ? 'bg-indigo-600 text-white rounded-br-none'
+                                       : 'bg-dark-tertiary text-gray-200 rounded-bl-none border border-gray-700/50'
                                        }`}>
                                        {editingMessageId === msg._id ? (
                                           <div className="flex flex-col space-y-2 min-w-[240px]">
