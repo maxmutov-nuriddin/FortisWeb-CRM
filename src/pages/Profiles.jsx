@@ -250,12 +250,13 @@ const Profiles = () => {
             role: user.role || 'employee',
             phone: user.phone || '',
             position: user.position || '',
-            companyId: user.company?._id || user.company || ''
+            companyId: String(user.company?._id || user.company?.id || user.company || '')
          });
       } else {
          setIsEditMode(false);
          setSelectedUser(null);
-         const defaultCompanyId = currentUser?.role === 'super_admin' ? '' : (currentUser?.company || currentUser?.data?.user?.company || '');
+         const companyData = userData?.company;
+         const defaultCompanyId = userData?.role === 'super_admin' ? '' : String(companyData?._id || companyData?.id || companyData || '');
          setFormData({
             name: '',
             email: '',
@@ -316,7 +317,11 @@ const Profiles = () => {
                setIsSubmitting(false);
                return;
             }
-            await createUser(formData);
+            const submitData = {
+               ...formData,
+               companyId: String(formData.companyId || '')
+            };
+            await createUser(submitData);
             toast.success('User created successfully!', {
                position: 'top-right',
                autoClose: 5000,

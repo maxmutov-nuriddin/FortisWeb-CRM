@@ -135,9 +135,10 @@ const Dashboard = () => {
          totalRevenue += amount
       })
 
-      // 70% Team, 10% Admin, 20% Company
+      // 56% Execution Pool, 14% Lead Management, 10% Admin, 20% Company
       setSalaryTotals({
-         team: totalRevenue * 0.7,
+         execution: totalRevenue * 0.56,
+         leadManagement: totalRevenue * 0.14,
          admin: totalRevenue * 0.1,
          company: totalRevenue * 0.2
       })
@@ -148,14 +149,10 @@ const Dashboard = () => {
 
    const salaryData = [{
       type: 'pie',
-      labels: ['Team', 'Admin', 'Company'],
-      values: [
-         salaryTotals.team,
-         salaryTotals.admin,
-         salaryTotals.company
-      ],
+      labels: ['Execution Pool (56%)', 'Lead Management (14%)', 'Admin (10%)', 'Company (20%)'],
+      values: [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company],
       marker: {
-         colors: ['#FF0000', '#3B82F6', '#10B981', '#8B5CF6']
+         colors: ['#10B981', '#8B5CF6', '#FF0000', '#3B82F6']
       },
       textinfo: 'label+value',
       textfont: { color: '#FFFFFF', size: 12 },
@@ -741,21 +738,28 @@ const Dashboard = () => {
                   <div className="mt-4 space-y-2">
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                           <span className="text-gray-400">Team (70%)</span>
+                           <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                           <span className="text-gray-400">Execution Pool (56%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.team}</span>
+                        <span className="text-white font-medium">${salaryTotals.execution.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                           <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                           <span className="text-gray-400">Lead Management (14%)</span>
+                        </div>
+                        <span className="text-white font-medium">${salaryTotals.leadManagement.toFixed(2)}</span>
+                     </div>
+                     <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-2">
+                           <div className="w-3 h-3 rounded-full bg-red-500"></div>
                            <span className="text-gray-400">Admin (10%)</span>
                         </div>
-                        <span className="text-white font-medium">${salaryTotals.admin}</span>
+                        <span className="text-white font-medium">${salaryTotals.admin.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                           <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                            <span className="text-gray-400">Company (20%)</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals.company}</span>

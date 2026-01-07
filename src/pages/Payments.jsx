@@ -164,8 +164,15 @@ const Payments = () => {
    // Helper to calculate My Share (moved up for use in stats)
    const calculateMyShare = React.useCallback((payment) => {
       if (!userData) return 0;
-      const projectId = String(payment.project?._id || payment.project?.id || payment.project || '');
+      const projectObj = payment.project || {};
+      const projectId = String(projectObj._id || projectObj.id || projectObj || '');
       const currentUserId = String(userData._id || userData.id || '');
+
+      // Identify Team Lead robustly
+      const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
+      const fullProject = projectList.find(p => String(p._id || p.id) === projectId) || projectObj;
+      const teamLeadId = String(fullProject.team?.teamLead?._id || fullProject.team?.teamLead || '');
+      const isLead = currentUserId === teamLeadId;
 
       // Robust task list retrieval
       const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
@@ -176,23 +183,34 @@ const Payments = () => {
          t.status === 'completed'
       );
 
-      if (projectTasks.length === 0) return 0;
-
-      // 2. Sum Total Weight
-      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-      if (totalWeight === 0) return 0;
-
-      // 3. Sum My Weight
-      const myTasks = projectTasks.filter(t =>
-         String(t.assignedTo?._id || t.assignedTo?.id || t.assignedTo || '') === currentUserId
-      );
-      const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-
-      // 4. Calculate Share (70% of total amount * weight fraction)
       const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
-      const teamShare = totalAmount * 0.70;
 
-      return (teamShare * (myWeight / totalWeight));
+      // New Policy: 70% Team Share
+      // - 20% of Team Share (14% of Total) is Lead Management Reward
+      // - 80% of Team Share (56% of Total) is Execution Pool
+      const managementReward = totalAmount * 0.14;
+      const executionPool = totalAmount * 0.56;
+
+      // 2. Sum Total Weight for Execution Pool
+      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+
+      let share = 0;
+
+      // Add Management Reward if Lead
+      if (isLead) {
+         share += managementReward;
+      }
+
+      // Add Execution Share if participated in tasks
+      if (totalWeight > 0) {
+         const myTasks = projectTasks.filter(t =>
+            String(t.assignedTo?._id || t.assignedTo?.id || t.assignedTo || '') === currentUserId
+         );
+         const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+         share += (executionPool * (myWeight / totalWeight));
+      }
+
+      return share;
    }, [userData, tasks]);
 
    const stats = useMemo(() => {
@@ -228,17 +246,24 @@ const Payments = () => {
          return sum + calculateMyShare(mockPayment);
       }, 0) : 0;
 
-      const teamPayouts = totalRevenue * 0.70; // 70% rule
+      const teamPayouts = totalRevenue * 0.70; // Total Team Share
+      const leadManagementPool = totalRevenue * 0.14; // 20% of 70%
+      const executionPool = totalRevenue * 0.56; // 80% of 70%
 
-      return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare };
+      return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare, leadManagementPool, executionPool };
    }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin]);
 
    const distributionData = [{
       type: 'pie',
-      labels: ['Team Members (70%)', 'Admin (10%)', 'Company (20%)'],
-      values: [stats.totalRevenue * 0.7, stats.totalRevenue * 0.1, stats.totalRevenue * 0.2],
+      labels: ['Execution Pool (56%)', 'Lead Management (14%)', 'Company (20%)', 'Admin (10%)'],
+      values: [
+         stats.totalRevenue * 0.56,
+         stats.totalRevenue * 0.14,
+         stats.totalRevenue * 0.20,
+         stats.totalRevenue * 0.10
+      ],
       marker: {
-         colors: ['#10B981', '#FF0000', '#3B82F6', '#F59E0B']
+         colors: ['#10B981', '#8B5CF6', '#3B82F6', '#FF0000']
       },
       textinfo: 'label+value',
       textfont: { color: '#FFFFFF', size: 10 },
@@ -470,17 +495,33 @@ const Payments = () => {
                   <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-green-500 transition">
                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
-                           <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                              <i className="fa-solid fa-users text-green-500"></i>
+                           <div className="w-10 h-10 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                              <i className="fa-solid fa-crown text-purple-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">Team Members</p>
-                              <p className="text-xs text-gray-400">70% divided by contribution</p>
+                              <p className="text-white font-medium">Team Lead</p>
+                              <p className="text-xs text-gray-400">20% of Team Share (14%)</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * 0.70).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">70%</p>
+                           <p className="text-white font-bold">${(projectAmount * 0.14).toLocaleString()}</p>
+                           <p className="text-xs text-green-500">Fixed management share</p>
+                        </div>
+                     </div>
+
+                     <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-green-500 transition flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                           <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                              <i className="fa-solid fa-microchip text-green-500"></i>
+                           </div>
+                           <div>
+                              <p className="text-white font-medium">Execution Pool</p>
+                              <p className="text-xs text-gray-400">80% of Team Share (56%)</p>
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           <p className="text-white font-bold">${(projectAmount * 0.56).toLocaleString()}</p>
+                           <p className="text-xs text-green-500">Distributed by task weights</p>
                         </div>
                      </div>
                   </div>
