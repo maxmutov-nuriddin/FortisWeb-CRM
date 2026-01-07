@@ -14,5 +14,7 @@ export const companiesApi = {
    // This likely adds a member to a team *in* the company, but where is teamId? Maybe body?
    // User provided: POST /api/companies/:id/teams/members
    addTeamMemberDirect: (id, data) => api.post(`/api/companies/${id}/teams/members`, data),
-   deleteTeam: (id, teamId) => api.delete(`/api/companies/${id}/teams/${teamId}`)
+   deleteTeam: (id, teamId) => api.delete(`/api/companies/${id}/teams/${teamId}`),
+   updateSubscription: (id, type) => api.post(`/api/companies/${id}/subscription`, { type }),
+   updateDistributionRates: (id, data) => api.put(`/api/companies/${id}/distribution-rates`, data)
 };

@@ -164,4 +164,48 @@ export const usePaymentStore = create((set) => ({
          set({ error: error.response?.data?.message || 'Failed to fetch user payments', isLoading: false });
       }
    },
+
+   getPaymentHistory: async (params) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await paymentsApi.getHistory(params);
+         set({ paymentHistory: response.data.data || response.data, isLoading: false });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to get payment history', isLoading: false });
+      }
+   },
+
+   exportPaymentHistory: async () => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await paymentsApi.exportHistory();
+         // Create blob link to download
+         const url = window.URL.createObjectURL(new Blob([response.data]));
+         const link = document.createElement('a');
+         link.href = url;
+         link.setAttribute('download', 'payment-history.csv');
+         document.body.appendChild(link);
+         link.click();
+         link.remove();
+         set({ isLoading: false });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to export history', isLoading: false });
+      }
+   },
+
+   deletePaymentHistory: async (id) => {
+      set({ isLoading: true, error: null });
+      try {
+         await paymentsApi.deleteHistory(id);
+         set((state) => ({
+            paymentHistory: Array.isArray(state.paymentHistory)
+               ? state.paymentHistory.filter(h => h._id !== id)
+               : state.paymentHistory,
+            isLoading: false
+         }));
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete history', isLoading: false });
+      }
+   }
 }));

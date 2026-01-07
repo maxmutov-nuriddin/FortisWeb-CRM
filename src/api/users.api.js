@@ -8,4 +8,5 @@ export const usersApi = {
    updateStatus: (id) => api.patch(`/api/users/${id}/status`),
    delete: (id) => api.delete(`/api/users/${id}`),
    getStats: (id) => api.get(`/api/users/${id}/stats`),
+   moveUser: (id, teamId) => api.put(`/api/users/employee/${id}/move`, { teamId }),
 };

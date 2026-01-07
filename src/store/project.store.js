@@ -209,5 +209,51 @@ export const useProjectStore = create((set) => ({
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to complete project', isLoading: false });
       }
+   },
+
+   acceptProject: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.accept(id, data);
+         const updatedProject = response.data.data?.project || response.data;
+         set((state) => ({
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+            isLoading: false
+         }));
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to accept project', isLoading: false });
+         throw error;
+      }
+   },
+
+   updateProjectStatusFlags: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.updateStatusFlags(id, data);
+         const updatedProject = response.data.data?.project || response.data;
+         set((state) => ({
+            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
+            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+            isLoading: false
+         }));
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update project status flags', isLoading: false });
+         throw error;
+      }
+   },
+
+   getOrderHistory: async () => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.getOrderHistory();
+         // Assuming this returns a list of history items, distinct from 'projects' state
+         set({ orderHistory: response.data.data || response.data, isLoading: false });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to get order history', isLoading: false });
+      }
    }
 }));

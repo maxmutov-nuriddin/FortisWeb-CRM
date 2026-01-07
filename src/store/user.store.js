@@ -195,5 +195,17 @@ export const useUserStore = create((set) => ({
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to get stats', isLoading: false });
       }
+   },
+
+   moveUser: async (id, teamId) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await usersApi.moveUser(id, teamId);
+         set({ isLoading: false });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to move user', isLoading: false });
+         throw error;
+      }
    }
 }));

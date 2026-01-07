@@ -252,4 +252,56 @@ export const useCompanyStore = create((set) => ({
          throw error;
       }
    },
+
+   updateSubscription: async (id, type) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await companiesApi.updateSubscription(id, type);
+         const updatedCompany = response.data.data?.company || response.data;
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: currentCompanies.map(c => (c._id === id ? updatedCompany : c))
+                  }
+               },
+               selectedCompany: state.selectedCompany?._id === id ? updatedCompany : state.selectedCompany,
+               isLoading: false
+            };
+         });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update subscription', isLoading: false });
+         throw error;
+      }
+   },
+
+   updateDistributionRates: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await companiesApi.updateDistributionRates(id, data);
+         const updatedCompany = response.data.data?.company || response.data;
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || [];
+            return {
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: currentCompanies.map(c => (c._id === id ? updatedCompany : c))
+                  }
+               },
+               selectedCompany: state.selectedCompany?._id === id ? updatedCompany : state.selectedCompany,
+               isLoading: false
+            };
+         });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to update distribution rates', isLoading: false });
+         throw error;
+      }
+   }
 }));

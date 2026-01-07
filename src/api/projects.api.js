@@ -12,4 +12,7 @@ export const projectsApi = {
    addResults: (id, data) => api.post(`/api/projects/${id}/results`, data),
    requestRevision: (id, data) => api.post(`/api/projects/${id}/revision`, data),
    complete: (id) => api.put(`/api/projects/${id}/complete`),
+   accept: (id, data) => api.post(`/api/projects/${id}/accept`, data),
+   updateStatusFlags: (id, data) => api.put(`/api/projects/${id}/status-flags`, data),
+   getOrderHistory: () => api.get('/api/projects/history/all'),
 };
