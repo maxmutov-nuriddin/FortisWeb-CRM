@@ -24,9 +24,7 @@ const Header = ({ toggleSidebar }) => {
       ).length || 0;
 
    // ===================== AUTH =====================
-   useEffect(() => {
-      getMe();
-   }, []);
+
 
    // ===================== PROJECTS =====================
    useEffect(() => {

@@ -13,7 +13,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
    const navigate = useNavigate()
    const location = useLocation();
 
-   const { user, isLoading: authLoading, error: authError, getMe } = useAuthStore();
+   const { user, logout, isLoading: authLoading, error: authError } = useAuthStore();
    const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
    const { chats, error: chatsError } = useChatStore();
    const { updateUserStatus } = useUserStore();
@@ -34,9 +34,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       ).length || 0;
 
    // ===================== AUTH =====================
-   useEffect(() => {
-      getMe();
-   }, []);
+
 
    // ===================== PROJECTS =====================
    useEffect(() => {
@@ -85,13 +83,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                               await updateUserStatus(user.data.user._id, false)
                            }
 
-                           document.cookie
-                              .split(";")
-                              .forEach((c) => {
-                                 document.cookie = c
-                                    .replace(/^ +/, "")
-                                    .replace(/=.*/, `=;expires=${new Date(0).toUTCString()};path=/`);
-                              });
+                           logout();
                            closeToast()
                            navigate('/signin')
                         } catch (e) {
@@ -118,9 +110,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
 
    // ===================== AUTH =====================
-   useEffect(() => {
-      getMe()
-   }, [])
+
 
    // ===================== ERRORS =====================
    useEffect(() => {

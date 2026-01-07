@@ -219,10 +219,7 @@ const Dashboard = () => {
    }, [payments])
 
 
-   // ===================== AUTH =====================
-   useEffect(() => {
-      getMe()
-   }, [])
+
 
 
    // ===================== DATA INITIALIZATION =====================

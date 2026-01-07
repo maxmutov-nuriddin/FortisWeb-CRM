@@ -28,7 +28,7 @@ const Placeholder = ({ title }) => (
 );
 
 function App() {
-  const { user, error: authError, getMe } = useAuthStore();
+  const { user, isAuthenticated, isLoading: authLoading, error: authError, getMe } = useAuthStore();
   const { updateUserStatus } = useUserStore();
 
   // ===================== AUTH =====================
@@ -71,6 +71,14 @@ function App() {
     if (authError) console.error(authError)
   }, [authError])
 
+  if (authLoading && !isAuthenticated) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-dark-primary">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-dark-accent"></div>
+      </div>
+    );
+  }
+
   return (
     <>
       <ToastContainer />
@@ -79,7 +87,6 @@ function App() {
           <Route path="/test" element={<TestApi />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="*" element={<NotFound />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
@@ -93,6 +100,7 @@ function App() {
               <Route path="projects" element={<Placeholder title="Projects" />} />
             </Route>
           </Route>
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </>
