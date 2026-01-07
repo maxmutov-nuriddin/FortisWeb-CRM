@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-undef */
 /* eslint-disable no-dupe-keys */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -24,7 +25,6 @@ const Orders = () => {
       paymentMethod: 'bank_transfer',
       status: 'pending'
    });
-   const [resultFormData, setResultFormData] = useState({ name: '', url: '' });
 
    const [formData, setFormData] = useState({
       title: '',
@@ -53,7 +53,7 @@ const Orders = () => {
    const { companies, getCompanies, getCompanyById, selectedCompany, isLoading: companiesLoading } = useCompanyStore();
    const {
       projects, getProjectsByCompany, getAllProjects, createProject, updateProject,
-      deleteProject, assignProject, addResults, requestRevision, isLoading: projectsLoading
+      deleteProject, assignProject, isLoading: projectsLoading
    } = useProjectStore();
    const { getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
@@ -675,69 +675,6 @@ const Orders = () => {
                theme: 'dark',
             });
          }
-      }
-   };
-
-   const handleAccept = async (e, orderId) => {
-      e.stopPropagation();
-      setIsSubmitting(true);
-      try {
-         // Сначала назначение
-         const assignmentData = {
-            teamLeadId: formData.teamLead || undefined,
-            memberIds: formData.assignedMembers || [],
-            assignedMembers: formData.assignedMembers?.map(userId => {
-               const member = availableMembers.find(m => String(m.id) === String(userId));
-               return { user: userId, role: member?.role || 'member' };
-            }) || [],
-            assignedTeamId: formData.assignedTeam || undefined
-         };
-
-         if (formData.teamLead || formData.assignedMembers.length > 0) {
-            try {
-               await assignProject(orderId, assignmentData);
-            } catch (assignErr) {
-               console.warn('Assignment specialized endpoint failed during accept:', assignErr);
-            }
-         }
-
-         // Затем статус и остальные поля. Статус оставляем pending до подтверждения оплаты
-         await updateProject(orderId, {
-            status: 'pending',
-            teamLead: formData.teamLead || null,
-            assignedTeam: formData.assignedTeam || null,
-            assignedMembers: assignmentData.assignedMembers
-         });
-
-         // Пытаемся автоматически создать платеж, если его нет. НО НЕ ПОДТВЕРЖДАЕМ его.
-         try {
-            const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-            const existingPayment = paymentsList.find(p => String(p.project?._id || p.project || '') === String(orderId));
-
-            if (!existingPayment) {
-               // Создаем только новый платеж
-               await createPayment({
-                  amount: formData.budget || 0,
-                  project: orderId,
-                  company: activeCompanyId || null,
-                  status: 'pending',
-                  paymentMethod: paymentFormData.paymentMethod || 'bank_transfer',
-                  description: `Initial payment for project: ${formData.title || 'Project'}`
-               });
-            }
-
-            // После создания платежа обновляем список
-            await fetchData();
-         } catch (payErr) {
-            console.warn('Auto-payment creation failed (non-critical):', payErr);
-         }
-         toast.success('Order accepted and assigned successfully!');
-         closeModal();
-      } catch (error) {
-         console.error('Error accepting order:', error);
-         toast.error('Failed to accept: ' + (error.response?.data?.message || error.message));
-      } finally {
-         setIsSubmitting(false);
       }
    };
 
@@ -1478,25 +1415,7 @@ const Orders = () => {
                               </div>
                            </div>
 
-                           <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Initial Payment Info</h3>
-                              <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Payment Method</label>
-                                 <select
-                                    name="paymentMethod"
-                                    value={paymentFormData.paymentMethod}
-                                    onChange={(e) => setPaymentFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 >
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="paypal">PayPal</option>
-                                    <option value="crypto">Crypto</option>
-                                    <option value="other">Other</option>
-                                 </select>
-                              </div>
-                           </div>
+
 
                            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
                               <button
@@ -1816,7 +1735,6 @@ const Orders = () => {
                                                    try {
                                                       await confirmPayment(payment._id || payment.id);
                                                       await fetchData().then(() => {
-                                                         // Sync selectedOrder with the fresh data from projectsList
                                                          if (selectedOrder) {
                                                             const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
                                                             if (freshOrder) setSelectedOrder(freshOrder);
@@ -1830,28 +1748,22 @@ const Orders = () => {
                                                          theme: 'dark',
                                                       });
                                                    } catch (err) {
-                                                      toast.error('Failed to confirm: ' + err.message, {
-                                                         position: 'top-right',
-                                                         autoClose: 5000,
-                                                         closeOnClick: false,
-                                                         draggable: false,
-                                                         theme: 'dark',
-                                                      });
+                                                      toast.error('Failed to confirm: ' + err.message);
                                                    } finally {
                                                       setIsSubmitting(false);
                                                    }
                                                 }}
                                                 className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                                              >
-                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
+                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check'} mr-1`}></i>
                                                 {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
                                              </button>
                                           )}
 
 
 
-                                          {/* START PROJECT ACTION: If payment is confirmed/completed but project is still pending */}
-                                          {(payment.status === 'confirmed' || payment.status === 'completed') && selectedOrder.status === 'pending' && (
+                                          {/* STEP 2: Start Project */}
+                                          {payment.status === 'confirmed' && selectedOrder.status === 'pending' && (
                                              <button
                                                 type="button"
                                                 disabled={isSubmitting}
@@ -1860,7 +1772,6 @@ const Orders = () => {
                                                    try {
                                                       await updateProject(selectedOrder._id, { status: 'in_progress' });
                                                       await fetchData().then(() => {
-                                                         // Sync selectedOrder
                                                          if (selectedOrder) {
                                                             const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
                                                             if (freshOrder) setSelectedOrder(freshOrder);
@@ -1877,6 +1788,35 @@ const Orders = () => {
                                              >
                                                 <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-play'} mr-1`}></i>
                                                 {isSubmitting ? 'Starting...' : 'Start Translation (Move to In Progress)'}
+                                             </button>
+                                          )}
+
+                                          {/* STEP 3: Complete Payment */}
+                                          {payment.status === 'confirmed' && selectedOrder.status === 'in_progress' && (
+                                             <button
+                                                type="button"
+                                                disabled={isSubmitting}
+                                                onClick={async () => {
+                                                   setIsSubmitting(true);
+                                                   try {
+                                                      await completePayment(payment._id || payment.id);
+                                                      await fetchData().then(() => {
+                                                         if (selectedOrder) {
+                                                            const freshOrder = projects?.data?.projects?.find(p => String(p._id) === String(selectedOrder._id));
+                                                            if (freshOrder) setSelectedOrder(freshOrder);
+                                                         }
+                                                      });
+                                                      toast.success('Payment completed and salaries distributed!');
+                                                   } catch (err) {
+                                                      toast.error('Failed to complete payment: ' + err.message);
+                                                   } finally {
+                                                      setIsSubmitting(false);
+                                                   }
+                                                }}
+                                                className={`w-full bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs font-bold transition flex items-center justify-center mt-4 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                             >
+                                                <i className={`fa-solid ${isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-double'} mr-1`}></i>
+                                                {isSubmitting ? 'Completing...' : 'Complete Payment (Distribute Salaries)'}
                                              </button>
                                           )}
                                        </div>
