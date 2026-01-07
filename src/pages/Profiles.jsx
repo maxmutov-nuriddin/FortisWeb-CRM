@@ -27,6 +27,7 @@ const Profiles = () => {
    const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState(null);
    const [memberToAddId, setMemberToAddId] = useState('');
    const [openMenuUserId, setOpenMenuUserId] = useState(null);
+   const [showPassword, setShowPassword] = useState(false);
 
    const [formData, setFormData] = useState({
       name: '',
@@ -73,7 +74,11 @@ const Profiles = () => {
       if (users?.partialFailure) {
          toast.warning('Some company data could not be loaded due to server errors. Check console for details.', {
             toastId: 'partial-load-warning',
-            autoClose: 5000
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
          });
       }
    }, [users?.partialFailure]);
@@ -241,17 +246,35 @@ const Profiles = () => {
             toast.success('User updated successfully!');
          } else {
             if (!formData.password) {
-               toast.error('Password is required for new users');
+               toast.error('Password is required for new users', {
+                  position: 'top-right',
+                  autoClose: 5000,
+                  closeOnClick: false,
+                  draggable: false,
+                  theme: 'dark',
+               });
                setIsSubmitting(false);
                return;
             }
             await createUser(formData);
-            toast.success('User created successfully!');
+            toast.success('User created successfully!', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          }
          closeModal();
       } catch (error) {
          console.error(error);
-         toast.error(error.response?.data?.message || 'Failed to save user');
+         toast.error(error.response?.data?.message || 'Failed to save user', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       } finally {
          setIsSubmitting(false);
       }
@@ -266,10 +289,22 @@ const Profiles = () => {
             teamLeadId: teamFormData.teamLeadId,
             description: teamFormData.description
          });
-         toast.success('Team created successfully!');
+         toast.success('Team created successfully!', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          closeModal();
       } catch (error) {
-         toast.error(error.response?.data?.message || 'Failed to create team');
+         toast.error(error.response?.data?.message || 'Failed to create team', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       } finally {
          setIsSubmitting(false);
       }
@@ -279,9 +314,21 @@ const Profiles = () => {
       if (window.confirm('Are you sure you want to delete this member?')) {
          try {
             await deleteUser(userId);
-            toast.success('User deleted successfully');
+            toast.success('User deleted successfully', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          } catch (error) {
-            toast.error('Failed to delete user');
+            toast.error('Failed to delete user', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          }
       }
    };
@@ -290,10 +337,22 @@ const Profiles = () => {
       if (window.confirm('Are you sure you want to delete this team? This will NOT delete team members, only the team organization.')) {
          try {
             await deleteTeamAction(companyId, teamId);
-            toast.success('Team deleted successfully');
+            toast.success('Team deleted successfully', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          } catch (error) {
             console.error('Delete team error:', error);
-            toast.error(error.response?.data?.message || 'Failed to delete team');
+            toast.error(error.response?.data?.message || 'Failed to delete team', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          }
       }
    };
@@ -301,9 +360,21 @@ const Profiles = () => {
    const toggleStatus = async (userId) => {
       try {
          await updateUserStatus(userId);
-         toast.success('Status updated');
+         toast.success('Status updated', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       } catch (error) {
-         toast.error('Failed to update status');
+         toast.error('Failed to update status', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       }
    };
 
@@ -316,16 +387,34 @@ const Profiles = () => {
 
    const handleConfirmAddMember = async () => {
       if (!memberToAddId) {
-         toast.error('Please select a member');
+         toast.error('Please select a member', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          return;
       }
       setIsSubmitting(true);
       try {
          await addTeamMemberDirect(selectedTeamCompanyId, { teamId: selectedTeamId, userId: memberToAddId });
-         toast.success('Member added to team');
+         toast.success('Member added to team', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          setIsMemberModalOpen(false);
       } catch (error) {
-         toast.error(error.response?.data?.message || 'Failed to add member');
+         toast.error(error.response?.data?.message || 'Failed to add member', {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       } finally {
          setIsSubmitting(false);
       }
@@ -657,12 +746,46 @@ const Profiles = () => {
                            />
                         </div>
                         {!isEditMode && (
-                           <div>
+                           <div style={{ position: 'relative' }}>
                               <label className={styles.label}>Password</label>
                               <input
-                                 type="password" required className={styles.input} placeholder="********"
-                                 value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                 type={showPassword ? "text" : "password"}
+                                 required
+                                 className={styles.input}
+                                 placeholder="********"
+                                 value={formData.password}
+                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                 style={{ paddingRight: '40px' }}
                               />
+                              <button
+                                 type="button"
+                                 onClick={() => setShowPassword(!showPassword)}
+                                 style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '68%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '5px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    color: '#6b7280'
+                                 }}
+                              >
+                                 {showPassword ? (
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                       <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                 ) : (
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                       <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                 )}
+                              </button>
                            </div>
                         )}
                         <div>

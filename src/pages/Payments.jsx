@@ -519,9 +519,21 @@ const Payments = () => {
                                           const newVal = e.target.value;
                                           try {
                                              await updatePayment(payment._id, { paymentMethod: newVal });
-                                             toast.success(`Method updated to ${newVal}`);
+                                             toast.success(`Method updated to ${newVal}`, {
+                                                position: 'top-right',
+                                                autoClose: 5000,
+                                                closeOnClick: false,
+                                                draggable: false,
+                                                theme: 'dark',
+                                             });
                                           } catch (err) {
-                                             toast.error('Update failed');
+                                             toast.error('Update failed', {
+                                                position: 'top-right',
+                                                autoClose: 5000,
+                                                closeOnClick: false,
+                                                draggable: false,
+                                                theme: 'dark',
+                                             });
                                           }
                                        }}
                                        className="bg-dark-secondary text-gray-300 text-xs px-2 py-1 rounded border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50"

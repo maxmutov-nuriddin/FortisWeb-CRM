@@ -4,6 +4,7 @@ import { useCompanyStore } from '../store/company.store';
 import PageLoader from '../components/loader/PageLoader';
 import { useAuthStore } from '../store/auth.store';
 import { useUserStore } from '../store/user.store';
+import { toast } from 'react-toastify';
 
 const Company = () => {
    const [statusFilter, setStatusFilter] = useState('All Statuses');
@@ -213,29 +214,103 @@ const Company = () => {
             const updateData = { ...formData };
             if (!updateData.password) delete updateData.password;
             await updateCompany(editingCompanyId, updateData);
-            alert('Company updated successfully!');
+            toast.success(formData.name + " Company updated successfully", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          } else {
             await createCompany(formData);
-            alert('Company created successfully!');
+            toast.success(formData.name + " Company created successfully", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          }
          closeCreateModal();
          await getCompanies();
       } catch (error) {
          console.error('Error submitting company:', error);
-         alert('Failed to save company: ' + (error.response?.data?.message || error.message));
+         toast.error('Failed to save company:' + (error.response?.data?.message || error.message), {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       }
    };
 
    const handleDeleteCompany = async (companyId) => {
-      if (window.confirm('Are you sure you want to delete this company?')) {
-         try {
-            await deleteCompany(companyId);
-            closeModal();
-            await getCompanies();
-         } catch (error) {
-            console.error('Error deleting company:', error);
-         }
-      }
+      // Показываем toast с кнопками подтверждения
+      const ToastContent = ({ closeToast }) => (
+         <div>
+            <p>Are you sure you want to delete this company?</p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+               <button
+                  onClick={async () => {
+                     closeToast();
+                     try {
+                        await deleteCompany(companyId);
+                        closeModal();
+                        await getCompanies();
+                        toast.success('Company deleted successfully', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     } catch (error) {
+                        console.error('Error deleting company:', error);
+                        toast.error('Failed to delete company', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
+                     }
+                  }}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#ef4444',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer'
+                  }}
+               >
+                  Delete
+               </button>
+               <button
+                  onClick={closeToast}
+                  style={{
+                     padding: '5px 15px',
+                     background: '#6b7280',
+                     border: 'none',
+                     borderRadius: '4px',
+                     color: 'white',
+                     cursor: 'pointer'
+                  }}
+               >
+                  Cancel
+               </button>
+            </div>
+         </div>
+      );
+
+      toast.info(<ToastContent />, {
+         position: 'top-right',
+         autoClose: false,
+         closeOnClick: false,
+         draggable: false,
+         theme: 'dark',
+      });
    };
 
 
