@@ -127,23 +127,24 @@ const Dashboard = () => {
    useEffect(() => {
       if (!filteredPayments) return
 
-      let team = 0
-      let admin = 0
-      let company = 0
+      let totalRevenue = 0
 
       filteredPayments.forEach(p => {
-         if (!p.distribution) return
-
-         team += Number(p.distribution.teamShare?.totalAmount || 0)
-         admin += Number(p.distribution.adminShare?.amount || 0)
-         company += Number(p.distribution.companyShare?.amount || 0)
+         // Using robust amount check similar to Payments.jsx
+         const amount = Number(p.totalAmount) || Number(p.amount) || 0
+         totalRevenue += amount
       })
 
-      setSalaryTotals({ team, admin, company })
+      // 70% Team, 10% Admin, 20% Company
+      setSalaryTotals({
+         team: totalRevenue * 0.7,
+         admin: totalRevenue * 0.1,
+         company: totalRevenue * 0.2
+      })
    }, [filteredPayments])
 
    console.log(filteredPayments);
-   
+
 
    const salaryData = [{
       type: 'pie',
