@@ -115,8 +115,9 @@ const Orders = () => {
       allCompanies.forEach(c => {
          if (c.employees) aggregated = [...aggregated, ...c.employees];
       });
-      return aggregated;
-   }, [allCompanies]);
+      // Filter out super_admin for everyone else
+      return isSuperAdmin ? aggregated : aggregated.filter(u => u.role !== 'super_admin');
+   }, [allCompanies, isSuperAdmin]);
 
    // ГЛОБАЛЬНЫЙ список команд для всех компаний (для резолва имен в модальном окне)
    const allTeams = useMemo(() => {
@@ -204,7 +205,14 @@ const Orders = () => {
    }, [formData.assignedTeam, allTeams, allCompanies, formData.selectedCompanyId, activeCompanyId, allUsers]);
 
 
-   const projectsList = useMemo(() => projects?.data?.projects || (Array.isArray(projects) ? projects : []), [projects]);
+   const projectsList = useMemo(() => {
+      const allProjects = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+      if (userData?.role === 'team_lead') {
+         const currentUserId = String(userData?._id || '');
+         return allProjects.filter(p => String(p.teamLead?._id || p.teamLead || '') === currentUserId);
+      }
+      return allProjects;
+   }, [projects, userData]);
    const paymentsList = useMemo(() => payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []), [payments]);
 
    const statusData = useMemo(() => {
@@ -779,13 +787,15 @@ const Orders = () => {
                      <i className="fa-solid fa-download"></i>
                      <span>Export</span>
                   </button>
-                  <button
-                     onClick={handleCreateOrder}
-                     className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
-                  >
-                     <i className="fa-solid fa-plus"></i>
-                     <span>Add Manual Order</span>
-                  </button>
+                  {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+                     <button
+                        onClick={handleCreateOrder}
+                        className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2"
+                     >
+                        <i className="fa-solid fa-plus"></i>
+                        <span>Add Manual Order</span>
+                     </button>
+                  )}
                </div>
             </div>
          </div>

@@ -164,8 +164,15 @@ const Dashboard = () => {
 
    // ===================== USERS =====================
    useEffect(() => {
-      const usersList = users?.data?.users || (Array.isArray(users) ? users : [])
+      let usersList = users?.data?.users || (Array.isArray(users) ? users : [])
       if (!usersList || usersList.length === 0) return
+
+      const userData = user?.data?.user || user;
+      const isAdmin = userData?.role === 'super_admin';
+
+      if (!isAdmin) {
+         usersList = usersList.filter(u => u.role !== 'super_admin');
+      }
 
       const activeRolesCount = new Set(
          usersList
@@ -777,46 +784,51 @@ const Dashboard = () => {
                         </button> */}
                   </div>
                   <div className="space-y-4">
-                     {users?.data?.users
-                        ?.filter(u => u._id !== user?.data?.user?._id) // не показываем себя
-                        .map(u => {
-                           const isOnline = u.isActive === true
+                     {((() => {
+                        const allUsers = users?.data?.users || [];
+                        const userDataObj = user?.data?.user || user;
+                        const isAdmin = userDataObj?.role === 'super_admin';
+                        return allUsers
+                           .filter(u => u._id !== userDataObj?._id) // не показываем себя
+                           .filter(u => isAdmin || u.role !== 'super_admin');
+                     })() || []).map(u => {
+                        const isOnline = u.isActive === true
 
-                           return (
-                              <div
-                                 key={u._id}
-                                 className="flex items-center space-x-4 p-4 bg-dark-tertiary rounded-lg hover:bg-gray-800 transition"
-                              >
-                                 <img
-                                    src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`}
-                                    className="w-12 h-12 rounded-full border-2 border-dark-accent"
-                                 />
+                        return (
+                           <div
+                              key={u._id}
+                              className="flex items-center space-x-4 p-4 bg-dark-tertiary rounded-lg hover:bg-gray-800 transition"
+                           >
+                              <img
+                                 src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`}
+                                 className="w-12 h-12 rounded-full border-2 border-dark-accent"
+                              />
 
-                                 <div className="flex-1">
-                                    <h4 className="text-white font-medium">{u.name}</h4>
-                                    <p className="text-xs text-gray-400">{u.email}</p>
-                                    <p className="text-sm text-dark-accent capitalize">
-                                       {u.role.replace('_', ' ')}
-                                    </p>
-                                 </div>
+                              <div className="flex-1">
+                                 <h4 className="text-white font-medium">{u.name}</h4>
+                                 <p className="text-xs text-gray-400">{u.email}</p>
+                                 <p className="text-sm text-dark-accent capitalize">
+                                    {u.role.replace('_', ' ')}
+                                 </p>
+                              </div>
 
-                                 <div className="text-right">
-                                    <div className="flex items-center space-x-1 justify-end">
-                                       <div
-                                          className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'
-                                             }`}
-                                       ></div>
-                                       <span
-                                          className={`text-xs ${isOnline ? 'text-green-500' : 'text-gray-400'
-                                             }`}
-                                       >
-                                          {isOnline ? 'Online' : 'Offline'}
-                                       </span>
-                                    </div>
+                              <div className="text-right">
+                                 <div className="flex items-center space-x-1 justify-end">
+                                    <div
+                                       className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'
+                                          }`}
+                                    ></div>
+                                    <span
+                                       className={`text-xs ${isOnline ? 'text-green-500' : 'text-gray-400'
+                                          }`}
+                                    >
+                                       {isOnline ? 'Online' : 'Offline'}
+                                    </span>
                                  </div>
                               </div>
-                           )
-                        })}
+                           </div>
+                        )
+                     })}
                   </div>
 
                </div>

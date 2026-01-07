@@ -83,23 +83,6 @@ const Profiles = () => {
       }
    }, [users?.partialFailure]);
 
-   const rawUserList = useMemo(() => {
-      return users?.data?.users || (Array.isArray(users) ? users : []);
-   }, [users]);
-
-   const userList = useMemo(() => {
-      const list = rawUserList;
-      if (filter === 'All Members') return list;
-      return list.filter(u => {
-         if (filter === 'Admins') return u.role === 'company_admin' || u.role === 'super_admin';
-         if (filter === 'Team Leads') return u.role === 'team_lead';
-         if (filter === 'Backend') return u.role === 'backend';
-         if (filter === 'Frontend') return u.role === 'frontend';
-         if (filter === 'Marketing') return u.role === 'marketer';
-         return true;
-      });
-   }, [users, filter]);
-
    const allTeams = useMemo(() => {
       if (!userData) return [];
       const companyList = companies?.data?.companies || companies || [];
@@ -113,9 +96,47 @@ const Profiles = () => {
          return teams;
       } else {
          const company = companyList.find(c => c._id === userCompanyId);
-         return company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: company._id })) || [];
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: company._id })) || [];
+         if (userData?.role === 'team_lead') {
+            const currentUserId = String(userData?._id || '');
+            return companyTeams.filter(t => String(t.teamLead || t.teamLead?._id || '') === currentUserId);
+         }
+         return companyTeams;
       }
    }, [companies, userData, isSuperAdmin]);
+
+   const rawUserList = useMemo(() => {
+      const all = users?.data?.users || (Array.isArray(users) ? users : []);
+      // Filter out super_admin for everyone else
+      let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
+
+      if (userData?.role === 'team_lead') {
+         // Show only members of their team
+         const myTeam = allTeams.find(t => String(t.teamLead || t.teamLead?._id || '') === String(userData?._id));
+         if (myTeam) {
+            const memberIds = new Set(myTeam.members?.map(m => String(m._id || m.user?._id || m.user || m)) || []);
+            memberIds.add(String(userData?._id)); // Include self
+            filtered = filtered.filter(u => memberIds.has(String(u._id)));
+         } else {
+            // If no team found, show only self
+            filtered = filtered.filter(u => String(u._id) === String(userData?._id));
+         }
+      }
+      return filtered;
+   }, [users, isSuperAdmin, userData, allTeams]);
+
+   const userList = useMemo(() => {
+      const list = rawUserList;
+      if (filter === 'All Members') return list;
+      return list.filter(u => {
+         if (filter === 'Admins') return u.role === 'company_admin' || u.role === 'super_admin';
+         if (filter === 'Team Leads') return u.role === 'team_lead';
+         if (filter === 'Backend') return u.role === 'backend';
+         if (filter === 'Frontend') return u.role === 'frontend';
+         if (filter === 'Marketing') return u.role === 'marketer';
+         return true;
+      });
+   }, [rawUserList, filter]);
 
    const stats = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
@@ -435,14 +456,18 @@ const Profiles = () => {
                   <p className="text-gray-400">Manage team members, roles, and access permissions</p>
                </div>
                <div className="flex items-center space-x-3">
-                  <button onClick={() => openModal()} className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
-                     <i className="fa-solid fa-user-plus"></i>
-                     <span>Add New Member</span>
-                  </button>
-                  <button onClick={() => openTeamModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
-                     <i className="fa-solid fa-people-group"></i>
-                     <span>Create Team</span>
-                  </button>
+                  {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+                     <>
+                        <button onClick={() => openModal()} className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                           <i className="fa-solid fa-user-plus"></i>
+                           <span>Add New Member</span>
+                        </button>
+                        <button onClick={() => openTeamModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
+                           <i className="fa-solid fa-people-group"></i>
+                           <span>Create Team</span>
+                        </button>
+                     </>
+                  )}
                </div>
             </div>
          </div>
@@ -876,7 +901,9 @@ const Profiles = () => {
                                     .filter(u => {
                                        const uCompId = String(u.company?._id || u.company || '');
                                        const selectedId = String(teamFormData.companyId || '');
-                                       return u.role === 'team_lead' && (!selectedId || uCompId === selectedId);
+                                       const isLead = u.role === 'team_lead';
+                                       // Super admin already filtered out in rawUserList memo
+                                       return isLead && (!selectedId || uCompId === selectedId);
                                     })
                                     .map(u => (
                                        <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
