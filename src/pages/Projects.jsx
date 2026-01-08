@@ -233,7 +233,7 @@ const Projects = () => {
 
          {/* Projects Grid */}
          {filteredProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                {filteredProjects.map((project, index) => {
                   const projectFiles = uploads.filter(file => file.orderId === project._id);
 
@@ -248,6 +248,13 @@ const Projects = () => {
                         <div className="flex-1 space-y-3 mb-4">
                            <div className="flex items-center justify-between text-xs text-gray-400 uppercase font-semibold tracking-wider">
                               <span>Files ({projectFiles.length})</span>
+                              <button
+                                 onClick={(e) => { e.stopPropagation(); setSelectedProjectForDetails(project); }}
+                                 className="text-[10px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors flex items-center gap-1.5"
+                              >
+                                 <i className="fa-solid fa-circle-info text-xs"></i>
+                                 View Order Info
+                              </button>
                            </div>
 
                            {projectFiles.length > 0 ? (
@@ -290,20 +297,20 @@ const Projects = () => {
                                           </div>
 
                                           {/* File Actions */}
-                                          <div className="flex flex-col gap-1 opacity-40 group-hover/file:opacity-100 transition-opacity">
+                                          <div className="flex items-center gap-1 opacity-40 group-hover/file:opacity-100 transition-opacity">
                                              <button
                                                 onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }}
-                                                className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1 rounded transition-colors"
+                                                className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1.5 rounded-lg transition-colors"
                                                 title="Replace File"
                                              >
-                                                <i className="fa-solid fa-pen text-[10px]"></i>
+                                                <i className="fa-solid fa-pen text-xs"></i>
                                              </button>
                                              <button
                                                 onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }}
-                                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition-colors"
+                                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors"
                                                 title="Delete File"
                                              >
-                                                <i className="fa-solid fa-trash text-[10px]"></i>
+                                                <i className="fa-solid fa-trash text-xs"></i>
                                              </button>
                                           </div>
                                        </div>
@@ -317,16 +324,7 @@ const Projects = () => {
                            )}
                         </div>
 
-                        {/* View Details Button */}
-                        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
-                           <button
-                              onClick={() => setSelectedProjectForDetails(project)}
-                              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-dark-tertiary dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-lg text-sm font-semibold transition"
-                           >
-                              <i className="fa-solid fa-circle-info text-blue-500"></i>
-                              View Project Details
-                           </button>
-                        </div>
+
 
                         {/* Actions Footer (Accept) - Only if team lead & assigned */}
                         {userData?.role === 'team_lead' && project.status === 'assigned' && (
