@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useChatStore } from '../store/chat.store';
 import { useAuthStore } from '../store/auth.store';
