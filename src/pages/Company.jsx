@@ -349,10 +349,6 @@ const Company = () => {
                </div>
                {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
                   <div className="flex items-center space-x-3">
-                     <button className="bg-white dark:bg-dark-tertiary hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-300 dark:border-gray-700">
-                        <i className="fa-solid fa-filter"></i>
-                        <span>{t('filters')}</span>
-                     </button>
                      <button
                         onClick={openCreateModal}
                         className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-3 shadow-lg shadow-red-900/20"

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { projectsApi } from '../api/projects.api';
+import { usePaymentStore } from './payment.store';
 
 export const useProjectStore = create((set) => ({
    projects: [],
@@ -114,6 +115,14 @@ export const useProjectStore = create((set) => ({
    deleteProject: async (id) => {
       set({ isLoading: true, error: null });
       try {
+         // Attempt to delete associated payments first
+         try {
+            const { deletePaymentsByProject } = usePaymentStore.getState();
+            await deletePaymentsByProject(id);
+         } catch (payError) {
+            console.warn('Payment cleanup failed, proceeding with project deletion:', payError);
+         }
+
          await projectsApi.delete(id);
          set((state) => {
             const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
