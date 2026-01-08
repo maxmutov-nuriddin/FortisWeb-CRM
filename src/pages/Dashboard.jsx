@@ -12,9 +12,11 @@ import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/task.store';
+import { useSettingsStore } from '../store/settings.store';
 
 const Dashboard = () => {
    const { t, i18n } = useTranslation();
+   const { theme } = useSettingsStore();
    //! DATA
    const { user, isLoading: authLoading, error: authError } = useAuthStore();
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
@@ -272,8 +274,8 @@ const Dashboard = () => {
    const salaryLayout = {
       autosize: true,
       margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
+      paper_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
       showlegend: false
    }
 
@@ -345,10 +347,10 @@ const Dashboard = () => {
    const revenueLayout = {
       autosize: true,
       margin: { t: 20, r: 20, b: 40, l: 60 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
-      xaxis: { color: '#9CA3AF' },
-      yaxis: { color: '#9CA3AF' },
+      plot_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
+      paper_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
+      xaxis: { color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
+      yaxis: { color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
       showlegend: false
    }
 
@@ -576,66 +578,66 @@ const Dashboard = () => {
       <>
          {selectedProject && (
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-               <div className="bg-dark-secondary rounded-xl w-full max-w-3xl p-6 relative">
+               <div className="bg-white dark:bg-dark-secondary rounded-xl w-full max-w-3xl p-6 relative">
 
                   <button
                      onClick={() => setSelectedProject(null)}
-                     className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                     className="absolute top-4 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                   >
                      ✕
                   </button>
 
-                  <h2 className="text-xl font-semibold text-white mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                      {selectedProject.title}
                   </h2>
 
                   {/* BASIC INFO */}
-                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-300">
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 dark:text-gray-300">
 
                      <div>
-                        <span className="text-gray-400">Client</span>
+                        <span className="text-gray-500 dark:text-gray-400">Client</span>
                         <div>{selectedProject.createdBy?.name}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Project Status</span>
+                        <span className="text-gray-500 dark:text-gray-400">Project Status</span>
                         <div className="capitalize">{selectedProject.status}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Priority</span>
+                        <span className="text-gray-500 dark:text-gray-400">Priority</span>
                         <div className="capitalize">{selectedProject.priority}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Source</span>
+                        <span className="text-gray-500 dark:text-gray-400">Source</span>
                         <div className="capitalize">{selectedProject.source}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Start Date</span>
+                        <span className="text-gray-500 dark:text-gray-400">Start Date</span>
                         <div>{new Date(selectedProject.startDate).toLocaleDateString()}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Deadline</span>
+                        <span className="text-gray-500 dark:text-gray-400">Deadline</span>
                         <div>{new Date(selectedProject.deadline).toLocaleDateString()}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Budget</span>
+                        <span className="text-gray-500 dark:text-gray-400">Budget</span>
                         <div>${selectedProject.budget || 0}</div>
                      </div>
 
                      <div>
-                        <span className="text-gray-400">Payment ID</span>
+                        <span className="text-gray-500 dark:text-gray-400">Payment ID</span>
                         <div>{selectedProject.payment || '—'}</div>
                      </div>
                   </div>
 
                   {/* PAYMENT STATUS */}
                   <div className="mt-5">
-                     <span className="text-gray-400 text-sm block mb-1">Payment Status</span>
+                     <span className="text-gray-500 dark:text-gray-400 text-sm block mb-1">Payment Status</span>
 
                      {paymentStatus === 'paid' && (
                         <div className="space-y-1">
@@ -643,14 +645,14 @@ const Dashboard = () => {
                               ✅ Paid — ${totalPaid}
                            </div>
 
-                           <div className="text-xs text-gray-400">
+                           <div className="text-xs text-gray-500 dark:text-gray-400">
                               Confirmed by:{" "}
-                              <span className="text-gray-300">
+                              <span className="text-gray-700 dark:text-gray-300">
                                  {confirmedPayment.confirmedBy?.name || '—'}
                               </span>
                            </div>
 
-                           <div className="text-xs text-gray-400">
+                           <div className="text-xs text-gray-500 dark:text-gray-400">
                               Date:{" "}
                               {new Date(
                                  confirmedPayment.confirmedAt || confirmedPayment.paymentDate
@@ -674,15 +676,15 @@ const Dashboard = () => {
 
                   {/* DESCRIPTION */}
                   <div className="mt-4">
-                     <span className="text-gray-400 text-sm block mb-1">Description</span>
-                     <div className="bg-dark-tertiary p-4 rounded text-gray-200">
+                     <span className="text-gray-500 dark:text-gray-400 text-sm block mb-1">Description</span>
+                     <div className="bg-gray-50 dark:bg-dark-tertiary p-4 rounded text-gray-700 dark:text-gray-200">
                         {selectedProject.description}
                      </div>
                   </div>
 
                   {/* MEMBERS */}
                   <div className="mt-4">
-                     <span className="text-gray-400 text-sm block mb-2">Assigned Members</span>
+                     <span className="text-gray-500 dark:text-gray-400 text-sm block mb-2">Assigned Members</span>
 
                      {selectedProject.assignedMembers.length === 0 ? (
                         <div className="text-gray-500 text-sm">No members assigned</div>
@@ -708,7 +710,7 @@ const Dashboard = () => {
                                  return (
                                     <div
                                        key={idx}
-                                       className="bg-dark-tertiary px-3 py-2 rounded-lg text-sm text-white flex items-center space-x-3 border border-gray-800"
+                                       className="bg-gray-50 dark:bg-dark-tertiary px-3 py-2 rounded-lg text-sm text-gray-900 dark:text-white flex items-center space-x-3 border border-gray-200 dark:border-gray-800"
                                     >
                                        <div className="w-8 h-8 rounded-full bg-dark-accent/20 flex items-center justify-center text-xs text-dark-accent font-bold border border-dark-accent/10">
                                           {name.charAt(0).toUpperCase()}
@@ -727,17 +729,17 @@ const Dashboard = () => {
                      )}
                   </div>
                   {/* STATS */}
-                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm text-gray-300">
+                  <div className="mt-4 grid grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-300">
                      <div>
-                        <span className="text-gray-400">Files</span>
+                        <span className="text-gray-500 dark:text-gray-400">Files</span>
                         <div>{selectedProject.files.length}</div>
                      </div>
                      <div>
-                        <span className="text-gray-400">Results</span>
+                        <span className="text-gray-500 dark:text-gray-400">Results</span>
                         <div>{selectedProject.results.length}</div>
                      </div>
                      <div>
-                        <span className="text-gray-400">Revisions</span>
+                        <span className="text-gray-500 dark:text-gray-400">Revisions</span>
                         <div>{selectedProject.revisionRequests.length}</div>
                      </div>
                   </div>
@@ -747,40 +749,40 @@ const Dashboard = () => {
          )}
          <div className="p-8 space-y-8">
             <div id="dashboard-header-section">
-               <h1 className="text-3xl font-bold text-white mb-2">{t('dashboard_overview')}</h1>
-               <p className="text-gray-400">{t('welcome_back_desc')}</p>
+               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('dashboard_overview')}</h1>
+               <p className="text-gray-500 dark:text-gray-400">{t('welcome_back_desc')}</p>
             </div>
 
             <div id="stats-cards-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
                   <div className="flex items-center justify-between mb-4">
                      <div className="w-12 h-12 bg-dark-accent bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-brands fa-telegram text-dark-accent text-2xl"></i>
                      </div>
                      <span className="text-green-500 text-sm font-medium">+{todayProjects.length ?? 0} {t('new')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">{t('new_orders')}</h3>
-                  <p className="text-3xl font-bold text-white">
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-1">{t('new_orders')}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                      {newOrder ?? 0}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">{t('from_system')}</p>
                </div>
 
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
                   <div className="flex items-center justify-between mb-4">
                      <div className="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-folder-open text-blue-500 text-2xl"></i>
                      </div>
                      <span className="text-blue-500 text-sm font-medium">{activeProjects ?? 0} {t('active')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">{t('total_projects')}</h3>
-                  <p className="text-3xl font-bold text-white">
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-1">{t('total_projects')}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                      {totalProjects ?? 0}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">{inProgress ?? 0} {t('in_progress_stat')}</p>
                </div>
 
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
                   <div className="flex items-center justify-between mb-4">
                      <div className="w-12 h-12 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-dollar-sign text-green-500 text-2xl"></i>
@@ -788,39 +790,39 @@ const Dashboard = () => {
                      <span className={`${revenuePercent >= 0 ? "text-green-500" : "text-dark-accent"} text-sm font-medium`}> {revenuePercent >= 0 ? '+' : ''}
                         {revenuePercent ?? 0}%</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">{t('today_revenue')}</h3>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-1">{t('today_revenue')}</h3>
                   <div className="h-[36px] flex items-center">
-                     <span className="text-3xl font-bold text-white">
+                     <span className="text-3xl font-bold text-gray-900 dark:text-white">
                         ${todayRevenue ?? 0}
                      </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">{t('from_system')} {todayProjectsCount} {t('projects').toLowerCase()}</p>
                </div>
 
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
                   <div className="flex items-center justify-between mb-4">
                      <div className="w-12 h-12 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-users text-purple-500 text-2xl"></i>
                      </div>
                      <span className="text-purple-500 text-sm font-medium">{onlineMembers} {t('online')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">{t('team_members')}</h3>
-                  <p className="text-3xl font-bold text-white">{totalMembers}</p>
+                  <h3 className="text-gray-500 dark:text-gray-400 text-sm mb-1">{t('team_members')}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{totalMembers}</p>
                   <p className="text-xs text-gray-500 mt-2">{activeRoles} {t('roles_active')}</p>
                </div>
             </div>
 
             <div id="charts-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-               <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
+               <div className="col-span-1 lg:col-span-2 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">{t('revenue_overview')}</h3>
-                        <p className="text-sm text-gray-400">{t('monthly_revenue_desc')}</p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('revenue_overview')}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('monthly_revenue_desc')}</p>
                      </div>
                      <select
                         value={period}
                         onChange={(e) => setPeriod(e.target.value)}
-                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
+                        className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                      >
                         <option value="6m">{t('last_6_months')}</option>
                         <option value="1y">{t('last_year')}</option>
@@ -838,12 +840,12 @@ const Dashboard = () => {
                   </div>
                </div>
 
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
                   <div className="mb-6">
-                     <h3 className="text-lg font-semibold text-white mb-1">
+                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
                         {isAdmin ? t('salary_distribution') : t('my_tasks_progress')}
                      </h3>
-                     <p className="text-sm text-gray-400">
+                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         {isAdmin ? t('per_project_breakdown') : t('personal_earnings_breakdown')}
                      </p>
                   </div>
@@ -862,30 +864,30 @@ const Dashboard = () => {
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                 <span className="text-gray-400">{t('execution_pool_label')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('execution_pool_label')}</span>
                               </div>
-                              <span className="text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                                 <span className="text-gray-400">{t('lead_management_label')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('lead_management_label')}</span>
                               </div>
-                              <span className="text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                                 <span className="text-gray-400">{t('admin_label')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('admin_label')}</span>
                               </div>
-                              <span className="text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                 <span className="text-gray-400">{t('company')} ({Math.round(distributionRates.company * 100)}%)</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('company')} ({Math.round(distributionRates.company * 100)}%)</span>
                               </div>
-                              <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
                            </div>
                         </>
                      ) : (
@@ -893,30 +895,30 @@ const Dashboard = () => {
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                                 <span className="text-gray-400">{t('completed')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('completed')}</span>
                               </div>
-                              <span className="text-white font-medium">${personalStats.earnings.completed.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${personalStats.earnings.completed.toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                 <span className="text-gray-400">{t('in_progress')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('in_progress')}</span>
                               </div>
-                              <span className="text-white font-medium">${personalStats.earnings.in_progress.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${personalStats.earnings.in_progress.toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                 <span className="text-gray-400">{t('review')} / {t('revision')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('review')} / {t('revision')}</span>
                               </div>
-                              <span className="text-white font-medium">${(personalStats.earnings.review + personalStats.earnings.revision).toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${(personalStats.earnings.review + personalStats.earnings.revision).toFixed(2)}</span>
                            </div>
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-                                 <span className="text-gray-400">{t('todo')}</span>
+                                 <span className="text-gray-600 dark:text-gray-400">{t('todo')}</span>
                               </div>
-                              <span className="text-white font-medium">${personalStats.earnings.todo.toFixed(2)}</span>
+                              <span className="text-gray-900 dark:text-white font-medium">${personalStats.earnings.todo.toFixed(2)}</span>
                            </div>
                         </>
                      )}
@@ -925,41 +927,37 @@ const Dashboard = () => {
             </div>
 
             <div id="orders-section">
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">{t('recent_orders_bot')}</h3>
-                        <p className="text-sm text-gray-400">{t('bot_desc')}</p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('recent_orders_bot')}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('bot_desc')}</p>
                      </div>
-                     {/* <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
-                           <i className="fa-solid fa-plus"></i>
-                           <span>Manual Order</span>
-                        </button> */}
                   </div>
                   <div className="overflow-x-auto">
                      <table className="w-full">
-                        <thead className="bg-dark-tertiary">
+                        <thead className="bg-gray-50 dark:bg-dark-tertiary">
                            <tr>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('date')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('client')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('description')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('amount')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('status')}</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('action')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('date')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('client')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('description')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('amount')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('action')}</th>
                            </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-800">
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                            {recentOrders.map(project => (
                               <tr
                                  key={project._id}
-                                 className="hover:bg-dark-tertiary transition"
+                                 className="hover:bg-gray-50 dark:hover:bg-dark-tertiary transition"
                               >
-                                 <td className="px-6 py-4 text-sm text-white font-medium">
+                                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">
                                     #{project._id.slice(-6)}
                                  </td>
 
-                                 <td className="px-6 py-4 text-sm text-gray-400">
+                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                     {new Date(project.createdAt).toLocaleDateString()}
                                  </td>
 
@@ -968,17 +966,17 @@ const Dashboard = () => {
                                        <div className="w-8 h-8 rounded-full bg-dark-accent flex items-center justify-center text-xs text-white">
                                           {project.createdBy?.name?.[0] || 'U'}
                                        </div>
-                                       <span className="text-sm text-white">
+                                       <span className="text-sm text-gray-900 dark:text-white">
                                           {project.createdBy?.name || 'Unknown'}
                                        </span>
                                     </div>
                                  </td>
 
-                                 <td className="px-6 py-4 text-sm text-gray-400">
+                                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                     {project.title}
                                  </td>
 
-                                 <td className="px-6 py-4 text-sm text-white font-semibold">
+                                 <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-semibold">
                                     {getAmountByProject(project)}
                                  </td>
 
@@ -1007,11 +1005,11 @@ const Dashboard = () => {
             </div>
 
             <div id="team-profiles-section" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-6">
                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">Team Members</h3>
-                        <p className="text-sm text-gray-400">Active employees and roles</p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Team Members</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Active employees and roles</p>
                      </div>
                      {/* <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                            <i className="fa-solid fa-user-plus"></i>
@@ -1032,7 +1030,7 @@ const Dashboard = () => {
                         return (
                            <div
                               key={u._id}
-                              className="flex items-center space-x-4 p-4 bg-dark-tertiary rounded-lg hover:bg-gray-800 transition"
+                              className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-dark-tertiary rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
                            >
                               <img
                                  src={u.avatar || `https://ui-avatars.com/api/?name=${u.name}`}
@@ -1040,8 +1038,8 @@ const Dashboard = () => {
                               />
 
                               <div className="flex-1">
-                                 <h4 className="text-white font-medium">{u.name}</h4>
-                                 <p className="text-xs text-gray-400">{u.email}</p>
+                                 <h4 className="text-gray-900 dark:text-white font-medium">{u.name}</h4>
+                                 <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
                                  <p className="text-sm text-dark-accent capitalize">
                                     {u.role.replace('_', ' ')}
                                  </p>

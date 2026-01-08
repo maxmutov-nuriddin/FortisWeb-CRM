@@ -378,8 +378,8 @@ const Payments = () => {
    const distributionLayout = {
       autosize: true,
       margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      paper_bgcolor: 'rgba(0,0,0,0)',
       showlegend: false
    };
 
@@ -434,8 +434,8 @@ const Payments = () => {
          tickformat: '$,.0f'
       },
       margin: { t: 20, r: 20, b: 40, l: 60 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: 'rgba(0,0,0,0)',
+      paper_bgcolor: 'rgba(0,0,0,0)',
       showlegend: false
    };
 
@@ -483,13 +483,13 @@ const Payments = () => {
          <div id="payments-header-section">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{t('payment_management')}</h1>
-                  <p className="text-gray-400">{t('payment_management_desc')}</p>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('payment_management')}</h1>
+                  <p className="text-gray-500 dark:text-gray-400">{t('payment_management_desc')}</p>
                </div>
                <div className="flex flex-wrap items-center gap-3">
                   {isSuperAdmin && (
                      <select
-                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-dark-accent"
+                        className="bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                         value={viewCompanyId}
                         onChange={(e) => setViewCompanyId(e.target.value)}
                      >
@@ -501,7 +501,7 @@ const Payments = () => {
                   )}
                   <button
                      onClick={handleExport}
-                     className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
+                     className="bg-white dark:bg-dark-tertiary hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-300 dark:border-gray-700">
                      <i className="fa-solid fa-download"></i>
                      <span>{t('export_report')}</span>
                   </button>
@@ -510,133 +510,133 @@ const Payments = () => {
          </div>
 
          <div id="payments-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-green-500 transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-green-500 dark:hover:border-green-500 transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_total_earnings') : t('total_revenue')}</h3>
-               <p className="text-2xl font-bold text-white">
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_total_earnings') : t('total_revenue')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   ${(!isSuperAdmin ? (stats?.myTotalEarnings || 0) : (stats?.totalRevenue || 0)).toLocaleString()}
                </p>
-               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? t('confirmed_payouts') : t('all_time_earnings')}</p>
+               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{!isSuperAdmin ? t('confirmed_payouts') : t('all_time_earnings')}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-yellow-500 transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-yellow-500 dark:hover:border-yellow-500 transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-clock text-yellow-500 text-xl"></i>
                   </div>
                   <span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} {t('pending_count')}</span>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('pending_payments')}</h3>
-               <p className="text-2xl font-bold text-white">${stats?.pendingAmount?.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">{t('awaiting_confirmation')}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('pending_payments')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">${stats?.pendingAmount?.toLocaleString()}</p>
+               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('awaiting_confirmation')}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-blue-500 transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-blue-500 dark:hover:border-blue-500 transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-calendar text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('this_month')}</h3>
-               <p className="text-2xl font-bold text-white">${stats?.thisMonthAmount?.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">{t('current_month')}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('this_month')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">${stats?.thisMonthAmount?.toLocaleString()}</p>
+               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{t('current_month')}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-purple-500 transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-purple-500 dark:hover:border-purple-500 transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-users text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</h3>
-               <p className="text-2xl font-bold text-white">
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   ${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}
                </p>
-               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? t('from_active_projects') : t('payouts_revenue_share')}</p>
+               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{!isSuperAdmin ? t('from_active_projects') : t('payouts_revenue_share')}</p>
             </div>
          </div>
 
          <div id="payment-distribution-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="col-span-1 lg:col-span-2 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-6">
                   <div>
-                     <h3 className="text-lg font-semibold text-white mb-1">{t('payment_distribution_calculator')}</h3>
-                     <p className="text-sm text-gray-400">{t('automatic_salary_split_desc')}</p>
+                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('payment_distribution_calculator')}</h3>
+                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('automatic_salary_split_desc')}</p>
                   </div>
                </div>
 
-               <div className="bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-700">
-                  <label className="text-sm text-gray-400 mb-2 block">{t('calculator_amount_label')}</label>
-                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
+               <div className="bg-gray-100 dark:bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-200 dark:border-gray-700">
+                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">{t('calculator_amount_label')}</label>
+                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-white dark:bg-dark-secondary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
                </div>
 
                <div className="space-y-4">
-                  <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-blue-500 transition">
+                  <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 transition">
                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                            <div className="w-10 h-10 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                               <i className="fa-solid fa-user-tie text-blue-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">{t('admin_generic')}</p>
-                              <p className="text-xs text-gray-400">{t('ten_percent_of_total')}</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{t('admin_generic')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('ten_percent_of_total')}</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * distributionRates.admin).toLocaleString()}</p>
+                           <p className="text-xl font-bold text-gray-900 dark:text-white">${(projectAmount * distributionRates.admin).toLocaleString()}</p>
                            <p className="text-xs text-blue-500">{Math.round(distributionRates.admin * 100)}%</p>
                         </div>
                      </div>
                   </div>
 
-                  <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-yellow-500 transition">
+                  <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:border-yellow-500 dark:hover:border-yellow-500 transition">
                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                            <div className="w-10 h-10 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                               <i className="fa-solid fa-building text-yellow-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">{t('company_generic')}</p>
-                              <p className="text-xs text-gray-400">{t('twenty_percent_of_total')}</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{t('company_generic')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('twenty_percent_of_total')}</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * distributionRates.company).toLocaleString()}</p>
+                           <p className="text-xl font-bold text-gray-900 dark:text-white">${(projectAmount * distributionRates.company).toLocaleString()}</p>
                            <p className="text-xs text-yellow-500">{Math.round(distributionRates.company * 100)}%</p>
                         </div>
                      </div>
                   </div>
 
-                  <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-green-500 transition">
+                  <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition">
                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-3">
                            <div className="w-10 h-10 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                               <i className="fa-solid fa-crown text-purple-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">{t('team_lead')}</p>
-                              <p className="text-xs text-gray-400">{t('team_lead_share_desc')}</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{t('team_lead')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('team_lead_share_desc')}</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-white font-bold">${(projectAmount * distributionRates.team * 0.2).toLocaleString()}</p>
+                           <p className="text-gray-900 dark:text-white font-bold">${(projectAmount * distributionRates.team * 0.2).toLocaleString()}</p>
                            <p className="text-xs text-green-500">{Math.round(distributionRates.team * 0.2 * 100)}%</p>
                         </div>
                      </div>
 
-                     <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700 hover:border-green-500 transition flex items-center justify-between">
+                     <div className="bg-white dark:bg-dark-tertiary rounded-lg p-4 border border-gray-300 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                            <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                               <i className="fa-solid fa-microchip text-green-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">{t('execution_pool')}</p>
-                              <p className="text-xs text-gray-400">{t('execution_pool_share_desc')}</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{t('execution_pool')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('execution_pool_share_desc')}</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-white font-bold">${(projectAmount * distributionRates.team * 0.8).toLocaleString()}</p>
+                           <p className="text-gray-900 dark:text-white font-bold">${(projectAmount * distributionRates.team * 0.8).toLocaleString()}</p>
                            <p className="text-xs text-green-500">{Math.round(distributionRates.team * 0.8 * 100)}%</p>
                         </div>
                      </div>
@@ -644,10 +644,10 @@ const Payments = () => {
                </div>
             </div>
 
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('distribution_chart')}</h3>
-                  <p className="text-sm text-gray-400">{t('visual_breakdown')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('distribution_chart')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('visual_breakdown')}</p>
                </div>
                <div className="w-full h-[350px]">
                   <Plot
@@ -661,11 +661,11 @@ const Payments = () => {
             </div>
          </div>
 
-         <div id="pending-payments-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6 mb-8">
+         <div id="pending-payments-section" className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 mb-8 shadow-sm dark:shadow-none">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('all_payments')}</h3>
-                  <p className="text-sm text-gray-400">{t('manage_all_transactions')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('all_payments')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('manage_all_transactions')}</p>
                </div>
                <div className="flex items-center space-x-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64">
@@ -675,11 +675,11 @@ const Payments = () => {
                         placeholder={t('search_payments_placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
+                        className="w-full bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                      />
                   </div>
                   <select
-                     className="bg-dark-tertiary border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
+                     className="bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                      value={statusFilter}
                      onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -693,28 +693,28 @@ const Payments = () => {
             <div className="overflow-x-auto">
                <table className="w-full min-w-[800px]">
                   <thead>
-                     <tr className="border-b border-gray-800">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('date_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('description_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('client_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('amount_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('my_salary_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('method_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('status_th')}</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('action_th')}</th>
+                     <tr className="border-b border-gray-200 dark:border-gray-800">
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('date_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('description_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('client_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('amount_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('my_salary_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('method_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('status_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('action_th')}</th>
                      </tr>
                   </thead>
                   <tbody>
                      {filteredPayments.length > 0 ? (
                         filteredPayments.map(payment => (
-                           <tr key={payment._id} className="border-b border-gray-800 hover:bg-dark-tertiary transition">
+                           <tr key={payment._id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-dark-tertiary transition">
                               <td className="py-4 px-4">
-                                 <p className="text-sm text-white">{new Date(payment.createdAt).toLocaleDateString()}</p>
-                                 <p className="text-xs text-gray-400">{new Date(payment.createdAt).toLocaleTimeString()}</p>
+                                 <p className="text-sm text-gray-900 dark:text-white">{new Date(payment.createdAt).toLocaleDateString()}</p>
+                                 <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(payment.createdAt).toLocaleTimeString()}</p>
                               </td>
                               <td className="py-4 px-4">
-                                 <p className="text-sm text-white font-medium">{payment.description || t('no_description')}</p>
-                                 <p className="text-xs text-gray-400">ID: {payment._id.slice(-8)}</p>
+                                 <p className="text-sm text-gray-900 dark:text-white font-medium">{payment.description || t('no_description')}</p>
+                                 <p className="text-xs text-gray-500 dark:text-gray-400">ID: {payment._id.slice(-8)}</p>
                               </td>
                               <td className="py-4 px-4">
                                  <div className="flex items-center space-x-2">
@@ -729,11 +729,11 @@ const Payments = () => {
 
                                        return (
                                           <>
-                                             <div className="w-8 h-8 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold border border-dark-accent/10">
+                                             <div className="w-8 h-8 rounded-full bg-dark-accent/10 dark:bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold border border-dark-accent/10">
                                                 {name.charAt(0).toUpperCase()}
                                              </div>
                                              <div>
-                                                <p className="text-sm text-white font-medium">{name}</p>
+                                                <p className="text-sm text-gray-900 dark:text-white font-medium">{name}</p>
                                                 {clientData?.email && <p className="text-[10px] text-gray-500">{clientData.email}</p>}
                                              </div>
                                           </>
@@ -741,19 +741,19 @@ const Payments = () => {
                                     })()}
                                  </div>
                               </td>
-                              <td className="py-4 px-4"><p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p></td>
+                              <td className="py-4 px-4"><p className="text-sm text-gray-900 dark:text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p></td>
                               <td className="py-4 px-4">
                                  {(() => {
                                     const share = calculateMyShare(payment);
                                     if (share > 0) {
                                        return (
                                           <div>
-                                             <p className="text-sm text-green-400 font-bold">+${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                             <p className="text-sm text-green-500 dark:text-green-400 font-bold">+${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                              <p className="text-[10px] text-gray-500">{t('from_tasks')}</p>
                                           </div>
                                        );
                                     }
-                                    return <span className="text-xs text-gray-600">—</span>;
+                                    return <span className="text-xs text-gray-400 dark:text-gray-600">—</span>;
                                  })()}
                               </td>
                               <td className="py-4 px-4">
@@ -782,7 +782,7 @@ const Payments = () => {
                                              });
                                           }
                                        }}
-                                       className="bg-dark-secondary text-gray-300 text-xs px-2 py-1 rounded border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50"
+                                       className="bg-white dark:bg-dark-secondary text-gray-700 dark:text-gray-300 text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50"
                                     >
                                        <option value="bank_transfer">{t('bank_transfer')}</option>
                                        <option value="cash">{t('cash')}</option>
@@ -795,7 +795,7 @@ const Payments = () => {
                               </td>
                               <td className="py-4 px-4">
                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase w-fit tracking-wider
-                                         ${payment.status === 'pending' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
+                                          ${payment.status === 'pending' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
                                        payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
                                           payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
                                              'bg-gray-500 bg-opacity-20 text-gray-500'}`}>
@@ -843,25 +843,25 @@ const Payments = () => {
          </div>
 
          <div id="payment-history-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="col-span-1 lg:col-span-2 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('recent_completed')}</h3>
-                  <p className="text-sm text-gray-400">{t('latest_finished_transactions')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('recent_completed')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('latest_finished_transactions')}</p>
                </div>
                <div className="space-y-3">
                   {paymentsList.filter(p => p.status === 'completed').slice(0, 5).map(payment => (
-                     <div key={payment._id} className="flex items-center justify-between p-4 bg-dark-tertiary rounded-lg border border-gray-700 hover:border-green-500 transition">
+                     <div key={payment._id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-tertiary rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition">
                         <div className="flex items-center space-x-4">
                            <div className="w-10 h-10 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                               <i className="fa-solid fa-check text-green-500"></i>
                            </div>
                            <div>
-                              <p className="text-sm text-white font-medium">{payment.description || t('payment_title')}</p>
-                              <p className="text-xs text-gray-400">{t('confirmed_on')} {new Date(payment.updatedAt || payment.createdAt).toLocaleDateString()}</p>
+                              <p className="text-sm text-gray-900 dark:text-white font-medium">{payment.description || t('payment_title')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('confirmed_on')} {new Date(payment.updatedAt || payment.createdAt).toLocaleDateString()}</p>
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p>
+                           <p className="text-sm text-gray-900 dark:text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p>
                            <p className="text-xs text-green-500">{t('distributed')}</p>
                         </div>
                      </div>
@@ -872,16 +872,16 @@ const Payments = () => {
                </div>
             </div>
 
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-6">
                   <div>
-                     <h3 className="text-lg font-semibold text-white mb-1">{t('revenue_trends')}</h3>
-                     <p className="text-sm text-gray-400">{t('past_performance')}</p>
+                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('revenue_trends')}</h3>
+                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('past_performance')}</p>
                   </div>
                   <select
                      value={timePeriod}
                      onChange={(e) => setTimePeriod(e.target.value)}
-                     className="bg-dark-tertiary border border-gray-700 rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-dark-accent"
+                     className="bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded px-2 py-1 text-xs text-gray-600 dark:text-gray-400 focus:outline-none focus:border-dark-accent"
                   >
                      <option value="6m">{t('last_6_months')}</option>
                      <option value="1y">{t('last_year')}</option>

@@ -317,32 +317,32 @@ const Tasks = () => {
    const renderColumn = (title, status, colorClass) => {
       const columnTasks = filteredTasks.filter(t => t.status === status);
       return (
-         <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[300px]">
-            <div className="flex items-center justify-between mb-4 sticky top-0 bg-dark-secondary pb-2 z-10">
-               <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+         <div className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[300px]">
+            <div className="flex items-center justify-between mb-4 sticky top-0 bg-gray-50 dark:bg-dark-secondary pb-2 z-10 transition-colors duration-300">
+               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(status)}</span>
                </h3>
-               <span className="text-sm text-gray-400 bg-dark-tertiary px-2 py-1 rounded">{columnTasks.length}</span>
+               <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-dark-tertiary px-2 py-1 rounded">{columnTasks.length}</span>
             </div>
             <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
                {columnTasks.map(task => (
-                  <div key={task._id} className="bg-dark-tertiary border border-gray-700 rounded-lg p-4 hover:border-dark-accent transition cursor-pointer relative group">
+                  <div key={task._id} className="bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-dark-accent dark:hover:border-dark-accent transition cursor-pointer relative group">
                      <div className="flex items-start justify-between mb-2 gap-2">
-                        <h4 className="text-sm font-medium text-white line-clamp-2">{task.title}</h4>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{task.title}</h4>
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${task.priority === 'urgent' ? 'bg-red-500 text-white' :
                            task.priority === 'high' ? 'bg-orange-500 text-white' :
                               task.priority === 'medium' ? 'bg-yellow-500 text-black' :
                                  'bg-blue-500 text-white'
                            }`}>{t(task.priority)}</span>
                      </div>
-                     <p className="text-xs text-gray-400 mb-3 line-clamp-2">{task.description}</p>
+                     <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{task.description}</p>
 
                      <div className="flex items-center space-x-2 mb-3">
-                        <span className="text-[10px] bg-dark-secondary text-gray-300 px-2 py-0.5 rounded border border-gray-700">
+                        <span className="text-[10px] bg-gray-100 dark:bg-dark-secondary text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
                            {task.project?.title || t('no_project')}
                         </span>
                         {task.weight > 1 && (
-                           <span className="text-[10px] bg-purple-500 bg-opacity-20 text-purple-400 px-2 py-0.5 rounded">
+                           <span className="text-[10px] bg-purple-500 bg-opacity-20 text-purple-700 dark:text-purple-400 px-2 py-0.5 rounded">
                               {t('weight')}: {task.weight}
                            </span>
                         )}
@@ -353,7 +353,7 @@ const Tasks = () => {
                            <div className="w-6 h-6 rounded-full bg-dark-accent flex items-center justify-center text-[10px] text-white font-bold">
                               {task.assignedTo?.name?.[0] || 'U'}
                            </div>
-                           <span className="text-[11px] text-gray-400 truncate max-w-[80px]">{task.assignedTo?.name || t('unassigned')}</span>
+                           <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[80px]">{task.assignedTo?.name || t('unassigned')}</span>
                         </div>
                         <span className={`text-[10px] flex items-center space-x-1 ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? 'text-red-500' : 'text-gray-500'}`}>
                            <i className="fa-regular fa-calendar text-[9px]"></i>
@@ -362,19 +362,19 @@ const Tasks = () => {
                      </div>
 
                      {/* Action Overlay */}
-                     <div className="absolute inset-0 bg-dark-tertiary bg-opacity-95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center p-4">
+                     <div className="absolute inset-0 bg-white dark:bg-dark-tertiary bg-opacity-95 dark:bg-opacity-95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center p-4">
                         <div className="flex flex-wrap gap-2 justify-center mb-4">
-                           {status !== 'todo' && <button onClick={() => handleStatusChange(task._id, 'todo')} className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
+                           {status !== 'todo' && <button onClick={() => handleStatusChange(task._id, 'todo')} className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
                            {status !== 'in_progress' && <button onClick={() => handleStatusChange(task._id, 'in_progress')} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
                            {status !== 'review' && <button onClick={() => handleStatusChange(task._id, 'review')} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
                            {status !== 'completed' && <button onClick={() => handleStatusChange(task._id, 'completed')} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
                         </div>
                         {canManageTasks && (
-                           <div className="flex border-t border-gray-700 pt-3 gap-3 justify-center">
-                              <button onClick={() => handleOpenEdit(task)} className="text-blue-400 hover:text-blue-300 text-xs flex items-center space-x-1">
+                           <div className="flex border-t border-gray-200 dark:border-gray-700 pt-3 gap-3 justify-center">
+                              <button onClick={() => handleOpenEdit(task)} className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs flex items-center space-x-1">
                                  <i className="fa-solid fa-edit"></i><span>{t('edit')}</span>
                               </button>
-                              <button onClick={() => handleDeleteTask(task._id)} className="text-red-400 hover:text-red-300 text-xs flex items-center space-x-1">
+                              <button onClick={() => handleDeleteTask(task._id)} className="text-red-500 hover:text-red-600 dark:hover:text-red-400 text-xs flex items-center space-x-1">
                                  <i className="fa-solid fa-trash"></i><span>{t('delete')}</span>
                               </button>
                            </div>
@@ -384,8 +384,8 @@ const Tasks = () => {
                ))}
                {columnTasks.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                     <i className="fa-solid fa-inbox text-2xl mb-2"></i>
-                     <p className="text-xs">{t('no_tasks_here')}</p>
+                     <i className="fa-solid fa-inbox text-2xl mb-2 text-gray-400 dark:text-gray-600"></i>
+                     <p className="text-xs text-gray-500 dark:text-gray-400">{t('no_tasks_here')}</p>
                   </div>
                )}
             </div>
@@ -400,9 +400,9 @@ const Tasks = () => {
          {/* Header */}
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-               <h1 className="text-3xl font-bold text-white mb-2">{t('task_management')}</h1>
+               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('task_management')}</h1>
                <div className="flex items-center space-x-2 text-sm text-gray-400">
-                  <span className="bg-dark-accent/20 text-dark-accent px-2 py-0.5 rounded capitalize">{role?.replace('_', ' ')}</span>
+                  <span className="bg-dark-accent/10 dark:bg-dark-accent/20 text-dark-accent px-2 py-0.5 rounded capitalize">{role?.replace('_', ' ')}</span>
                   <span>•</span>
                   <span>{taskList.length} {t('tasks_total')}</span>
                </div>
@@ -413,7 +413,7 @@ const Tasks = () => {
                   <input
                      type="text"
                      placeholder={t('search_tasks_placeholder')}
-                     className="bg-dark-secondary border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-64"
+                     className="bg-white dark:bg-dark-secondary border border-gray-300 dark:border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-64"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -435,26 +435,26 @@ const Tasks = () => {
                { icon: 'fa-calendar-xmark', color: 'bg-red-500', label: 'overdue', value: stats.overdue, sub: 'needs_attention' },
                { icon: 'fa-chart-line', color: 'bg-purple-500', label: 'success_rate', value: stats.avgCompletion, sub: 'efficiency' },
             ].map((stat, i) => (
-               <div key={i} className="bg-dark-secondary border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition group">
+               <div key={i} className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-700 transition group shadow-sm dark:shadow-none">
                   <div className="flex items-center gap-3 mb-2">
                      <div className={`w-8 h-8 ${stat.color} bg-opacity-20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <i className={`fa-solid ${stat.icon} ${stat.color.replace('bg-', 'text-')} text-sm`}></i>
                      </div>
-                     <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">{t(stat.label)}</span>
+                     <span className="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">{t(stat.label)}</span>
                   </div>
-                  <div className="text-2xl font-bold text-white mb-0.5">{stat.value}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{stat.value}</div>
                   <div className="text-[10px] text-gray-500">{t(stat.sub)}</div>
                </div>
             ))}
          </div>
 
          {/* Filter Tabs */}
-         <div className="flex items-center gap-2 bg-dark-secondary p-1 rounded-xl w-fit border border-gray-800">
+         <div className="flex items-center gap-2 bg-gray-100 dark:bg-dark-secondary p-1 rounded-xl w-fit border border-gray-200 dark:border-gray-800">
             {['all', 'todo', 'in_progress', 'review', 'completed'].map(f => (
                <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f ? 'bg-dark-accent text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-dark-tertiary'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f ? 'bg-dark-accent text-white shadow-md' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-dark-tertiary'}`}
                >
                   {f === 'all' ? t('all_tasks') : t(f)}
                </button>
@@ -472,11 +472,11 @@ const Tasks = () => {
          {/* Modal Overlay */}
          {(isCreateModalOpen || isEditModalOpen) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
-               <div className="bg-dark-secondary border border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl animate-modalEnter">
+               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl animate-modalEnter">
                   <header className="flex items-center justify-between mb-6">
-                     <h2 className="text-2xl font-bold text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
-                     <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-white transition"><i className="fa-solid fa-times"></i></button>
+                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
+                     <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-times"></i></button>
                   </header>
 
                   <form onSubmit={async (e) => {
@@ -509,7 +509,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('title_label')}</label>
                            <input
                               type="text" required
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                               value={formData.title}
                               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                            />
@@ -518,7 +518,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('description_label')}</label>
                            <textarea
                               rows="3" required
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent resize-none"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none"
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                            ></textarea>
@@ -527,7 +527,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('project')}</label>
                            <select
                               required
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
                               value={formData.project}
                               onChange={(e) => setFormData({ ...formData, project: e.target.value, assignedTo: '' })}
                            >
@@ -539,7 +539,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('assignee')}</label>
                            <select
                               required
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
                               value={formData.assignedTo}
                               onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                            >
@@ -550,7 +550,7 @@ const Tasks = () => {
                         <div>
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('priority')}</label>
                            <select
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
                               value={formData.priority}
                               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                            >
@@ -564,7 +564,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('estimated_hours')}</label>
                            <input
                               type="number" min="0"
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                               value={formData.estimatedHours}
                               onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                            />
@@ -573,7 +573,7 @@ const Tasks = () => {
                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('task_weight')}</label>
                            <input
                               type="number" min="1" max="10"
-                              className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                               value={formData.weight}
                               onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
                            />
@@ -584,7 +584,7 @@ const Tasks = () => {
                         <button
                            type="button"
                            onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}
-                           className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition"
+                           className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold py-3 rounded-lg transition"
                         >
                            {t('cancel')}
                         </button>

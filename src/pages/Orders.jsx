@@ -11,9 +11,11 @@ import { usePaymentStore } from '../store/payment.store';
 import { useAuthStore } from '../store/auth.store';
 import PageLoader from '../components/loader/PageLoader';
 import { useUserStore } from '../store/user.store';
+import { useSettingsStore } from '../store/settings.store';
 
 const Orders = () => {
    const { t } = useTranslation();
+   const { theme } = useSettingsStore();
    const [statusFilter, setStatusFilter] = useState('All Statuses');
    const [dateFilter, setDateFilter] = useState('All Time');
    const [amountFilter, setAmountFilter] = useState('All Amounts');
@@ -274,19 +276,19 @@ const Orders = () => {
    const statusLayout = {
       autosize: true,
       margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
+      paper_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
       showlegend: false
    };
 
    const trendLayout = {
       autosize: true,
       title: { text: '', font: { size: 0 } },
-      xaxis: { title: '', gridcolor: '#2A2A2A', color: '#9CA3AF' },
-      yaxis: { title: 'Orders', gridcolor: '#2A2A2A', color: '#9CA3AF' },
+      xaxis: { title: '', gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB', color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
+      yaxis: { title: 'Orders', gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB', color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
       margin: { t: 20, r: 20, b: 40, l: 60 },
-      plot_bgcolor: '#1A1A1A',
-      paper_bgcolor: '#1A1A1A',
+      plot_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
+      paper_bgcolor: theme === 'dark' ? '#1A1A1A' : '#ffffff',
       showlegend: false,
       hovermode: 'x unified'
    };
@@ -778,15 +780,15 @@ const Orders = () => {
          <div id="orders-header-section">
             <div className="flex items-center justify-between">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{t('orders_management')}</h1>
-                  <p className="text-gray-400">{t('orders_desc')}</p>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('orders_management')}</h1>
+                  <p className="text-gray-500 dark:text-gray-400">{t('orders_desc')}</p>
                </div>
                <div className="flex items-center space-x-3">
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
+                  <button className="bg-white dark:bg-dark-tertiary hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-200 dark:border-gray-700">
                      <i className="fa-solid fa-filter"></i>
                      <span>Filters</span>
                   </button>
-                  <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
+                  <button className="bg-white dark:bg-dark-tertiary hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-200 dark:border-gray-700">
                      <i className="fa-solid fa-download"></i>
                      <span>Export</span>
                   </button>
@@ -804,63 +806,63 @@ const Orders = () => {
          </div>
 
          <div id="orders-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-clock text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('pending')}</h3>
-               <p className="text-2xl font-bold text-white">{pendingOrders?.length || 0}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('pending')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{pendingOrders?.length || 0}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-user-check text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('completed_paid')}</h3>
-               <p className="text-2xl font-bold text-white">{assignedOrders.length || 0}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('completed_paid')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{assignedOrders.length || 0}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-spinner text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('in_progress')}</h3>
-               <p className="text-2xl font-bold text-white">{inProgressOrders?.length || 0}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('in_progress')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{inProgressOrders?.length || 0}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-check-circle text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('completed')}</h3>
-               <p className="text-2xl font-bold text-white">{completedOrders?.length || 0}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('completed')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{completedOrders?.length || 0}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-times-circle text-red-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('cancelled')}</h3>
-               <p className="text-2xl font-bold text-white">{cancelledOrders?.length || 0}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('cancelled')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{cancelledOrders?.length || 0}</p>
             </div>
          </div>
 
-         <div id="orders-filters-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6 mb-6">
+         <div id="orders-filters-section" className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 mb-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap w-full">
                   <div className="w-full sm:w-auto flex-grow max-w-md">
-                     <label className="text-xs text-gray-400 mb-1 block">{t('search_label')}</label>
+                     <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('search_label')}</label>
                      <div className="relative">
                         <input
                            type="text"
                            placeholder={t('search_orders_placeholder')}
-                           className="bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
+                           className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-full"
                            value={searchQuery}
                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -868,9 +870,9 @@ const Orders = () => {
                      </div>
                   </div>
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">{t('status')}</label>
+                     <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('status')}</label>
                      <select
-                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                      >
@@ -885,9 +887,9 @@ const Orders = () => {
                   </div>
                   {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
                      <div className="flex-1 min-w-[200px]">
-                        <label className="text-xs text-gray-400 mb-1 block">{t('filter_by_company')}</label>
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('filter_by_company')}</label>
                         <select
-                           className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
+                           className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-full"
                            value={viewCompanyId}
                            onChange={(e) => setViewCompanyId(e.target.value)}
                         >
@@ -901,9 +903,9 @@ const Orders = () => {
                      </div>
                   )}
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">{t('date_range')}</label>
+                     <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('date_range')}</label>
                      <select
-                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value)}
                      >
@@ -914,9 +916,9 @@ const Orders = () => {
                      </select>
                   </div>
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">{t('amount_range')}</label>
+                     <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">{t('amount_range')}</label>
                      <select
-                        className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
+                        className="bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={amountFilter}
                         onChange={(e) => setAmountFilter(e.target.value)}
                      >
@@ -940,23 +942,23 @@ const Orders = () => {
             </div>
          </div>
 
-         <div id="orders-table-section" className="bg-dark-secondary border border-gray-800 rounded-xl overflow-hidden mb-8">
+         <div id="orders-table-section" className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden mb-8">
             <div className="overflow-x-auto">
                <table className="w-full">
-                  <thead className="bg-dark-tertiary">
+                  <thead className="bg-gray-50 dark:bg-dark-tertiary">
                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('date_time')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('client')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('description')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('amount')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('source')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('status')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('payment')}</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('actions')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('date_time')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('client')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('description')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('amount')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('source')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('payment')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('actions')}</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800 relative">
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-800 relative">
                      {projectsLoading && projectsList.length > 0 && (
                         <tr className="absolute top-0 left-0 w-full h-1 z-10">
                            <td colSpan="9" className="p-0">
@@ -966,35 +968,35 @@ const Orders = () => {
                      )}
                      {filteredOrders.length > 0 ? (
                         filteredOrders.map((order) => (
-                           <tr key={order._id} className="hover:bg-dark-tertiary transition">
-                              <td className="px-6 py-4 text-sm text-white font-medium">#{order._id.substring(order._id.length - 8).toUpperCase()}</td>
-                              <td className="px-6 py-4 text-sm text-gray-400">
+                           <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-dark-tertiary transition">
+                              <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-medium">#{order._id.substring(order._id.length - 8).toUpperCase()}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                                  <div>{new Date(order.createdAt).toLocaleDateString()}</div>
-                                 <div className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                 <div className="text-xs text-gray-400 dark:text-gray-500">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                               </td>
                               <td className="px-6 py-4">
                                  <div className="flex items-center space-x-3">
-                                    <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-xs text-white">
+                                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-700 dark:text-white">
                                        {order.client?.name ? order.client.name.charAt(0).toUpperCase() : '?'}
                                     </div>
                                     <div>
-                                       <div className="text-sm text-white font-medium">{order.client?.name || 'Unknown Client'}</div>
-                                       <div className="text-xs text-gray-400">
+                                       <div className="text-sm text-gray-900 dark:text-white font-medium">{order.client?.name || 'Unknown Client'}</div>
+                                       <div className="text-xs text-gray-500 dark:text-gray-400">
                                           {allCompanies.find(c => c._id === (order.company?._id || order.company))?.name || 'Manual'}
                                        </div>
-                                       <div className="text-xs text-gray-500">{order.client?.username || 'No username'}</div>
+                                       <div className="text-xs text-gray-400 dark:text-gray-500">{order.client?.username || 'No username'}</div>
                                     </div>
                                  </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-400 max-w-xs truncate" title={order.description}>
+                              <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title={order.description}>
                                  {order.title || order.description || 'No description'}
                               </td>
-                              <td className="px-6 py-4 text-sm text-white font-semibold">
+                              <td className="px-6 py-4 text-sm text-gray-900 dark:text-white font-semibold">
                                  ${(order.budget || 0).toLocaleString()}
                               </td>
                               <td className="px-6 py-4">
                                  <span className="flex items-center space-x-1 text-xs">
-                                    <span className="text-gray-400">{order?.source}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">{order?.source}</span>
                                  </span>
                               </td>
                               <td className="px-6 py-4">
@@ -1112,10 +1114,10 @@ const Orders = () => {
          </div>
 
          <div id="orders-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('orders_by_status')}</h3>
-                  <p className="text-sm text-gray-400">{t('status_dist_desc')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('orders_by_status')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('status_dist_desc')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -1127,10 +1129,10 @@ const Orders = () => {
                   />
                </div>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('monthly_orders_trend')}</h3>
-                  <p className="text-sm text-gray-400">{t('order_vol_desc')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('monthly_orders_trend')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('order_vol_desc')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -1144,11 +1146,11 @@ const Orders = () => {
             </div>
          </div>
 
-         <div id="telegram-integration-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+         <div id="telegram-integration-section" className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('telegram_bot_integration')}</h3>
-                  <p className="text-sm text-gray-400">{t('bot_connect_desc')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('telegram_bot_integration')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('bot_connect_desc')}</p>
                </div>
                <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -1156,28 +1158,28 @@ const Orders = () => {
                </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-               <div className="bg-dark-tertiary rounded-lg p-5">
+               <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-5">
                   <div className="flex items-center space-x-3 mb-3">
                      <div className="w-10 h-10 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-brands fa-telegram text-blue-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 className="text-white font-medium">{t('bot_status')}</h4>
+                        <h4 className="text-gray-900 dark:text-white font-medium">{t('bot_status')}</h4>
                      </div>
                   </div>
-                  <p className="text-2xl font-bold text-white mb-1">{t('active')}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{t('active')}</p>
                   <p className="text-xs text-gray-500">{t('last_sync')}: 2 min ago</p>
                </div>
-               <div className="bg-dark-tertiary rounded-lg p-5">
+               <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-5">
                   <div className="flex items-center space-x-3 mb-3">
                      <div className="w-10 h-10 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-inbox text-purple-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 className="text-white font-medium">{t('messages')}</h4>
+                        <h4 className="text-gray-900 dark:text-white font-medium">{t('messages')}</h4>
                      </div>
                   </div>
-                  <p className="text-2xl font-bold text-white mb-1">1,247</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">1,247</p>
                   <p className="text-xs text-gray-500">{t('total_received')}</p>
                </div>
             </div>
@@ -1185,12 +1187,12 @@ const Orders = () => {
 
          {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
-               <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                     <h2 className="text-xl font-bold text-white">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-dark-tertiary">
+                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                         {isCreateMode ? t('create_new_order') : isEditMode ? t('edit_order') : t('order_details')}
                      </h2>
-                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
+                     <button onClick={closeModal} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition">
                         <i className="fa-solid fa-times text-xl"></i>
                      </button>
                   </div>
@@ -1200,14 +1202,14 @@ const Orders = () => {
                         <form onSubmit={handleSubmit} className="space-y-4">
                            {isCreateMode && isSuperAdmin && (
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
                                     Company <span className="text-red-500">*</span>
                                  </label>
                                  <select
                                     name="selectedCompanyId"
                                     value={formData.selectedCompanyId}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     required
                                  >
                                     <option value="">{t('select_company_placeholder')} ({allCompanies.length} available)</option>
@@ -1238,25 +1240,25 @@ const Orders = () => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('project_title')} <span className="text-red-500">*</span></label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('project_title')} <span className="text-red-500">*</span></label>
                                  <input
                                     type="text"
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     placeholder={t('website_redesign_placeholder')}
                                     required
                                  />
                               </div>
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('budget')} <span className="text-red-500">*</span></label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('budget')} <span className="text-red-500">*</span></label>
                                  <input
                                     type="number"
                                     name="budget"
                                     value={formData.budget}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     placeholder={t('budget_placeholder')}
                                     required
                                  />
@@ -1271,7 +1273,7 @@ const Orders = () => {
                                     name="deadline"
                                     value={formData.deadline}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     required
                                  />
                               </div>
@@ -1281,7 +1283,7 @@ const Orders = () => {
                                     name="priority"
                                     value={formData.priority}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                  >
                                     <option value="low">{t('low')}</option>
                                     <option value="medium">{t('medium')}</option>
@@ -1292,26 +1294,26 @@ const Orders = () => {
                            </div>
 
                            <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">{t('description')}</label>
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('description')}</label>
                               <textarea
                                  name="description"
                                  value={formData.description}
                                  onChange={handleInputChange}
                                  rows="3"
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                  placeholder={t('project_details_placeholder')}
                               ></textarea>
                            </div>
 
                            <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
                                  {t('status')}
                               </label>
                               <select
                                  name="status"
                                  value={formData.status}
                                  onChange={handleInputChange}
-                                 className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                               >
                                  <option value="pending">Pending</option>
                                  <option value="in_progress">In Progress</option>
@@ -1322,35 +1324,35 @@ const Orders = () => {
                               </select>
                            </div>
 
-                           <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{t('client_information')}</h3>
+                           <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">{t('client_information')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_name')}</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('client_name')}</label>
                                     <input
                                        type="text"
                                        name="clientName"
                                        value={formData.clientName}
                                        onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                        placeholder={t('full_name')}
                                     />
                                  </div>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_username')}</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('client_username')}</label>
                                     <input
                                        type="text"
                                        name="clientUsername"
                                        value={formData.clientUsername}
                                        onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                        placeholder="@username"
                                     />
                                  </div>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_email')}</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('client_email')}</label>
                                     <input
                                        type="email"
                                        name="clientEmail"
@@ -1362,7 +1364,7 @@ const Orders = () => {
                                              setFormData(prev => ({ ...prev, clientEmail: val.trim() + '@gmail.com' }));
                                           }
                                        }}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                        placeholder="email@example.com"
                                     />
                                     <p className="text-[10px] text-gray-500 mt-1">
@@ -1370,39 +1372,39 @@ const Orders = () => {
                                     </p>
                                  </div>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_phone')}</label>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('client_phone')}</label>
                                     <input
                                        type="text"
                                        name="clientPhone"
                                        value={formData.clientPhone}
                                        onChange={handleInputChange}
-                                       className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                       className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                        placeholder="+12345678"
                                     />
                                  </div>
                               </div>
                               <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_company')}</label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('client_company')}</label>
                                  <input
                                     type="text"
                                     name="clientCompany"
                                     value={formData.clientCompany}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     placeholder="Company Name"
                                  />
                               </div>
                            </div>
 
-                           <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{t('assignment')}</h3>
+                           <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+                              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">{t('assignment')}</h3>
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('team_lead')}</label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">{t('team_lead')}</label>
                                  <select
                                     name="teamLead"
                                     value={formData.teamLead}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                  >
                                     <option value="">Select Team Lead ({availableLeads.length} available)</option>
                                     {availableLeads.map(user => (
@@ -1413,12 +1415,12 @@ const Orders = () => {
                                  </select>
                               </div>
                               <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team</label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Team</label>
                                  <select
                                     name="assignedTeam"
                                     value={formData.assignedTeam}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                     disabled={!formData.teamLead}
                                  >
                                     <option value="">
@@ -1434,13 +1436,13 @@ const Orders = () => {
                                  </select>
                               </div>
                               <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Assigned Members</label>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">Assigned Members</label>
                                  <select
                                     name="assignedMembers"
                                     multiple
                                     value={formData.assignedMembers}
                                     onChange={handleInputChange}
-                                    className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent h-32"
+                                    className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent h-32"
                                     disabled={!formData.assignedTeam}
                                  >
                                     {!formData.assignedTeam ? (
@@ -1459,13 +1461,11 @@ const Orders = () => {
                               </div>
                            </div>
 
-
-
-                           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-800">
+                           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-800">
                               <button
                                  type="button"
                                  onClick={closeModal}
-                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
                               >
                                  {t('cancel')}
                               </button>
@@ -1480,14 +1480,14 @@ const Orders = () => {
                         </form>
                      ) : (
                         <div className="space-y-6">
-                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
+                           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center">
                               <i className="fa-solid fa-circle-info mr-2 text-dark-accent"></i>
                               {t('order_details')}
                            </h3>
                            <div className="flex flex-col sm:flex-row justify-between gap-4">
                               <div>
                                  <span className="text-xs text-gray-500 block mb-1">{t('order_id')}</span>
-                                 <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
+                                 <span className="text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-dark-tertiary px-2 py-1 rounded text-sm">
                                     #{selectedOrder._id}
                                  </span>
                               </div>
@@ -1503,14 +1503,14 @@ const Orders = () => {
                            </div>
 
                            <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('company_information')}</h3>
-                              <div className="bg-dark-tertiary rounded-lg p-4">
+                              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('company_information')}</h3>
+                              <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4">
                                  <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                                        <i className="fa-solid fa-building text-indigo-500"></i>
                                     </div>
                                     <div>
-                                       <p className="text-white font-medium">
+                                       <p className="text-gray-900 dark:text-white font-medium">
                                           {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || t('manual_entry_unknown')}
                                        </p>
                                        <p className="text-xs text-gray-500 italic">{t('project_source_entity')}</p>
@@ -1520,27 +1520,27 @@ const Orders = () => {
                            </div>
 
                            <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('project_info')}</h3>
-                              <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
+                              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{t('project_info')}</h3>
+                              <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 space-y-3">
                                  <div>
                                     <span className="text-xs text-gray-500 block">{t('project_title')}</span>
-                                    <p className="text-white font-medium">{selectedOrder.title || t('no_title')}</p>
+                                    <p className="text-gray-900 dark:text-white font-medium">{selectedOrder.title || t('no_title')}</p>
                                  </div>
                                  <div>
                                     <span className="text-xs text-gray-500 block">{t('description')}</span>
-                                    <p className="text-gray-300 text-sm">{selectedOrder.description || t('no_description')}</p>
+                                    <p className="text-gray-600 dark:text-gray-300 text-sm">{selectedOrder.description || t('no_description')}</p>
                                  </div>
                                  <div className="grid grid-cols-2 gap-4">
                                     <div>
                                        <span className="text-xs text-gray-500 block">{t('budget_amount')}</span>
-                                       <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
+                                       <p className="text-gray-900 dark:text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
                                        <div className="mt-4">
                                           <span className="text-xs text-gray-500 block">{t('date_created')}</span>
-                                          <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
+                                          <p className="text-gray-900 dark:text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
                                        </div>
                                        <div className="mt-4">
                                           <span className="text-xs text-gray-500 block">{t('source')}</span>
-                                          <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
+                                          <p className="text-gray-900 dark:text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
                                        </div>
                                     </div>
                                     <div>
@@ -1561,7 +1561,7 @@ const Orders = () => {
                                        </div>
                                        <div className="mt-4">
                                           <span className="text-xs text-gray-500 block">Deadline</span>
-                                          <p className="text-white text-sm font-medium">{new Date(selectedOrder.deadline).toLocaleDateString()}</p>
+                                          <p className="text-gray-900 dark:text-white text-sm font-medium">{new Date(selectedOrder.deadline).toLocaleDateString()}</p>
                                        </div>
                                        <div className="mt-4">
                                           <span className="text-xs text-gray-500 block">Priority</span>
@@ -1579,25 +1579,25 @@ const Orders = () => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                               <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
-                                    <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center text-lg text-white font-bold">
+                                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Client Info</h3>
+                                 <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 flex items-center space-x-4">
+                                    <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg text-gray-700 dark:text-white font-bold">
                                        {selectedOrder.client?.name ? selectedOrder.client.name.charAt(0).toUpperCase() : '?'}
                                     </div>
                                     <div>
-                                       <p className="text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
+                                       <p className="text-gray-900 dark:text-white font-medium">{selectedOrder.client?.name || 'Unknown Client'}</p>
                                        <p className="text-gray-500 text-sm">{selectedOrder.client?.username || selectedOrder.clientUsername || 'No username'}</p>
                                        <p className="text-gray-500 text-[10px] mt-1">ID: {selectedOrder.client?._id || 'N/A'}</p>
                                     </div>
                                  </div>
                               </div>
                               <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-4">
+                                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Team & Manager</h3>
+                                 <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 space-y-4">
                                     <div>
                                        <span className="text-xs text-gray-500 block mb-1">Team & Lead</span>
                                        <div className="flex items-center space-x-2">
-                                          <p className="text-white text-sm font-medium">
+                                          <p className="text-gray-900 dark:text-white text-sm font-medium">
                                              {(() => {
                                                 const team = selectedOrder.assignedTeam;
                                                 if (!team) return 'No Team';
@@ -1606,8 +1606,8 @@ const Orders = () => {
                                                 return teamFound?.name || team?.name || (typeof team === 'object' ? team.name : 'Unknown Team');
                                              })()}
                                           </p>
-                                          <span className="text-gray-600">•</span>
-                                          <p className="text-gray-400 text-xs">
+                                          <span className="text-gray-400 dark:text-gray-600">•</span>
+                                          <p className="text-gray-500 dark:text-gray-400 text-xs">
                                              {(() => {
                                                 const lead = selectedOrder.teamLead;
                                                 if (!lead) return 'No Lead';
@@ -1647,12 +1647,12 @@ const Orders = () => {
                                                    const userName = empFound?.name || userRef?.name || m.name || 'Unknown Member';
                                                    const userRole = empFound?.role || userRef?.role || m.role || 'Member';
                                                    return (
-                                                      <div key={i} className="flex items-center space-x-2 bg-dark-secondary/50 p-2 rounded-md border border-gray-800/50">
-                                                         <div className="w-6 h-6 rounded-full bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
+                                                      <div key={i} className="flex items-center space-x-2 bg-white dark:bg-dark-secondary/50 p-2 rounded-md border border-gray-200 dark:border-gray-800/50">
+                                                         <div className="w-6 h-6 rounded-full bg-dark-accent/10 dark:bg-dark-accent/20 flex items-center justify-center text-[10px] text-dark-accent font-bold">
                                                             {userName.charAt(0).toUpperCase()}
                                                          </div>
                                                          <div className="flex flex-col">
-                                                            <span className="text-white text-[11px] font-medium leading-none">{userName}</span>
+                                                            <span className="text-gray-900 dark:text-white text-[11px] font-medium leading-none">{userName}</span>
                                                             <span className="text-gray-500 text-[9px] capitalize">{userRole.replace('_', ' ')}</span>
                                                          </div>
                                                       </div>
@@ -1667,8 +1667,8 @@ const Orders = () => {
                            </div>
 
                            {(isSuperAdmin || isCompanyAdmin) && (
-                              <div className="border-t border-gray-800 pt-6">
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                              <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
+                                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                                     <i className="fa-solid fa-credit-card mr-2 text-dark-accent"></i>
                                     Payment Information
                                  </h3>
@@ -1680,12 +1680,12 @@ const Orders = () => {
                                     });
                                     if (!payment) {
                                        return (
-                                          <div className="bg-dark-tertiary rounded-xl p-8 border border-dashed border-gray-700/50 flex flex-col items-center justify-center text-center space-y-4">
-                                             <div className="w-16 h-16 bg-dark-secondary rounded-full flex items-center justify-center text-gray-600 mb-2 border border-gray-800">
+                                          <div className="bg-gray-50 dark:bg-dark-tertiary rounded-xl p-8 border border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-center space-y-4">
+                                             <div className="bg-white dark:bg-dark-secondary rounded-full w-16 h-16 flex items-center justify-center text-gray-400 dark:text-gray-600 mb-2 border border-gray-200 dark:border-gray-800">
                                                 <i className="fa-solid fa-file-invoice-dollar text-2xl"></i>
                                              </div>
                                              <div className="max-w-xs">
-                                                <h4 className="text-white font-semibold text-sm mb-1">Missing Payment Record</h4>
+                                                <h4 className="text-gray-900 dark:text-white font-semibold text-sm mb-1">Missing Payment Record</h4>
                                                 <p className="text-gray-500 text-xs">A financial record is required to track this project's revenue and team payouts.</p>
                                              </div>
                                              <div className="w-full max-w-sm pt-2">
@@ -1698,7 +1698,7 @@ const Orders = () => {
                                                          setPaymentFormData(prev => ({ ...prev, paymentMethod: val }));
                                                       }}
 
-                                                      className="col-span-2 bg-dark-secondary border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-dark-accent"
+                                                      className="col-span-2 bg-white dark:bg-dark-secondary border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
                                                    >
                                                       <option value="bank_transfer">Bank Transfer</option>
                                                       <option value="cash">Cash</option>
@@ -1721,7 +1721,7 @@ const Orders = () => {
                                     }
 
                                     return (
-                                       <div className="bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-700">
+                                       <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-5 space-y-4 border border-gray-200 dark:border-gray-700">
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                              <div>
                                                 <span className="text-xs text-gray-500 block mb-1">Payment Status</span>
@@ -1736,7 +1736,7 @@ const Orders = () => {
                                              </div>
                                              <div>
                                                 <span className="text-xs text-gray-500 block mb-1">Amount</span>
-                                                <p className="text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
+                                                <p className="text-gray-900 dark:text-white font-bold">${(payment.amount || selectedOrder.budget || 0).toLocaleString()}</p>
                                              </div>
                                           </div>
 
@@ -1769,7 +1769,7 @@ const Orders = () => {
                                                             });
                                                          }
                                                       }}
-                                                      className="flex-1 bg-dark-secondary text-white text-sm px-3 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                                                      className="flex-1 bg-white dark:bg-dark-secondary text-gray-900 dark:text-white text-sm px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50 disabled:cursor-not-allowed"
                                                    >
                                                       <option value="bank_transfer">Bank Transfer</option>
                                                       <option value="cash">Cash</option>
@@ -1782,7 +1782,7 @@ const Orders = () => {
                                              </div>
                                           </div>
 
-                                          <div className="pt-2 border-t border-gray-700 flex flex-col space-y-2">
+                                          <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-col space-y-2">
                                              {payment.status === 'pending' && (
                                                 <button
                                                    type="button"
@@ -1822,8 +1822,6 @@ const Orders = () => {
                                                    {isSubmitting ? 'Confirming...' : 'Confirm Receipt (Money Received)'}
                                                 </button>
                                              )}
-
-
 
                                              {/* STEP 2: Start Project */}
                                              {payment.status === 'confirmed' && selectedOrder.status === 'pending' && (
@@ -1915,11 +1913,11 @@ const Orders = () => {
 
                            {selectedOrder.results?.length > 0 && (
                               <div>
-                                 <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
-                                 <div className="bg-dark-tertiary rounded-lg p-4 space-y-2">
+                                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Project Results</h3>
+                                 <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 space-y-2">
                                     {selectedOrder.results.map((res, i) => (
                                        <div key={i} className="flex items-center justify-between text-sm">
-                                          <span className="text-gray-300">{res.name}</span>
+                                          <span className="text-gray-600 dark:text-gray-300">{res.name}</span>
                                           <a href={res.url} target="_blank" rel="noreferrer" className="text-dark-accent hover:underline">View File</a>
                                        </div>
                                     ))}
@@ -1927,10 +1925,10 @@ const Orders = () => {
                               </div>
                            )}
 
-                           <div className="flex justify-between items-center pt-4 border-t border-gray-800">
+                           <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-800">
                               <button
                                  onClick={closeModal}
-                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
+                                 className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition"
                               >
                                  Close
                               </button>

@@ -84,10 +84,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
    // Check if link is active, including sub-routes or specific matches
    const isActive = (path) => {
-      if (path === '/' && location.pathname !== '/') return 'text-gray-400 hover:bg-dark-tertiary hover:text-white';
+      if (path === '/' && location.pathname !== '/') return 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-gray-900 dark:hover:text-white';
       return location.pathname.startsWith(path) && (path !== '/' || location.pathname === '/')
          ? 'bg-dark-accent text-white'
-         : 'text-gray-400 hover:bg-dark-tertiary hover:text-white';
+         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-gray-900 dark:hover:text-white';
    };
 
    const handleLogout = () => {
@@ -150,16 +150,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          <aside
             id="sidebar"
             className={`
-            fixed inset-y-0 left-0 z-30 w-64 bg-dark-secondary border-r border-gray-800 flex flex-col h-full transform transition-transform duration-300 ease-in-out
+            fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-dark-secondary border-r border-gray-200 dark:border-gray-800 flex flex-col h-full transform transition-transform duration-300 ease-in-out
             md:static md:translate-x-0
             ${isOpen ? 'translate-x-0' : '-translate-x-full'}
          `}>
-            <div id="logo-section" className="p-6 border-b border-gray-800">
+            <div id="logo-section" className="p-6 border-b border-gray-200 dark:border-gray-800">
                <Link to="/" className="flex items-center space-x-3">
                   <div className="w-12 h-12 flex items-center justify-center">
                      <img className='rounded-full border-2 border-dark-accent' src="fortislogo.JPG" alt="" />
                   </div>
-                  <span className="text-xl font-bold text-white">FortisWeb</span>
+                  <span className="text-xl font-bold text-gray-900 dark:text-white">FortisWeb</span>
                </Link>
             </div>
 
@@ -212,26 +212,26 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                </div>
 
                <div className="mt-8 px-4">
-                  <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700">
+                  <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                      <div className="flex items-center space-x-2 mb-2">
                         <i className="fa-solid fa-bolt text-dark-accent"></i>
-                        <span className="text-sm font-semibold text-white">{t('quick_stats')}</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{t('quick_stats')}</span>
                      </div>
                      <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
-                           <span className="text-gray-400">{t('active_projects')}</span>
-                           <span className="text-white font-semibold">{activeProjectsCount}</span>
+                           <span className="text-gray-500 dark:text-gray-400">{t('active_projects')}</span>
+                           <span className="text-gray-900 dark:text-white font-semibold">{activeProjectsCount}</span>
                         </div>
                         <div className="flex justify-between">
-                           <span className="text-gray-400">{t('team_members')}</span>
-                           <span className="text-white font-semibold">{teamMembersCount}</span>
+                           <span className="text-gray-500 dark:text-gray-400">{t('team_members')}</span>
+                           <span className="text-gray-900 dark:text-white font-semibold">{teamMembersCount}</span>
                         </div>
                      </div>
                   </div>
                </div>
             </nav>
 
-            <div id="sidebar-footer" className="p-4 border-t border-gray-800">
+            <div id="sidebar-footer" className="p-4 border-t border-gray-200 dark:border-gray-800">
                <div className="flex items-center space-x-3">
                   <img
                      src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
@@ -239,12 +239,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      alt={userData?.name}
                   />
                   <div className="flex-1 min-w-0">
-                     <div className="text-sm font-medium text-white truncate">{userData?.name || 'User'}</div>
+                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{userData?.name || 'User'}</div>
                      <div className="text-xs text-dark-accent truncate capitalize">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
                   </div>
                   <i
                      onClick={handleLogout}
-                     className="fa-solid fa-sign-out-alt text-gray-400 hover:text-white cursor-pointer transition-colors"
+                     className="fa-solid fa-sign-out-alt text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors"
                   />
                </div>
             </div>

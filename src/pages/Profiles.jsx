@@ -9,10 +9,12 @@ import PageLoader from '../components/loader/PageLoader';
 import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/task.store';
 import { useProjectStore } from '../store/project.store';
+import { useSettingsStore } from '../store/settings.store';
 
 const Profiles = () => {
    const { t } = useTranslation();
    const { user: currentUser } = useAuthStore();
+   const { theme } = useSettingsStore();
    const userData = useMemo(() => currentUser?.data?.user || currentUser?.user || currentUser, [currentUser]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
@@ -229,7 +231,10 @@ const Profiles = () => {
       margin: { t: 0, r: 0, b: 0, l: 0 },
       plot_bgcolor: 'transparent',
       paper_bgcolor: 'transparent',
-      showlegend: false
+      showlegend: false,
+      font: {
+         color: theme === 'dark' ? '#fff' : '#111827'
+      }
    };
 
    const performanceData = useMemo(() => {
@@ -264,8 +269,17 @@ const Profiles = () => {
 
    const performanceLayout = {
       autosize: true,
-      xaxis: { title: '', gridcolor: '#2A2A2A', color: '#9CA3AF' },
-      yaxis: { title: t('success_rate_percent'), gridcolor: '#2A2A2A', color: '#9CA3AF', range: [0, 100] },
+      xaxis: {
+         title: '',
+         gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB',
+         color: theme === 'dark' ? '#9CA3AF' : '#4B5563'
+      },
+      yaxis: {
+         title: t('success_rate_percent'),
+         gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB',
+         color: theme === 'dark' ? '#9CA3AF' : '#4B5563',
+         range: [0, 100]
+      },
       margin: { t: 20, r: 20, b: 60, l: 60 },
       plot_bgcolor: 'transparent',
       paper_bgcolor: 'transparent',
@@ -274,11 +288,11 @@ const Profiles = () => {
 
    const styles = {
       modalOverlay: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 backdrop-blur-sm",
-      modalContent: "bg-dark-secondary border border-gray-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl",
-      input: "w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent transition placeholder-gray-500",
-      label: "block text-sm font-medium text-gray-400 mb-1.5",
+      modalContent: "bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl",
+      input: "w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent transition placeholder-gray-500",
+      label: "block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1.5",
       btnPrimary: "bg-dark-accent hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed",
-      btnSecondary: "bg-dark-tertiary hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition border border-gray-700"
+      btnSecondary: "bg-gray-200 dark:bg-dark-tertiary hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition border border-gray-300 dark:border-gray-700"
    };
 
    const openModal = (user = null) => {
@@ -653,8 +667,8 @@ const Profiles = () => {
          <div id="profiles-header-section">
             <div className="flex items-center justify-between">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">{t('team_profiles')}</h1>
-                  <p className="text-gray-400">{t('profiles_desc')}</p>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('team_profiles')}</h1>
+                  <p className="text-gray-500 dark:text-gray-400">{t('profiles_desc')}</p>
                </div>
                <div className="flex items-center space-x-3">
                   {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
@@ -674,63 +688,63 @@ const Profiles = () => {
          </div>
 
          <div id="profiles-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-users text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('total_members')}</h3>
-               <p className="text-2xl font-bold text-white">{stats.total}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('total_members')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-user-check text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('active_now')}</h3>
-               <p className="text-2xl font-bold text-white">{stats.active}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('active_now')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.active}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-user-tie text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('team_leads')}</h3>
-               <p className="text-2xl font-bold text-white">{stats.leads}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('team_leads')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.leads}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-user-clock text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('inactive')}</h3>
-               <p className="text-2xl font-bold text-white">{stats.leave}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('inactive')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.leave}</p>
             </div>
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-layer-group text-indigo-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{t('teams')}</h3>
-               <p className="text-2xl font-bold text-white">{stats.teams}</p>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('teams')}</h3>
+               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.teams}</p>
             </div>
          </div>
 
-         <div className="flex border-b border-gray-800">
+         <div className="flex border-b border-gray-200 dark:border-gray-800">
             <button
                onClick={() => setActiveTab('members')}
-               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'members' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
+               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'members' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
             >
                {t('all_members')}
             </button>
             <button
                onClick={() => setActiveTab('teams')}
-               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'teams' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
+               className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'teams' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
             >
                {t('teams')} & {t('department_team')}
             </button>
@@ -738,12 +752,12 @@ const Profiles = () => {
 
          {activeTab === 'members' ? (
             <>
-               <div id="profiles-role-tabs-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
+               <div id="profiles-role-tabs-section" className="bg-gray-100 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
                   {[t('all_members'), t('admins'), t('team_leads'), t('backend'), t('frontend'), t('marketing')].map(t_label => (
                      <button
                         key={t_label}
                         onClick={() => setFilter(t_label)}
-                        className={`flex-auto px-4 py-2.5 rounded-lg text-sm font-medium transition ${filter === t_label ? 'bg-dark-accent text-white' : 'hover:bg-dark-tertiary text-gray-400 hover:text-white'}`}
+                        className={`flex-auto px-4 py-2.5 rounded-lg text-sm font-medium transition ${filter === t_label ? 'bg-dark-accent text-white shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-dark-tertiary text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                      >
                         {t_label}
                      </button>
@@ -752,18 +766,18 @@ const Profiles = () => {
 
                <div id="profiles-grid-section" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {userList.map(item => (
-                     <div key={item._id} className={`bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition ${!item.isActive ? 'opacity-60' : ''}`}>
+                     <div key={item._id} className={`bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 hover:border-dark-accent dark:hover:border-dark-accent transition shadow-sm dark:shadow-none ${!item.isActive ? 'opacity-60' : ''}`}>
                         <div className="flex items-start justify-between mb-4">
                            <div className="relative">
                               <img
                                  src={item.avatar || `https://ui-avatars.com/api/?name=${item?.name}.jpg`}
                                  alt="Profile"
-                                 className={`w-16 h-16 rounded-full border-2 ${item.isActive ? 'border-dark-accent' : 'border-gray-600'}`}
+                                 className={`w-16 h-16 rounded-full border-2 ${item.isActive ? 'border-dark-accent' : 'border-gray-200 dark:border-gray-600'}`}
                               />
-                              <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-dark-secondary ${item.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                              <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-dark-secondary ${item.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                            </div>
                            <div className="flex items-center space-x-2">
-                              <button onClick={() => openModal(item)} className="text-gray-400 hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
+                              <button onClick={() => openModal(item)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
                               <div className="relative">
                                  <button
                                     onClick={(e) => {
@@ -771,13 +785,13 @@ const Profiles = () => {
                                        e.stopPropagation();
                                        setOpenMenuUserId(openMenuUserId === item._id ? null : item._id);
                                     }}
-                                    className="text-gray-400 hover:text-white transition p-1"
+                                    className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition p-1"
                                  >
                                     <i className="fa-solid fa-ellipsis-v"></i>
                                  </button>
                                  {openMenuUserId === item._id && (
                                     <div
-                                       className="absolute right-0 top-full mt-2 w-48 bg-dark-tertiary border border-gray-700 rounded-lg shadow-xl overflow-hidden z-20"
+                                       className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-20"
                                        onClick={(e) => e.stopPropagation()}
                                     >
                                        <button
@@ -785,14 +799,14 @@ const Profiles = () => {
                                              toggleStatus(item._id);
                                              setOpenMenuUserId(null);
                                           }}
-                                          className="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-gray-700 transition flex items-center"
+                                          className="w-full text-left px-4 py-3 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center"
                                        >
                                           <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
                                           {item.isActive ? t('deactivate') : t('activate')}
                                        </button>
                                        <button
                                           onClick={() => openMoveTeamModal(item._id)}
-                                          className="w-full text-left px-4 py-3 text-xs text-blue-400 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
+                                          className="w-full text-left px-4 py-3 text-xs text-blue-500 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
                                        >
                                           <i className="fa-solid fa-people-arrows mr-2"></i>
                                           {t('move_to_team')}
@@ -802,7 +816,7 @@ const Profiles = () => {
                                              handleDelete(item._id);
                                              setOpenMenuUserId(null);
                                           }}
-                                          className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
+                                          className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
                                        >
                                           <i className="fa-solid fa-trash-can mr-2"></i>
                                           {t('delete_member')}
@@ -812,27 +826,27 @@ const Profiles = () => {
                               </div>
                            </div>
                         </div>
-                        <h3 className="text-lg font-semibold text-white mb-1">{item.name}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{item.name}</h3>
                         <p className="text-sm text-dark-accent mb-3">{item.position || item.role?.replace('_', ' ')}</p>
                         <div className="space-y-2 mb-4">
-                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span className="truncate">{item.email}</span></div>
-                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>{item.phone || t('no_phone')}</span></div>
+                           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span className="truncate">{item.email}</span></div>
+                           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>{item.phone || t('no_phone')}</span></div>
                         </div>
                         <div className="flex items-center space-x-2 mb-4">
                            <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.role === 'super_admin' ? 'bg-red-500 text-red-500' :
                               item.role === 'company_admin' ? 'bg-blue-500 text-blue-500' :
                                  item.role === 'team_lead' ? 'bg-purple-500 text-purple-500' :
-                                    'bg-gray-500 text-gray-400'
+                                    'bg-gray-500 text-gray-500'
                               }`}>{item.role?.replace('_', ' ')}</span>
                            <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.isActive ? 'bg-green-500 text-green-500' : 'bg-red-500 text-red-500'}`}>
                               {item.isActive ? t('active') : t('inactive')}
                            </span>
                         </div>
-                        <div className="pt-4 border-t border-gray-800">
+                        <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                            <div className="flex items-center justify-between text-xs">
-                              <div><p className="text-gray-400 mb-1">{t('salary')}</p><p className="text-white font-semibold">${item.salary || 0}</p></div>
-                              <div><p className="text-gray-400 mb-1">{t('company')}</p><p className="text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
-                              <div><p className="text-gray-400 mb-1">{t('created')}</p><p className="text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
+                              <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('salary')}</p><p className="text-gray-900 dark:text-white font-semibold">${item.salary || 0}</p></div>
+                              <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('company')}</p><p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
+                              <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('created')}</p><p className="text-gray-900 dark:text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
                            </div>
                         </div>
                      </div>
@@ -848,24 +862,24 @@ const Profiles = () => {
          ) : (
             <div id="teams-grid-section" className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {allTeams.map(team => (
-                  <div key={team._id} className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+                  <div key={team._id} className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                      <div className="flex items-center justify-between mb-6">
                         <div>
-                           <h3 className="text-xl font-bold text-white mb-1">{team.name}</h3>
-                           <p className="text-xs text-gray-500">Company: {team.companyName}</p>
+                           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{team.name}</h3>
+                           <p className="text-xs text-gray-500 dark:text-gray-400">Company: {team.companyName}</p>
                         </div>
                         <div className="flex items-center space-x-3">
                            <button onClick={() => handleDeleteTeam(team.companyId, team._id)} className="text-gray-500 hover:text-red-500 transition text-sm">
                               <i className="fa-solid fa-trash-can mr-1"></i>
                            </button>
-                           <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-white text-sm font-medium transition">
+                           <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-red-600 dark:hover:text-white text-sm font-medium transition">
                               <i className="fa-solid fa-plus mr-1"></i> {t('add_member')}
                            </button>
                         </div>
                      </div>
                      <div className="mb-6">
-                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">{t('team_lead')}</p>
-                        <div className="flex items-center space-x-3 bg-dark-tertiary p-3 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-3">{t('team_lead')}</p>
+                        <div className="flex items-center space-x-3 bg-gray-50 dark:bg-dark-tertiary p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                            <div className="w-10 h-10 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-purple-500 font-bold">
                               {(() => {
                                  const leadId = String(team.teamLead?._id || team.teamLead || '');
@@ -875,7 +889,7 @@ const Profiles = () => {
                               })()}
                            </div>
                            <div>
-                              <p className="text-sm font-medium text-white">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
                                  {(() => {
                                     const leadId = String(team.teamLead?._id || team.teamLead || '');
                                     const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
@@ -883,12 +897,12 @@ const Profiles = () => {
                                     return leadFound?.name || team.teamLead?.name || t('unassigned_lead');
                                  })()}
                               </p>
-                              <p className="text-xs text-gray-500">{t('responsible_for_deliverables')}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{t('responsible_for_deliverables')}</p>
                            </div>
                         </div>
                      </div>
                      <div>
-                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Members ({team.members?.length || 0})</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-3">Members ({team.members?.length || 0})</p>
                         <div className="grid grid-cols-2 gap-2">
                            {team.members?.map((m, idx) => {
                               const uId = String(m?._id || m.user?._id || m.user || m);
@@ -897,22 +911,22 @@ const Profiles = () => {
                               const name = empFound?.name || m.name || m.user?.name || 'Unknown Member';
 
                               return (
-                                 <div key={idx} className="flex items-center space-x-2 bg-dark-tertiary p-2 rounded-lg">
-                                    <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">
+                                 <div key={idx} className="flex items-center space-x-2 bg-gray-50 dark:bg-dark-tertiary p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-gray-700 dark:text-white">
                                        {name.charAt(0).toUpperCase() || '?'}
                                     </div>
-                                    <span className="text-xs text-gray-300 truncate">{name}</span>
+                                    <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{name}</span>
                                  </div>
                               );
                            })}
-                           {(!team.members || team.members.length === 0) && <p className="text-xs text-gray-600 col-span-2">{t('no_members_in_team')}</p>}
+                           {(!team.members || team.members.length === 0) && <p className="text-xs text-gray-500 dark:text-gray-600 col-span-2">{t('no_members_in_team')}</p>}
                         </div>
                      </div>
                   </div>
                ))}
                {allTeams.length === 0 && (
-                  <div className="col-span-full py-12 text-center text-gray-500 bg-dark-secondary rounded-xl border border-dashed border-gray-800">
-                     <i className="fa-solid fa-people-group text-4xl mb-3"></i>
+                  <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 dark:bg-dark-secondary rounded-xl border border-dashed border-gray-300 dark:border-gray-800">
+                     <i className="fa-solid fa-people-group text-4xl mb-3 opacity-50"></i>
                      <p>{t('no_teams_found_create')}</p>
                   </div>
                )}
@@ -921,10 +935,10 @@ const Profiles = () => {
 
 
          <div id="profiles-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('team_dist_role')}</h3>
-                  <p className="text-sm text-gray-400">{t('member_breakdown_dept')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('team_dist_role')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('member_breakdown_dept')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -937,10 +951,10 @@ const Profiles = () => {
                </div>
             </div>
 
-            <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
+            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">{t('performance_overview')}</h3>
-                  <p className="text-sm text-gray-400">{t('avg_success_rate_dept')}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('performance_overview')}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('avg_success_rate_dept')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -958,9 +972,9 @@ const Profiles = () => {
          {isModalOpen && (
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent}>
-                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">{isEditMode ? t('edit_team_member') : t('add_new_member')}</h2>
-                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{isEditMode ? t('edit_team_member') : t('add_new_member')}</h2>
+                     <button onClick={closeModal} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <form onSubmit={handleSubmit} className="p-6 space-y-4">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -984,7 +998,7 @@ const Profiles = () => {
                                  }
                               }}
                            />
-                           <p className="text-[10px] text-gray-500 mt-1">
+                           <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                               Domain @gmail.com will be added automatically if missing
                            </p>
                         </div>
@@ -1003,6 +1017,7 @@ const Profiles = () => {
                               <button
                                  type="button"
                                  onClick={() => setShowPassword(!showPassword)}
+                                 className="text-gray-500 dark:text-gray-400"
                                  style={{
                                     position: 'absolute',
                                     right: '10px',
@@ -1014,7 +1029,6 @@ const Profiles = () => {
                                     padding: '5px',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    color: '#6b7280'
                                  }}
                               >
                                  {showPassword ? (
@@ -1092,9 +1106,9 @@ const Profiles = () => {
          {isTeamModalOpen && (
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent}>
-                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">{t('create_new_team')}</h2>
-                     <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('create_new_team')}</h2>
+                     <button onClick={closeModal} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <form onSubmit={handleTeamSubmit} className="p-6 space-y-4">
                      <div>
@@ -1171,9 +1185,9 @@ const Profiles = () => {
             isMemberModalOpen && (
                <div className={styles.modalOverlay}>
                   <div className={styles.modalContent + " max-w-md"}>
-                     <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-white">{t('add_member_to_team')}</h2>
-                        <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                     <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('add_member_to_team')}</h2>
+                        <button onClick={closeModal} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition text-2xl">&times;</button>
                      </div>
                      <div className="p-6 space-y-4">
                         <div>
@@ -1223,9 +1237,9 @@ const Profiles = () => {
          {isMoveModalOpen && (
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent + " max-w-md"}>
-                  <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">{t('move_user_to_team')}</h2>
-                     <button onClick={() => setIsMoveModalOpen(false)} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('move_user_to_team')}</h2>
+                     <button onClick={() => setIsMoveModalOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <div className="p-6 space-y-4">
                      <div>

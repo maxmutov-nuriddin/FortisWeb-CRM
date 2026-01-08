@@ -70,20 +70,20 @@ const SignUp = () => {
    };
 
    return (
-      <div className="w-full min-h-screen bg-black flex items-center justify-center">
-         <div className="w-full max-w-md bg-dark-secondary rounded-lg p-8 mx-4">
+      <div className="w-full min-h-screen bg-gray-100 dark:bg-black flex items-center justify-center">
+         <div className="w-full max-w-md bg-white dark:bg-dark-secondary rounded-xl shadow-xl dark:shadow-none p-8 mx-4 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-8">
                <Link to="/" className="flex items-center">
-                  <span className="text-dark-accent text-2xl mr-2">
+                  <span className="text-red-600 dark:text-dark-accent text-2xl mr-2">
                      <i className="fa fa-user-edit"></i>
                   </span>
-                  <h3 className="text-dark-accent text-2xl font-bold">DarkPan</h3>
+                  <h3 className="text-red-600 dark:text-dark-accent text-2xl font-bold">DarkPan</h3>
                </Link>
-               <h3 className="text-white text-2xl font-bold">Sign Up</h3>
+               <h3 className="text-gray-900 dark:text-white text-2xl font-bold">Sign Up</h3>
             </div>
             {authError && (
-               <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg">
-                  <p className="text-red-500 text-sm">{authError}</p>
+               <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500 rounded-lg">
+                  <p className="text-red-600 dark:text-red-500 text-sm">{authError}</p>
                </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,7 +91,7 @@ const SignUp = () => {
                   <input
                      type="text"
                      name="name"
-                     className="w-full px-4 py-3 bg-black text-gray-400 rounded border border-dark-secondary focus:outline-none"
+                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-dark-secondary text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent placeholder-gray-500 dark:placeholder-gray-500"
                      placeholder="Full Name"
                      value={formData.name}
                      onChange={handleChange}
@@ -103,7 +103,7 @@ const SignUp = () => {
                   <input
                      type="email"
                      name="email"
-                     className="w-full px-4 py-3 bg-gray-200 text-gray-900 rounded focus:outline-none"
+                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent"
                      placeholder="Email address"
                      value={formData.email}
                      onChange={handleChange}
@@ -115,7 +115,7 @@ const SignUp = () => {
                      }}
                      required
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                      Domain @gmail.com will be added automatically if missing
                   </p>
                </div>
@@ -124,7 +124,7 @@ const SignUp = () => {
                   <input
                      type={showPassword ? "text" : "password"}
                      name="password"
-                     className="w-full px-4 py-3 bg-gray-200 text-gray-900 rounded focus:outline-none pr-12"
+                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent pr-12"
                      placeholder="Password"
                      value={formData.password}
                      onChange={handleChange}
@@ -134,7 +134,7 @@ const SignUp = () => {
                   <button
                      type="button"
                      onClick={() => setShowPassword(!showPassword)}
-                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-900 focus:outline-none"
+                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-900 focus:outline-none"
                   >
                      {showPassword ? (
                         <i className="fa fa-eye-slash"></i>
@@ -145,9 +145,14 @@ const SignUp = () => {
                </div>
 
                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                     <select name="role" id="chooseRole" value={formData.role}
-                        onChange={handleChange}>
+                  <div className="w-full mr-2">
+                     <select
+                        name="role"
+                        id="chooseRole"
+                        value={formData.role}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent appearance-none"
+                     >
                         <option value="view">Choose user role</option>
                         <option value="super_admin">Support</option>
                         <option value="company_admin">Company Admin</option>
@@ -159,7 +164,7 @@ const SignUp = () => {
                         <option value="employee">Employee</option>
                      </select>
                   </div>
-                  <Link to="/forgot-password" className="text-dark-accent text-sm hover:underline">
+                  <Link to="/forgot-password" className="text-red-600 dark:text-dark-accent text-sm hover:underline whitespace-nowrap">
                      Forgot Password
                   </Link>
                </div>
@@ -167,7 +172,7 @@ const SignUp = () => {
                <button
                   type="submit"
                   disabled={isLoading || authLoading}
-                  className="w-full bg-dark-accent hover:bg-dark-accent text-white font-medium py-3 rounded transition-colors mb-6"
+                  className="w-full bg-red-600 dark:bg-dark-accent hover:bg-red-700 dark:hover:bg-red-600 text-white font-medium py-3 rounded-lg transition-colors mb-6 shadow-lg shadow-red-900/20"
                >
                   {isLoading || authLoading ? (
                      <span className="flex items-center justify-center">
@@ -182,9 +187,9 @@ const SignUp = () => {
                   )}
                </button>
             </form>
-            <p className="text-center text-gray-400 text-sm">
+            <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
                Already have an Account?{' '}
-               <Link to="/signin" className="text-dark-accent hover:underline">
+               <Link to="/signin" className="text-red-600 dark:text-dark-accent hover:underline">
                   Sign In
                </Link>
             </p>
