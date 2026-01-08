@@ -9,15 +9,16 @@ import PageLoader from '../components/loader/PageLoader';
 
 const Settings = () => {
    const { t } = useTranslation();
-   const { user, updateProfile, updatePassword, isLoading: authLoading } = useAuthStore();
+   const { user, updateProfile, updatePassword, getMe, isLoading: authLoading } = useAuthStore();
    const { selectedCompany, getCompanyById, updateCompany, isLoading: companyLoading } = useCompanyStore();
    const { language, theme, setTheme, setLanguage } = useSettingsStore();
 
    const [activeTab, setActiveTab] = useState('general');
    const [profileData, setProfileData] = useState({
       name: '',
-      email: '',
-      phone: ''
+      phone: '',
+      avatar: null,
+      preview: null
    });
    const [passwordData, setPasswordData] = useState({
       currentPassword: '',
@@ -41,10 +42,25 @@ const Settings = () => {
 
    useEffect(() => {
       if (userData && lastInitedUserId.current !== userData._id) {
+         let avatarPreview = null;
+         if (userData.avatar) {
+            // Check if avatar is already a full URL (api/http) or Base64 (data:)
+            if (userData.avatar.startsWith('http') || userData.avatar.startsWith('data:')) {
+               avatarPreview = userData.avatar;
+            } else {
+               // Assume relative path
+               avatarPreview = `http://localhost:5000${userData.avatar}`;
+            }
+            // Add cache buster if it's a remote URL
+            if (avatarPreview && !avatarPreview.startsWith('data:')) {
+               avatarPreview += `?t=${new Date().getTime()}`;
+            }
+         }
+
          setProfileData({
             name: userData.name || '',
-            email: userData.email || '',
-            phone: userData.phone || ''
+            phone: userData.phone || '',
+            preview: avatarPreview
          });
          lastInitedUserId.current = userData._id;
       }
@@ -69,13 +85,71 @@ const Settings = () => {
       }
    }, [selectedCompany]);
 
+   const compressImage = (file) => {
+      return new Promise((resolve, reject) => {
+         const reader = new FileReader();
+         reader.readAsDataURL(file);
+         reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+               const canvas = document.createElement('canvas');
+               const ctx = canvas.getContext('2d');
+
+               // Max dimensions
+               const MAX_WIDTH = 300;
+               const MAX_HEIGHT = 300;
+               let width = img.width;
+               let height = img.height;
+
+               if (width > height) {
+                  if (width > MAX_WIDTH) {
+                     height *= MAX_WIDTH / width;
+                     width = MAX_WIDTH;
+                  }
+               } else {
+                  if (height > MAX_HEIGHT) {
+                     width *= MAX_HEIGHT / height;
+                     height = MAX_HEIGHT;
+                  }
+               }
+
+               canvas.width = width;
+               canvas.height = height;
+               ctx.drawImage(img, 0, 0, width, height);
+
+               // Compress to JPEG with 0.7 quality
+               const base64 = canvas.toDataURL('image/jpeg', 0.7);
+               resolve(base64);
+            };
+            img.onerror = (error) => reject(error);
+         };
+         reader.onerror = (error) => reject(error);
+      });
+   };
+
    const handleProfileUpdate = async (e) => {
       e.preventDefault();
       try {
-         await updateProfile(profileData);
+         const updatePayload = {
+            name: profileData.name,
+            phone: profileData.phone
+         };
+
+         if (profileData.avatar) {
+            // Compress image before sending to avoid 500/413 errors
+            const base64Avatar = await compressImage(profileData.avatar);
+            updatePayload.avatar = base64Avatar;
+         }
+
+         await updateProfile(updatePayload);
+
+         await getMe(); // Refresh user data from server
          toast.success('Profile updated successfully');
       } catch (err) {
-         toast.error(err.response?.data?.message || 'Failed to update profile');
+         console.error('Profile Update Error:', err);
+         const errorMsg = err.response?.data?.message || err.message || 'Failed to update profile';
+         toast.error(`Error: ${errorMsg}`);
       }
    };
 
@@ -179,6 +253,46 @@ const Settings = () => {
                               <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{t('update_personal_info')}</p>
                            </div>
                         </div>
+
+                        {/* Avatar Upload Section */}
+                        <div className="flex flex-col items-center mb-8">
+                           <div className="relative group cursor-pointer" onClick={() => document.getElementById('avatar-upload').click()}>
+                              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-dark-secondary shadow-lg">
+                                 {profileData.preview ? (
+                                    <img
+                                       src={profileData.preview}
+                                       alt="Profile"
+                                       className="w-full h-full object-cover"
+                                    />
+                                 ) : (
+                                    <div className="w-full h-full bg-gray-200 dark:bg-dark-tertiary flex items-center justify-center text-gray-400">
+                                       <i className="fa-solid fa-user text-4xl"></i>
+                                    </div>
+                                 )}
+                              </div>
+                              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                 <i className="fa-solid fa-camera text-white text-2xl"></i>
+                              </div>
+                              <input
+                                 type="file"
+                                 id="avatar-upload"
+                                 className="hidden"
+                                 accept="image/*"
+                                 onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                       setProfileData({
+                                          ...profileData,
+                                          avatar: file,
+                                          preview: URL.createObjectURL(file)
+                                       });
+                                    }
+                                 }}
+                              />
+                           </div>
+                           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">Click to upload new photo</p>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                            <div className="space-y-2.5">
                               <label className="text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest ml-1">{t('full_name')}</label>
@@ -189,25 +303,6 @@ const Settings = () => {
                                  className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-gray-600"
                                  placeholder="Enter your name"
                               />
-                           </div>
-                           <div className="space-y-2.5">
-                              <label className="text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest ml-1">{t('email_address')}</label>
-                              <input
-                                 type="email"
-                                 value={profileData.email}
-                                 onChange={e => setProfileData({ ...profileData, email: e.target.value })}
-                                 onBlur={e => {
-                                    const val = e.target.value;
-                                    if (val && !val.includes('@')) {
-                                       setProfileData({ ...profileData, email: val.trim() + '@gmail.com' });
-                                    }
-                                 }}
-                                 className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-gray-600"
-                                 placeholder="email@example.com"
-                              />
-                              <p className="text-[10px] text-gray-500 ml-1 mt-1">
-                                 Domain @gmail.com will be added automatically if missing
-                              </p>
                            </div>
                            <div className="space-y-2.5">
                               <label className="text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest ml-1">{t('phone_number')}</label>
