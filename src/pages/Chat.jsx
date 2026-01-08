@@ -182,12 +182,12 @@ const Chat = () => {
       if (!messageInput.trim()) return;
       if (!selectedChat) {
          toast.error("No chat selected.", {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          return;
       }
       try {
@@ -197,12 +197,12 @@ const Chat = () => {
       } catch (error) {
          console.error(error);
          toast.error(error.response?.data?.message || 'Failed to send message', {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       }
    };
 
@@ -211,12 +211,12 @@ const Chat = () => {
       if (!file) return;
       if (!selectedChat) {
          toast.error("No chat selected.", {
-               position: 'top-right',
-               autoClose: 5000,
-               closeOnClick: false,
-               draggable: false,
-               theme: 'dark',
-            });
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          return;
       }
 
@@ -278,7 +278,7 @@ const Chat = () => {
    return (
       <div className="flex h-[calc(100vh-80px)] overflow-hidden p-6 gap-6 bg-gray-100 dark:bg-dark-primary">
          {/* Sidebar */}
-         <div className="w-1/4 bg-white dark:bg-dark-secondary backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-3xl flex flex-col shadow-xl dark:shadow-2xl overflow-hidden animate-fadeIn">
+         <div className="w-1/4 bg-white dark:bg-dark-secondary backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-3xl flex flex-col shadow-xl dark:shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-dark-tertiary">
                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">{t('messages_sidebar_title')}</h2>
                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium opacity-60 uppercase tracking-widest">{t('team_collaboration_desc')}</p>
@@ -351,7 +351,7 @@ const Chat = () => {
          </div>
 
          {/* Chat Area */}
-         <div className="flex-1 bg-white dark:bg-dark-secondary/40 backdrop-blur-xl border border-gray-200 dark:border-gray-800/50 rounded-3xl flex flex-col relative overflow-hidden shadow-xl dark:shadow-2xl animate-fadeIn">
+         <div className="flex-1 bg-white dark:bg-dark-secondary/40 backdrop-blur-xl border border-gray-200 dark:border-gray-800/50 rounded-3xl flex flex-col relative overflow-hidden shadow-xl dark:shadow-2xl">
 
             {showRestrictedAccess ? (
                <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-dark-secondary/20">
@@ -414,7 +414,7 @@ const Chat = () => {
                            const roleLabel = formatRole(senderInfo.role);
 
                            return (
-                              <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group animate-fadeIn`}>
+                              <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
                                  {!isMe && (
                                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-dark-tertiary dark:to-gray-800 flex items-center justify-center mr-4 mt-1 shadow-lg border border-gray-200 dark:border-gray-700/50 text-sm font-bold text-gray-700 dark:text-gray-200 uppercase">
                                        {senderInfo.name?.charAt(0) || '?'}
@@ -518,7 +518,7 @@ const Chat = () => {
                            </button>
 
                            {showEmojiPicker && (
-                              <div className="absolute bottom-full right-0 mb-4 p-4 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl dark:shadow-2xl animate-fadeIn flex flex-wrap gap-2 w-64 z-50">
+                              <div className="absolute bottom-full right-0 mb-4 p-4 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl dark:shadow-2xl flex flex-wrap gap-2 w-64 z-50">
                                  {['😀', '😂', '😍', '👍', '🔥', '🚀', '💯', '✨', '✔️', '❌', '📁', '📄', '💻', '🤝', '🎉'].map(emoji => (
                                     <button
                                        key={emoji}

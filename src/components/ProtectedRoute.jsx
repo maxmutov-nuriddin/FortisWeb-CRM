@@ -8,7 +8,7 @@ const ProtectedRoute = () => {
    const { isAuthenticated, isLoading } = useAuthStore();
    const location = useLocation();
 
-   if (isLoading) {
+   if (isLoading && !isAuthenticated) {
       return (
          <PageLoader />
       );

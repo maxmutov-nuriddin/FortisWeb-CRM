@@ -572,7 +572,7 @@ const Dashboard = () => {
       if (paymentsError) console.error(paymentsError)
    }, [projectsError, authError, paymentsError])
 
-   if (authLoading && paymentsLoading && projectsLoading && companiesLoading && usersLoading) return (
+   if ((authLoading || paymentsLoading || projectsLoading || companiesLoading || usersLoading) && (filteredProjects?.length === 0 || filteredPayments?.length === 0)) return (
       <PageLoader />
    );
 

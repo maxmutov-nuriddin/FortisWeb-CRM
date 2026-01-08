@@ -317,7 +317,7 @@ const Payments = () => {
 
    const handleExport = async () => { try { await exportPaymentHistory(); toast.success(t('export_started_success')); } catch (e) { } };
 
-   if (isLoading && paymentsList.length === 0) return <PageLoader />;
+   if (isLoading && paymentsList?.length === 0) return <PageLoader />;
 
    return (
       <div className="p-8 space-y-8">

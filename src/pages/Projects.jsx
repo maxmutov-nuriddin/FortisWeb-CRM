@@ -193,6 +193,8 @@ const Projects = () => {
       }
    };
 
+   if ((projectsLoading || uploadsLoading) && myProjects?.length === 0) return <PageLoader />;
+
    return (
       <div className="p-8 space-y-8 min-h-screen bg-gray-50 dark:bg-dark-primary">
          {/* Hidden File Input for Replacement */}

@@ -770,7 +770,7 @@ const Orders = () => {
       resetForm();
    };
 
-   if (usersLoading && companiesLoading) {
+   if ((usersLoading || companiesLoading || projectsLoading) && projectsList?.length === 0) {
       return <PageLoader />;
    }
 

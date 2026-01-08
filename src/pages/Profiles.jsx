@@ -656,7 +656,7 @@ const Profiles = () => {
       }
    };
 
-   if (isLoading && userList.length === 0) return <PageLoader />;
+   if (isLoading && userList?.length === 0) return <PageLoader />;
 
    if (!isLoading && userList.length === 0 && !users?.partialFailure && !isSuperAdmin) {
       // Optional: Show "No data" message if list is empty and no error

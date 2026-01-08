@@ -242,7 +242,7 @@ const Settings = () => {
             {/* Content Area */}
             <div id="settings-content" className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-dark-primary/20">
                {activeTab === 'general' && (
-                  <form onSubmit={handleProfileUpdate} className="max-w-4xl space-y-6 animate-fadeIn">
+                  <form onSubmit={handleProfileUpdate} className="max-w-4xl space-y-6">
                      <div className="bg-white dark:bg-dark-secondary/40 border border-gray-200 dark:border-gray-800/50 rounded-3xl p-8 shadow-xl dark:shadow-2xl backdrop-blur-md">
                         <div className="flex items-center space-x-5 mb-10">
                            <div className="w-16 h-16 rounded-2xl bg-dark-accent/10 border border-dark-accent/20 flex items-center justify-center text-dark-accent text-3xl shadow-inner">
@@ -326,7 +326,7 @@ const Settings = () => {
                )}
 
                {activeTab === 'security' && (
-                  <form onSubmit={handlePasswordUpdate} className="max-w-4xl space-y-6 animate-fadeIn">
+                  <form onSubmit={handlePasswordUpdate} className="max-w-4xl space-y-6">
                      <div className="bg-white dark:bg-dark-secondary/40 border border-gray-200 dark:border-gray-800/50 rounded-3xl p-8 shadow-xl dark:shadow-2xl backdrop-blur-md">
                         <div className="flex items-center space-x-5 mb-10">
                            <div className="w-16 h-16 rounded-2xl bg-dark-accent/10 border border-dark-accent/20 flex items-center justify-center text-dark-accent text-3xl shadow-inner">
@@ -379,7 +379,7 @@ const Settings = () => {
                )}
 
                {activeTab === 'company' && isAdmin && (
-                  <form onSubmit={handleCompanyUpdate} className="max-w-4xl space-y-6 animate-fadeIn">
+                  <form onSubmit={handleCompanyUpdate} className="max-w-4xl space-y-6">
                      <div className="bg-white dark:bg-dark-secondary/40 border border-gray-200 dark:border-gray-800/50 rounded-3xl p-8 shadow-xl dark:shadow-2xl backdrop-blur-md">
                         <div className="flex items-center space-x-5 mb-10">
                            <div className="w-16 h-16 rounded-2xl bg-dark-accent/10 border border-dark-accent/20 flex items-center justify-center text-dark-accent text-3xl shadow-inner">
@@ -448,7 +448,7 @@ const Settings = () => {
                )}
 
                {activeTab === 'appearance' && (
-                  <div className="max-w-4xl space-y-6 animate-fadeIn">
+                  <div className="max-w-4xl space-y-6">
                      <div className="bg-white dark:bg-dark-secondary/40 border border-gray-200 dark:border-gray-800/50 rounded-3xl p-8 shadow-xl dark:shadow-2xl backdrop-blur-md">
                         <div className="flex items-center space-x-5 mb-10">
                            <div className="w-16 h-16 rounded-2xl bg-dark-accent/10 border border-dark-accent/20 flex items-center justify-center text-dark-accent text-3xl shadow-inner">

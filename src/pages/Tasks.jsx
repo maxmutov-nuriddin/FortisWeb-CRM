@@ -54,19 +54,49 @@ const Tasks = () => {
 
    useEffect(() => {
       if (userId) {
-         fetchTasks();
-         fetchFormData();
+         loadPageData();
       }
    }, [userId, role]);
 
-   const fetchTasks = async () => {
+   const loadPageData = async () => {
       try {
          if (role === 'super_admin') {
-            // Handled in fetchFormData to avoid multiple project fetches
+            console.log('Fetching data for Super Admin...');
+            // 1. Get all companies
+            const result = await getCompanies();
+            const companyList = result?.data?.companies || result?.companies || result || [];
+            const companyIds = companyList.map(c => c._id || c.id).filter(Boolean);
+
+            // 2. Fetch projects and users for these companies
+            if (companyIds.length > 0) {
+               const results = await Promise.all([
+                  getAllProjects(companyIds),
+                  getAllUsers(companyIds)
+               ]);
+
+               // 3. Extract projects and fetch their tasks
+               const projectsResult = results[0];
+               const projectsArray = projectsResult?.data?.projects || projectsResult?.projects || (Array.isArray(projectsResult) ? projectsResult : []);
+               const projectIds = projectsArray.map(p => p._id || p.id).filter(Boolean);
+
+               if (projectIds.length > 0) {
+                  await getTasksByProjects(projectIds);
+               } else {
+                  useTaskStore.setState({ tasks: [] });
+               }
+            } else {
+               useTaskStore.setState({ tasks: [] });
+            }
          } else if (role === 'company_admin' || role === 'team_lead') {
             if (companyId) {
-               const projResult = await getProjectsByCompany(companyId);
-               let projs = projResult?.data?.projects || projResult || [];
+               console.log(`Fetching data for ${role}...`);
+               // Parallel fetch projects and users
+               const [projResult] = await Promise.all([
+                  getProjectsByCompany(companyId),
+                  getUsersByCompany(companyId)
+               ]);
+
+               let projs = projResult?.data?.projects || projResult?.projects || (Array.isArray(projResult) ? projResult : []);
 
                // Filter for Team Lead
                if (role === 'team_lead') {
@@ -81,77 +111,20 @@ const Tasks = () => {
                if (pIds.length > 0) {
                   await getTasksByProjects(pIds);
                } else {
-                  // If no projects found or allowed, clear tasks
                   useTaskStore.setState({ tasks: [] });
                }
             }
          } else {
+            // Worker role
+            console.log('Fetching tasks for worker...');
             await getTasksByUser(userId);
-         }
-      } catch (error) {
-         console.error('Failed to fetch tasks:', error);
-      }
-   };
-
-   const fetchFormData = async () => {
-      try {
-         if (role === 'super_admin') {
-            console.log('Fetching data for Super Admin...');
-            // 1. Get all companies
-            const result = await getCompanies();
-            const companyList = result?.data?.companies || result?.companies || result || [];
-            const companyIds = companyList.map(c => c._id || c.id).filter(Boolean);
-            console.log(`Found ${companyIds.length} companies:`, companyIds);
-
-            // 2. Fetch projects and users for these companies
-            if (companyIds.length > 0) {
-               const results = await Promise.all([
-                  getAllProjects(companyIds),
-                  getAllUsers(companyIds)
-               ]);
-
-               // 3. Extract projects and fetch their tasks
-               const projectsResult = results[0];
-               const projectsArray = projectsResult?.data?.projects || projectsResult?.projects || (Array.isArray(projectsResult) ? projectsResult : []);
-               const projectIds = projectsArray.map(p => p._id || p.id).filter(Boolean);
-               console.log(`Found ${projectIds.length} projects for harvesting tasks.`);
-
-               if (projectIds.length > 0) {
-                  await getTasksByProjects(projectIds);
-               } else {
-                  console.warn('No projects found to harvest tasks from.');
-                  useTaskStore.setState({ tasks: [] });
-               }
-            } else {
-               console.warn('No companies found.');
-               useTaskStore.setState({ tasks: [] });
-            }
-         } else if (role === 'company_admin' || role === 'team_lead') {
+            // Also need projects for context/options
             if (companyId) {
-               const projResult = await getProjectsByCompany(companyId);
-               await getUsersByCompany(companyId);
-
-               // Fetch tasks only for allowed projects
-               let projs = projResult?.data?.projects || projResult?.projects || (Array.isArray(projResult) ? projResult : []);
-
-               if (role === 'team_lead') {
-                  const currentUserId = String(userId);
-                  projs = projs.filter(p =>
-                     String(p.teamLead?._id || p.teamLead || '') === currentUserId ||
-                     (p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId))
-                  );
-               }
-
-               const pIds = projs.map(p => p._id || p.id).filter(Boolean);
-               if (pIds.length > 0) {
-                  await getTasksByProjects(pIds);
-               } else {
-                  useTaskStore.setState({ tasks: [] });
-               }
+               await getProjectsByCompany(companyId);
             }
          }
       } catch (error) {
-         console.error('Error in fetchFormData:', error);
+         console.error('Failed to load page data:', error);
       }
    };
 
@@ -395,10 +368,10 @@ const Tasks = () => {
       );
    };
 
-   if (isLoading && taskList.length === 0) return <PageLoader />;
+   if (isLoading && taskList?.length === 0) return <PageLoader />;
 
    return (
-      <div className="p-8 space-y-8 animate-fadeIn">
+      <div className="p-8 space-y-8">
          {/* Header */}
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -475,7 +448,7 @@ const Tasks = () => {
          {(isCreateModalOpen || isEditModalOpen) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
-               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl animate-modalEnter">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl">
                   <header className="flex items-center justify-between mb-6">
                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
                      <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-times"></i></button>
