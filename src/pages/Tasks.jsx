@@ -317,7 +317,7 @@ const Tasks = () => {
    const renderColumn = (title, status, colorClass) => {
       const columnTasks = filteredTasks.filter(t => t.status === status);
       return (
-         <div className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[300px]">
+         <div className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[340px]">
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-gray-50 dark:bg-dark-secondary pb-2 z-10 transition-colors duration-300">
                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(status)}</span>
@@ -462,7 +462,7 @@ const Tasks = () => {
          </div>
 
          {/* Kanban Board */}
-         <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar">
+         <div className="flex justify-between gap-6 overflow-x-auto pb-4 custom-scrollbar">
             {renderColumn(t('todo'), 'todo', 'bg-gray-500')}
             {renderColumn(t('in_progress'), 'in_progress', 'bg-yellow-500')}
             {renderColumn(t('review'), 'review', 'bg-purple-500')}
