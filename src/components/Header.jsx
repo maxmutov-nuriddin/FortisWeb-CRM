@@ -59,10 +59,10 @@ const Header = ({ toggleSidebar }) => {
                   </button>
 
                   {/* Search Bar */}
-                  <div className="relative flex-1 max-w-md hidden sm:block">
+                  {/* <div className="relative flex-1 max-w-md hidden sm:block">
                      <i className="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
                      <input type="text" placeholder={t('search')} className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg pl-11 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-dark-accent transition-colors" />
-                  </div>
+                  </div> */}
                   {/* Mobile Search Icon (optional replacement for full bar) */}
                   <button className="sm:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                      <i className="fa-solid fa-search text-xl"></i>
