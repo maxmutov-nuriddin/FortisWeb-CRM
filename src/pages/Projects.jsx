@@ -236,8 +236,6 @@ const Projects = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                {filteredProjects.map((project, index) => {
                   const projectFiles = uploads.filter(file => file.orderId === project._id);
-                  // const isPaid = project.statusFlags?.isPaymentAccepted; // Moved to modal
-                  // const isStarted = project.statusFlags?.isWorkStarted; // Moved to modal
 
                   return (
                      <div
@@ -255,18 +253,6 @@ const Projects = () => {
                            </button>
                         )}
 
-                        {/* Minimal Header: Title Only */}
-                        <div className="mb-4 pr-8">
-                           <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-sm">
-                                 #{index + 1}
-                              </div>
-                              <h2 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-dark-accent transition-colors" title={project.title}>
-                                 {project.title}
-                              </h2>
-                           </div>
-                        </div>
-
                         {/* Files Section  */}
                         <div className="flex-1 space-y-3 mb-4">
                            <div className="flex items-center justify-between text-xs text-gray-400 uppercase font-semibold tracking-wider">
@@ -274,7 +260,7 @@ const Projects = () => {
                            </div>
 
                            {projectFiles.length > 0 ? (
-                              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 customize-scrollbar">
+                              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 customize-scrollbar">
                                  {projectFiles.map(file => {
                                     const ext = (file.originalName || '').split('.').pop().toLowerCase();
                                     let iconClass = 'fa-solid fa-file';
@@ -284,6 +270,14 @@ const Projects = () => {
                                     else if (['jpg', 'png', 'jpeg'].includes(ext)) { iconClass = 'fa-solid fa-file-image'; iconColor = 'text-purple-500'; }
                                     else if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-solid fa-file-word'; iconColor = 'text-blue-500'; }
                                     else if (['zip', 'rar'].includes(ext)) { iconClass = 'fa-solid fa-file-zipper'; iconColor = 'text-yellow-500'; }
+
+                                    const formatDate = (dateStr) => {
+                                       const date = new Date(dateStr);
+                                       if (isNaN(date.getTime())) return null;
+                                       return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+                                    };
+
+                                    const uploadTime = formatDate(file.createdAt) || formatDate(file.updatedAt) || formatDate(project.createdAt) || 'N/A';
 
                                     return (
                                        <div
@@ -295,7 +289,13 @@ const Projects = () => {
 
                                           <div className="flex-1 min-w-0 mr-1">
                                              <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{file.originalName}</p>
-                                             <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
+                                             <div className="flex items-center gap-2">
+                                                <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
+                                                <span className="text-[10px] text-gray-400 font-bold">•</span>
+                                                <p className="text-[10px] text-gray-500 font-medium" title="Upload time">
+                                                   {uploadTime}
+                                                </p>
+                                             </div>
                                           </div>
 
                                           {/* File Actions */}
