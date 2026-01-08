@@ -353,5 +353,7 @@
    "delete_message_confirm": "Delete this message?",
    "clear_chat_confirm": "Delete chat history?",
    "chat_cleared": "Chat cleared",
-   "deleted": "Deleted"
+   "deleted": "Deleted",
+   "employee_role": "Employee",
+   "support_agent": "Support Agent"
 }

@@ -321,10 +321,10 @@ const Company = () => {
             <div className="flex items-center justify-between">
                <div>
                   <h1 className="text-3xl font-bold text-white mb-2">
-                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? 'Companies Management' : 'My Company'}
+                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? t('companies_management') : t('my_company')}
                   </h1>
                   <p className="text-gray-400">
-                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? 'Manage all companies in the system' : 'View and manage your company details'}
+                     {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') ? t('manage_all_companies_desc') : t('view_manage_company_desc')}
                   </p>
                </div>
                {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
@@ -352,7 +352,7 @@ const Company = () => {
                      <i className="fa-solid fa-building text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Total Companies</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('total_companies')}</h3>
                <p className="text-2xl font-bold text-white">{companiesList.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -361,7 +361,7 @@ const Company = () => {
                      <i className="fa-solid fa-check-circle text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Active</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('active')}</h3>
                <p className="text-2xl font-bold text-white">{activeCompanies.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -370,7 +370,7 @@ const Company = () => {
                      <i className="fa-solid fa-times-circle text-red-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Inactive</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('inactive')}</h3>
                <p className="text-2xl font-bold text-white">{inactiveCompanies.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -379,7 +379,7 @@ const Company = () => {
                      <i className="fa-solid fa-users text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Total Employees</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('total_employees')}</h3>
                <p className="text-2xl font-bold text-white">{totalEmployees || 0}</p>
             </div>
          </div>
@@ -388,11 +388,11 @@ const Company = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap w-full">
                   <div className="w-full sm:w-auto flex-grow max-w-md">
-                     <label className="text-xs text-gray-400 mb-1 block">Search</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('search_label')}</label>
                      <div className="relative">
                         <input
                            type="text"
-                           placeholder="Search by Name, Email, or Address..."
+                           placeholder={t('search_companies_placeholder')}
                            className="bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
                            value={searchQuery}
                            onChange={(e) => setSearchQuery(e.target.value)}
@@ -401,15 +401,15 @@ const Company = () => {
                      </div>
                   </div>
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">Status</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('status')}</label>
                      <select
                         className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                      >
-                        <option>All Statuses</option>
-                        <option>Active</option>
-                        <option>Inactive</option>
+                        <option value={t('all_statuses')}>{t('all_statuses')}</option>
+                        <option value="Active">{t('active')}</option>
+                        <option value="Inactive">{t('inactive')}</option>
                      </select>
                   </div>
                </div>

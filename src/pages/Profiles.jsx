@@ -617,19 +617,19 @@ const Profiles = () => {
          <div id="profiles-header-section">
             <div className="flex items-center justify-between">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Team Profiles</h1>
-                  <p className="text-gray-400">Manage team members, roles, and access permissions</p>
+                  <h1 className="text-3xl font-bold text-white mb-2">{t('team_profiles')}</h1>
+                  <p className="text-gray-400">{t('profiles_desc')}</p>
                </div>
                <div className="flex items-center space-x-3">
                   {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
                      <>
                         <button onClick={() => openModal()} className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                            <i className="fa-solid fa-user-plus"></i>
-                           <span>Add New Member</span>
+                           <span>{t('add_new_member')}</span>
                         </button>
                         <button onClick={() => openTeamModal()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                            <i className="fa-solid fa-people-group"></i>
-                           <span>Create Team</span>
+                           <span>{t('create_team')}</span>
                         </button>
                      </>
                   )}
@@ -644,7 +644,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-users text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Total Members</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('total_members')}</h3>
                <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -653,7 +653,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-user-check text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Active Now</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('active_now')}</h3>
                <p className="text-2xl font-bold text-white">{stats.active}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -662,7 +662,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-user-tie text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Team Leads</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('team_leads')}</h3>
                <p className="text-2xl font-bold text-white">{stats.leads}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -671,7 +671,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-user-clock text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Inactive</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('inactive')}</h3>
                <p className="text-2xl font-bold text-white">{stats.leave}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -680,7 +680,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-layer-group text-indigo-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Teams</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('teams')}</h3>
                <p className="text-2xl font-bold text-white">{stats.teams}</p>
             </div>
          </div>
@@ -690,13 +690,13 @@ const Profiles = () => {
                onClick={() => setActiveTab('members')}
                className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'members' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
             >
-               Members List
+               {t('all_members')}
             </button>
             <button
                onClick={() => setActiveTab('teams')}
                className={`px-8 py-4 text-sm font-medium transition ${activeTab === 'teams' ? 'text-dark-accent border-b-2 border-dark-accent' : 'text-gray-400 hover:text-white'}`}
             >
-               Teams & Departments
+               {t('teams')} & {t('department_team')}
             </button>
          </div>
 

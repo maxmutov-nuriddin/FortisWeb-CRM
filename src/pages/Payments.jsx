@@ -458,7 +458,7 @@ const Payments = () => {
                         value={viewCompanyId}
                         onChange={(e) => setViewCompanyId(e.target.value)}
                      >
-                        <option value="all">All Companies</option>
+                        <option value="all">{t('all_companies')}</option>
                         {allCompanies.map(c => (
                            <option key={c._id} value={c._id}>{c.name}</option>
                         ))}
@@ -468,7 +468,7 @@ const Payments = () => {
                      onClick={handleExport}
                      className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
                      <i className="fa-solid fa-download"></i>
-                     <span>Export Report</span>
+                     <span>{t('export_report')}</span>
                   </button>
                </div>
             </div>
@@ -481,22 +481,22 @@ const Payments = () => {
                      <i className="fa-solid fa-dollar-sign text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? 'My Total Earnings' : 'Total Revenue'}</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_total_earnings') : t('total_revenue')}</h3>
                <p className="text-2xl font-bold text-white">
                   ${(!isSuperAdmin ? (stats?.myTotalEarnings || 0) : (stats?.totalRevenue || 0)).toLocaleString()}
                </p>
-               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? 'Confirmed payouts' : 'All time earnings'}</p>
+               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? t('confirmed_payouts') : t('all_time_earnings')}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-yellow-500 transition">
                <div className="flex items-center justify-between mb-3">
                   <div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                      <i className="fa-solid fa-clock text-yellow-500 text-xl"></i>
                   </div>
-                  <span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} pending</span>
+                  <span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} {t('pending_count')}</span>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Pending Payments</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('pending_payments')}</h3>
                <p className="text-2xl font-bold text-white">${stats?.pendingAmount?.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">Awaiting confirmation</p>
+               <p className="text-xs text-gray-500 mt-1">{t('awaiting_confirmation')}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-blue-500 transition">
                <div className="flex items-center justify-between mb-3">
@@ -504,9 +504,9 @@ const Payments = () => {
                      <i className="fa-solid fa-calendar text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">This Month</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('this_month')}</h3>
                <p className="text-2xl font-bold text-white">${stats?.thisMonthAmount?.toLocaleString()}</p>
-               <p className="text-xs text-gray-500 mt-1">Current Month</p>
+               <p className="text-xs text-gray-500 mt-1">{t('current_month')}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-purple-500 transition">
                <div className="flex items-center justify-between mb-3">
@@ -514,11 +514,11 @@ const Payments = () => {
                      <i className="fa-solid fa-users text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? 'My Estimated Share' : 'Team Payouts'}</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</h3>
                <p className="text-2xl font-bold text-white">
                   ${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}
                </p>
-               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? 'From active projects' : '70% of revenue'}</p>
+               <p className="text-xs text-gray-500 mt-1">{!isSuperAdmin ? t('from_active_projects') : t('payouts_revenue_share')}</p>
             </div>
          </div>
 
@@ -526,13 +526,13 @@ const Payments = () => {
             <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="flex items-center justify-between mb-6">
                   <div>
-                     <h3 className="text-lg font-semibold text-white mb-1">Payment Distribution Calculator</h3>
-                     <p className="text-sm text-gray-400">Automatic salary split based on project revenue</p>
+                     <h3 className="text-lg font-semibold text-white mb-1">{t('payment_distribution_calculator')}</h3>
+                     <p className="text-sm text-gray-400">{t('automatic_salary_split_desc')}</p>
                   </div>
                </div>
 
                <div className="bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-700">
-                  <label className="text-sm text-gray-400 mb-2 block">Calculator Amount ($)</label>
+                  <label className="text-sm text-gray-400 mb-2 block">{t('calculator_amount_label')}</label>
                   <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(Number(e.target.value))} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
                </div>
 

@@ -353,5 +353,7 @@
    "delete_message_confirm": "Ushbu xabarni o'chirasizmi?",
    "clear_chat_confirm": "Chat tarixini o'chirib tashlaysizmi?",
    "chat_cleared": "Chat tozalandi",
-   "deleted": "O'chirildi"
+   "deleted": "O'chirildi",
+   "employee_role": "Xodim",
+   "support_agent": "Yordam agenti"
 }

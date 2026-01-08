@@ -141,11 +141,11 @@ const Chat = () => {
    };
 
    const formatRole = (role) => {
-      if (!role) return 'Employee';
-      if (role === 'user') return 'Employee';
-      if (role === 'company_admin') return 'Company Admin';
-      if (role === 'super_admin') return 'Support Agent';
-      if (role === 'team_lead') return 'Team Lead';
+      if (!role) return t('employee_role', 'Employee');
+      if (role === 'user') return t('employee_role', 'Employee');
+      if (role === 'company_admin') return t('company_admin');
+      if (role === 'super_admin') return t('support_agent', 'Support Agent');
+      if (role === 'team_lead') return t('team_lead');
       return role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
    };
 
@@ -296,7 +296,7 @@ const Chat = () => {
                            </button>
                         ))
                      ) : (
-                        <div className="text-center py-6 text-gray-600 text-xs italic font-medium">No active tickets</div>
+                        <div className="text-center py-6 text-gray-600 text-xs italic font-medium">{t('no_active_tickets')}</div>
                      )}
                   </div>
                )}
@@ -311,14 +311,13 @@ const Chat = () => {
                   <div className="w-24 h-24 bg-dark-accent/10 border border-dark-accent/20 rounded-3xl flex items-center justify-center mb-10 transition-transform duration-500 shadow-2xl">
                      <i className="fa-solid fa-user-shield text-4xl text-dark-accent shadow-xl"></i>
                   </div>
-                  <h3 className="text-3xl font-bold text-white mb-3 tracking-tight">Restricted Access</h3>
+                  <h3 className="text-3xl font-bold text-white mb-3 tracking-tight">{t('restricted_access')}</h3>
                   <p className="text-gray-400 max-w-sm mb-10 leading-relaxed font-medium">
-                     Direct support channel is available for Company Admins only. <br />
-                     Please contact your <strong>Administrator</strong> for help.
+                     {t('support_restricted_desc')}
                   </p>
                   <div className="flex items-center space-x-3 text-dark-accent text-xs font-bold bg-dark-accent/10 px-6 py-3 rounded-2xl border border-dark-accent/20 uppercase tracking-widest">
                      <i className="fa-solid fa-circle-info"></i>
-                     <span>Policy applied for {formatRole(userData.role)}</span>
+                     <span>{t('policy_applied_for')} {formatRole(userData.role)}</span>
                   </div>
                </div>
             ) : (
@@ -336,12 +335,12 @@ const Chat = () => {
                         </div>
                         <div>
                            <h3 className="text-white font-bold text-xl tracking-tight">
-                              {selectedChat?.name || (activeTab === 'global' ? 'Company Global' :
-                                 activeTab === 'team' ? 'Department Team' : 'Help Desk')}
+                              {selectedChat?.name || (activeTab === 'global' ? t('company_global') :
+                                 activeTab === 'team' ? t('department_team') : t('help_desk'))}
                            </h3>
                            <div className="flex items-center space-x-2 mt-0.5">
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                 {Array.from(userMap.values()).length} Active Members
+                                 {Array.from(userMap.values()).length} {t('active_members')}
                               </p>
                            </div>
                         </div>
@@ -354,7 +353,7 @@ const Chat = () => {
                            title="Clear entire chat history"
                         >
                            <i className="fa-solid fa-trash-can"></i>
-                           <span>Clear History</span>
+                           <span>{t('clear_history')}</span>
                         </button>
                      )}
                   </div>
@@ -431,8 +430,8 @@ const Chat = () => {
                            <div className="w-24 h-24 bg-dark-tertiary/20 rounded-full flex items-center justify-center mb-6 shadow-inner border border-gray-800/30">
                               <i className="fa-regular fa-comments text-5xl opacity-20"></i>
                            </div>
-                           <p className="text-sm font-bold uppercase tracking-widest opacity-40">No messages yet</p>
-                           <p className="text-[10px] font-medium uppercase tracking-tighter opacity-30 mt-1">Start the conversation</p>
+                           <p className="text-sm font-bold uppercase tracking-widest opacity-40">{t('no_messages_yet')}</p>
+                           <p className="text-[10px] font-medium uppercase tracking-tighter opacity-30 mt-1">{t('start_conversation_desc')}</p>
                         </div>
                      )}
                      <div ref={messagesEndRef} />
@@ -449,7 +448,7 @@ const Chat = () => {
                               type="text"
                               value={messageInput}
                               onChange={(e) => setMessageInput(e.target.value)}
-                              placeholder="Type your message..."
+                              placeholder={t('type_message_placeholder')}
                               className="w-full bg-dark-secondary/60 border border-gray-700/50 rounded-2xl pl-6 pr-14 py-4 text-white placeholder-gray-600 font-medium focus:outline-none focus:border-dark-accent/50 focus:ring-4 focus:ring-dark-accent/5 transition-all duration-300 shadow-inner"
                            />
                            <button

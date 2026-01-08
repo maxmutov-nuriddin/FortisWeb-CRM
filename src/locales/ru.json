@@ -353,5 +353,7 @@
    "delete_message_confirm": "Удалить это сообщение?",
    "clear_chat_confirm": "Удалить историю чата?",
    "chat_cleared": "Чат очищен",
-   "deleted": "Удалено"
+   "deleted": "Удалено",
+   "employee_role": "Сотрудник",
+   "support_agent": "Агент поддержки"
 }
