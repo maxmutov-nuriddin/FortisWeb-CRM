@@ -13,7 +13,7 @@ import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
-   const { t } = useTranslation();
+   const { t, i18n } = useTranslation();
    //! DATA
    const { user, isLoading: authLoading, error: authError } = useAuthStore();
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
@@ -152,7 +152,7 @@ const Dashboard = () => {
 
    const salaryData = [{
       type: 'pie',
-      labels: ['Execution Pool (56%)', 'Lead Management (14%)', 'Admin (10%)', 'Company (20%)'],
+      labels: [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')],
       values: [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company],
       marker: {
          colors: ['#10B981', '#8B5CF6', '#FF0000', '#3B82F6']
@@ -209,7 +209,7 @@ const Dashboard = () => {
       return {
          labels: keys.map(k => {
             const [y, m] = k.split('-')
-            return new Date(y, m).toLocaleString('en', { month: 'short' })
+            return new Date(y, m).toLocaleString(i18n.language || 'en', { month: 'short' })
          }),
          values: keys.map(k => map[k])
       }
@@ -700,17 +700,17 @@ const Dashboard = () => {
                <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">Revenue Overview</h3>
-                        <p className="text-sm text-gray-400">Monthly revenue breakdown</p>
+                        <h3 className="text-lg font-semibold text-white mb-1">{t('revenue_overview')}</h3>
+                        <p className="text-sm text-gray-400">{t('monthly_revenue_desc')}</p>
                      </div>
                      <select
                         value={period}
                         onChange={(e) => setPeriod(e.target.value)}
                         className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
                      >
-                        <option value="6m">Last 6 Months</option>
-                        <option value="1y">Last Year</option>
-                        <option value="all">All Time</option>
+                        <option value="6m">{t('last_6_months')}</option>
+                        <option value="1y">{t('last_year')}</option>
+                        <option value="all">{t('all_time')}</option>
                      </select>
                   </div>
                   <div className="w-full h-[300px]">
@@ -726,8 +726,8 @@ const Dashboard = () => {
 
                <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                   <div className="mb-6">
-                     <h3 className="text-lg font-semibold text-white mb-1">Salary Distribution</h3>
-                     <p className="text-sm text-gray-400">Per project breakdown</p>
+                     <h3 className="text-lg font-semibold text-white mb-1">{t('salary_distribution')}</h3>
+                     <p className="text-sm text-gray-400">{t('per_project_breakdown')}</p>
                   </div>
                   <div className="w-full h-[300px]">
                      <Plot
@@ -742,28 +742,28 @@ const Dashboard = () => {
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                           <span className="text-gray-400">Execution Pool (56%)</span>
+                           <span className="text-gray-400">{t('execution_pool_label')}</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                           <span className="text-gray-400">Lead Management (14%)</span>
+                           <span className="text-gray-400">{t('lead_management_label')}</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                           <span className="text-gray-400">Admin (10%)</span>
+                           <span className="text-gray-400">{t('admin_label')}</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
                      </div>
                      <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center space-x-2">
                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                           <span className="text-gray-400">Company (20%)</span>
+                           <span className="text-gray-400">{t('company')} (20%)</span>
                         </div>
                         <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
                      </div>
@@ -775,8 +775,8 @@ const Dashboard = () => {
                <div className="bg-dark-secondary border border-gray-800 rounded-xl overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
                      <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">Recent Orders from Telegram Bot</h3>
-                        <p className="text-sm text-gray-400">Orders received via @fortisweb_bot</p>
+                        <h3 className="text-lg font-semibold text-white mb-1">{t('recent_orders_bot')}</h3>
+                        <p className="text-sm text-gray-400">{t('bot_desc')}</p>
                      </div>
                      {/* <button className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2">
                            <i className="fa-solid fa-plus"></i>
@@ -787,13 +787,13 @@ const Dashboard = () => {
                      <table className="w-full">
                         <thead className="bg-dark-tertiary">
                            <tr>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Order ID</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Client</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Action</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('date')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('client')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('description')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('amount')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('action')}</th>
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-800">
@@ -842,7 +842,7 @@ const Dashboard = () => {
                                        onClick={() => setSelectedProject(project)}
                                        className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition"
                                     >
-                                       View
+                                       {t('view')}
                                     </button>
                                  </td>
                               </tr>

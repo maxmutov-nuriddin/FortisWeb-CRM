@@ -172,13 +172,13 @@ const Profiles = () => {
 
    const userList = useMemo(() => {
       const list = rawUserList;
-      if (filter === 'All Members') return list;
+      if (filter === 'All Members' || filter === t('all_members')) return list;
       return list.filter(u => {
-         if (filter === 'Admins') return u.role === 'company_admin' || u.role === 'super_admin';
-         if (filter === 'Team Leads') return u.role === 'team_lead';
-         if (filter === 'Backend') return u.role === 'backend';
-         if (filter === 'Frontend') return u.role === 'frontend';
-         if (filter === 'Marketing') return u.role === 'marketer';
+         if (filter === 'Admins' || filter === t('admins')) return u.role === 'company_admin' || u.role === 'super_admin';
+         if (filter === 'Team Leads' || filter === t('team_leads')) return u.role === 'team_lead';
+         if (filter === 'Backend' || filter === t('backend')) return u.role === 'backend';
+         if (filter === 'Frontend' || filter === t('frontend')) return u.role === 'frontend';
+         if (filter === 'Marketing' || filter === t('marketing')) return u.role === 'marketing' || u.role === 'marketer';
          return true;
       });
    }, [rawUserList, filter]);
@@ -197,7 +197,7 @@ const Profiles = () => {
    const roleData = useMemo(() => {
       const all = rawUserList;
       const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
-      const labels = ['Backend', 'Frontend', 'Team Leads', 'Admins', 'Marketing'];
+      const labels = [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')];
       const values = roles.map(r => all.filter(u => u.role === r).length);
 
       return [{
@@ -207,7 +207,7 @@ const Profiles = () => {
          marker: { colors: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] },
          textinfo: 'label+percent',
          textfont: { color: '#FFFFFF', size: 11 },
-         hovertemplate: '%{label}: %{value} members<extra></extra>'
+         hovertemplate: `%{label}: %{value} ${t('members_stat')}<extra></extra>`
       }];
    }, [rawUserList]);
 
@@ -221,7 +221,7 @@ const Profiles = () => {
 
    const performanceData = [{
       type: 'bar',
-      x: ['Backend', 'Frontend', 'Team Leads', 'Admins', 'Marketing'],
+      x: [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')],
       y: [93, 95, 91, 92, 91],
       marker: { color: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] }
    }];
@@ -229,7 +229,7 @@ const Profiles = () => {
    const performanceLayout = {
       autosize: true,
       xaxis: { title: '', gridcolor: '#2A2A2A', color: '#9CA3AF' },
-      yaxis: { title: 'Success Rate (%)', gridcolor: '#2A2A2A', color: '#9CA3AF', range: [0, 100] },
+      yaxis: { title: t('success_rate_percent'), gridcolor: '#2A2A2A', color: '#9CA3AF', range: [0, 100] },
       margin: { t: 20, r: 20, b: 60, l: 60 },
       plot_bgcolor: 'transparent',
       paper_bgcolor: 'transparent',
@@ -703,13 +703,13 @@ const Profiles = () => {
          {activeTab === 'members' ? (
             <>
                <div id="profiles-role-tabs-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
-                  {['All Members', 'Admins', 'Team Leads', 'Backend', 'Frontend', 'Marketing'].map(t => (
+                  {[t('all_members'), t('admins'), t('team_leads'), t('backend'), t('frontend'), t('marketing')].map(t_label => (
                      <button
-                        key={t}
-                        onClick={() => setFilter(t)}
-                        className={`flex-auto px-4 py-2.5 rounded-lg text-sm font-medium transition ${filter === t ? 'bg-dark-accent text-white' : 'hover:bg-dark-tertiary text-gray-400 hover:text-white'}`}
+                        key={t_label}
+                        onClick={() => setFilter(t_label)}
+                        className={`flex-auto px-4 py-2.5 rounded-lg text-sm font-medium transition ${filter === t_label ? 'bg-dark-accent text-white' : 'hover:bg-dark-tertiary text-gray-400 hover:text-white'}`}
                      >
-                        {t}
+                        {t_label}
                      </button>
                   ))}
                </div>
@@ -752,14 +752,14 @@ const Profiles = () => {
                                           className="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-gray-700 transition flex items-center"
                                        >
                                           <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
-                                          {item.isActive ? 'Deactivate' : 'Activate'}
+                                          {item.isActive ? t('deactivate') : t('activate')}
                                        </button>
                                        <button
                                           onClick={() => openMoveTeamModal(item._id)}
                                           className="w-full text-left px-4 py-3 text-xs text-blue-400 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
                                        >
                                           <i className="fa-solid fa-people-arrows mr-2"></i>
-                                          Move to Team
+                                          {t('move_to_team')}
                                        </button>
                                        <button
                                           onClick={() => {
@@ -769,7 +769,7 @@ const Profiles = () => {
                                           className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-700 transition border-t border-gray-700 flex items-center"
                                        >
                                           <i className="fa-solid fa-trash-can mr-2"></i>
-                                          Delete Member
+                                          {t('delete_member')}
                                        </button>
                                     </div>
                                  )}
@@ -780,7 +780,7 @@ const Profiles = () => {
                         <p className="text-sm text-dark-accent mb-3">{item.position || item.role?.replace('_', ' ')}</p>
                         <div className="space-y-2 mb-4">
                            <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-envelope w-4"></i><span className="truncate">{item.email}</span></div>
-                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>{item.phone || 'No phone'}</span></div>
+                           <div className="flex items-center space-x-2 text-xs text-gray-400"><i className="fa-solid fa-phone w-4"></i><span>{item.phone || t('no_phone')}</span></div>
                         </div>
                         <div className="flex items-center space-x-2 mb-4">
                            <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.role === 'super_admin' ? 'bg-red-500 text-red-500' :
@@ -789,14 +789,14 @@ const Profiles = () => {
                                     'bg-gray-500 text-gray-400'
                               }`}>{item.role?.replace('_', ' ')}</span>
                            <span className={`px-2 py-1 bg-opacity-20 rounded text-xs ${item.isActive ? 'bg-green-500 text-green-500' : 'bg-red-500 text-red-500'}`}>
-                              {item.isActive ? 'Active' : 'Inactive'}
+                              {item.isActive ? t('active') : t('inactive')}
                            </span>
                         </div>
                         <div className="pt-4 border-t border-gray-800">
                            <div className="flex items-center justify-between text-xs">
-                              <div><p className="text-gray-400 mb-1">Salary</p><p className="text-white font-semibold">${item.salary || 0}</p></div>
-                              <div><p className="text-gray-400 mb-1">Company</p><p className="text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
-                              <div><p className="text-gray-400 mb-1">Created</p><p className="text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
+                              <div><p className="text-gray-400 mb-1">{t('salary')}</p><p className="text-white font-semibold">${item.salary || 0}</p></div>
+                              <div><p className="text-gray-400 mb-1">{t('company')}</p><p className="text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
+                              <div><p className="text-gray-400 mb-1">{t('created')}</p><p className="text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
                            </div>
                         </div>
                      </div>
@@ -804,7 +804,7 @@ const Profiles = () => {
                   {userList.length === 0 && (
                      <div className="col-span-full py-12 text-center text-gray-500 bg-dark-secondary rounded-xl border border-dashed border-gray-800">
                         <i className="fa-solid fa-users-slash text-4xl mb-3"></i>
-                        <p>No members found in this category</p>
+                        <p>{t('no_members_found')}</p>
                      </div>
                   )}
                </div>
@@ -823,12 +823,12 @@ const Profiles = () => {
                               <i className="fa-solid fa-trash-can mr-1"></i>
                            </button>
                            <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-white text-sm font-medium transition">
-                              <i className="fa-solid fa-plus mr-1"></i> Add Member
+                              <i className="fa-solid fa-plus mr-1"></i> {t('add_member')}
                            </button>
                         </div>
                      </div>
                      <div className="mb-6">
-                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">Team Lead</p>
+                        <p className="text-xs text-gray-400 uppercase font-semibold mb-3">{t('team_lead')}</p>
                         <div className="flex items-center space-x-3 bg-dark-tertiary p-3 rounded-lg">
                            <div className="w-10 h-10 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-purple-500 font-bold">
                               {(() => {
@@ -844,10 +844,10 @@ const Profiles = () => {
                                     const leadId = String(team.teamLead?._id || team.teamLead || '');
                                     const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(team.companyId));
                                     const leadFound = (company?.employees || rawUserList).find(e => String(e._id) === leadId);
-                                    return leadFound?.name || team.teamLead?.name || 'Unassigned Lead';
+                                    return leadFound?.name || team.teamLead?.name || t('unassigned_lead');
                                  })()}
                               </p>
-                              <p className="text-xs text-gray-500">Responsible for deliverables</p>
+                              <p className="text-xs text-gray-500">{t('responsible_for_deliverables')}</p>
                            </div>
                         </div>
                      </div>
@@ -869,7 +869,7 @@ const Profiles = () => {
                                  </div>
                               );
                            })}
-                           {(!team.members || team.members.length === 0) && <p className="text-xs text-gray-600 col-span-2">No members in this team yet</p>}
+                           {(!team.members || team.members.length === 0) && <p className="text-xs text-gray-600 col-span-2">{t('no_members_in_team')}</p>}
                         </div>
                      </div>
                   </div>
@@ -877,7 +877,7 @@ const Profiles = () => {
                {allTeams.length === 0 && (
                   <div className="col-span-full py-12 text-center text-gray-500 bg-dark-secondary rounded-xl border border-dashed border-gray-800">
                      <i className="fa-solid fa-people-group text-4xl mb-3"></i>
-                     <p>No teams found. Create one to get started!</p>
+                     <p>{t('no_teams_found_create')}</p>
                   </div>
                )}
             </div>
@@ -887,8 +887,8 @@ const Profiles = () => {
          <div id="profiles-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Team Distribution by Role</h3>
-                  <p className="text-sm text-gray-400">Member breakdown across departments</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('team_dist_role')}</h3>
+                  <p className="text-sm text-gray-400">{t('member_breakdown_dept')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -903,8 +903,8 @@ const Profiles = () => {
 
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Performance Overview</h3>
-                  <p className="text-sm text-gray-400">Average success rate by department</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('performance_overview')}</h3>
+                  <p className="text-sm text-gray-400">{t('avg_success_rate_dept')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -923,20 +923,20 @@ const Profiles = () => {
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent}>
                   <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">{isEditMode ? 'Edit Team Member' : 'Add New Member'}</h2>
+                     <h2 className="text-xl font-bold text-white">{isEditMode ? t('edit_team_member') : t('add_new_member')}</h2>
                      <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <form onSubmit={handleSubmit} className="p-6 space-y-4">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                           <label className={styles.label}>Full Name</label>
+                           <label className={styles.label}>{t('full_name')}</label>
                            <input
                               type="text" required className={styles.input} placeholder="e.g. John Doe"
                               value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
                            />
                         </div>
                         <div>
-                           <label className={styles.label}>Email Address</label>
+                           <label className={styles.label}>{t('email_address')}</label>
                            <input
                               type="email" required className={styles.input} placeholder="john@example.com"
                               value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -944,7 +944,7 @@ const Profiles = () => {
                         </div>
                         {!isEditMode && (
                            <div style={{ position: 'relative' }}>
-                              <label className={styles.label}>Password</label>
+                              <label className={styles.label}>{t('new_password')}</label>
                               <input
                                  type={showPassword ? "text" : "password"}
                                  required
@@ -986,43 +986,43 @@ const Profiles = () => {
                            </div>
                         )}
                         <div>
-                           <label className={styles.label}>Phone Number</label>
+                           <label className={styles.label}>{t('phone_number')}</label>
                            <input
                               type="text" className={styles.input} placeholder="+1..."
                               value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
                            />
                         </div>
                         <div>
-                           <label className={styles.label}>Position</label>
+                           <label className={styles.label}>{t('position')}</label>
                            <input
                               type="text" className={styles.input} placeholder="e.g. Senior Backend"
                               value={formData.position} onChange={e => setFormData({ ...formData, position: e.target.value })}
                            />
                         </div>
                         <div>
-                           <label className={styles.label}>Role</label>
+                           <label className={styles.label}>{t('role')}</label>
                            <select
                               className={styles.input}
                               value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
                            >
-                              <option value="employee">Employee</option>
-                              <option value="team_lead">Team Lead</option>
-                              <option value="company_admin">Company Admin</option>
+                              <option value="employee">{t('employee_role')}</option>
+                              <option value="team_lead">{t('team_lead')}</option>
+                              <option value="company_admin">{t('company_admin')}</option>
                               {currentUser?.data?.user.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
-                              <option value="backend">Backend</option>
-                              <option value="frontend">Frontend</option>
-                              <option value="marketer">Marketer</option>
-                              <option value="designer">Designer</option>
+                              <option value="backend">{t('backend')}</option>
+                              <option value="frontend">{t('frontend')}</option>
+                              <option value="marketer">{t('marketing')}</option>
+                              <option value="designer">{t('designer')}</option>
                            </select>
                         </div>
                         {(currentUser?.data?.user.role === 'super_admin' || currentUser?.role === 'super_admin') && (
                            <div>
-                              <label className={styles.label}>Company</label>
+                              <label className={styles.label}>{t('company')}</label>
                               <select
                                  className={styles.input} required
                                  value={formData.companyId} onChange={e => setFormData({ ...formData, companyId: e.target.value })}
                               >
-                                 <option value="">Select Company</option>
+                                 <option value="">{t('select_company_placeholder')}</option>
                                  {(companies?.data?.companies || companies || []).map(c => (
                                     <option key={c._id} value={c._id}>{c.name}</option>
                                  ))}
@@ -1034,7 +1034,7 @@ const Profiles = () => {
                         <button type="button" onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
                         <button type="submit" disabled={isSubmitting} className={styles.btnPrimary}>
                            {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
-                           {isEditMode ? 'Update Member' : 'Create Member'}
+                           {isEditMode ? t('update_member') : t('create_member')}
                         </button>
                      </div>
                   </form>
@@ -1047,28 +1047,28 @@ const Profiles = () => {
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent}>
                   <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">Create New Team</h2>
+                     <h2 className="text-xl font-bold text-white">{t('create_new_team')}</h2>
                      <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <form onSubmit={handleTeamSubmit} className="p-6 space-y-4">
                      <div>
-                        <label className={styles.label}>Team Name</label>
+                        <label className={styles.label}>{t('team_name')}</label>
                         <input
                            type="text" required className={styles.input} placeholder="e.g. Backend Devs"
                            value={teamFormData.name} onChange={e => setTeamFormData({ ...teamFormData, name: e.target.value })}
                         />
                      </div>
                      <div>
-                        <label className={styles.label}>Team Lead</label>
+                        <label className={styles.label}>{t('team_lead')}</label>
                         <select
                            required className={styles.input}
                            value={teamFormData.teamLeadId} onChange={e => setTeamFormData({ ...teamFormData, teamLeadId: e.target.value })}
                         >
                            {isLoading ? (
-                              <option disabled>Loading members...</option>
+                              <option disabled>{t('loading_members')}</option>
                            ) : (
                               <>
-                                 <option value="">Select a Lead</option>
+                                 <option value="">{t('select_a_lead')}</option>
                                  {rawUserList
                                     .filter(u => {
                                        const uCompId = String(u.company?._id || u.company || '');
@@ -1081,13 +1081,13 @@ const Profiles = () => {
                                        <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
                                     ))
                                  }
-                                 {rawUserList.length === 0 && <option disabled>No users found</option>}
+                                 {rawUserList.length === 0 && <option disabled>{t('no_users_found')}</option>}
                               </>
                            )}
                         </select>
                      </div>
                      <div>
-                        <label className={styles.label}>Description</label>
+                        <label className={styles.label}>{t('description_label')}</label>
                         <textarea
                            className={styles.input + " h-24 resize-none"}
                            placeholder="Team responsibilities..."
@@ -1096,12 +1096,12 @@ const Profiles = () => {
                      </div>
                      {isSuperAdmin && (
                         <div>
-                           <label className={styles.label}>Company</label>
+                           <label className={styles.label}>{t('company')}</label>
                            <select
                               className={styles.input} required
                               value={teamFormData.companyId} onChange={e => setTeamFormData({ ...teamFormData, companyId: e.target.value })}
                            >
-                              <option value="">Select Company</option>
+                              <option value="">{t('select_company_placeholder')}</option>
                               {(companies?.data?.companies || companies || []).map(c => (
                                  <option key={c._id} value={c._id}>{c.name}</option>
                               ))}
@@ -1112,7 +1112,7 @@ const Profiles = () => {
                         <button type="button" onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
                         <button type="submit" disabled={isSubmitting} className={styles.btnPrimary}>
                            {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
-                           Create Team
+                           {t('create_team')}
                         </button>
                      </div>
                   </form>
@@ -1126,21 +1126,21 @@ const Profiles = () => {
                <div className={styles.modalOverlay}>
                   <div className={styles.modalContent + " max-w-md"}>
                      <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-white">Add Member to Team</h2>
+                        <h2 className="text-xl font-bold text-white">{t('add_member_to_team')}</h2>
                         <button onClick={closeModal} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
                      </div>
                      <div className="p-6 space-y-4">
                         <div>
-                           <label className={styles.label}>Select Member</label>
+                           <label className={styles.label}>{t('select_member')}</label>
                            <select
                               className={styles.input}
                               value={memberToAddId} onChange={e => setMemberToAddId(e.target.value)}
                            >
                               {isLoading ? (
-                                 <option disabled>Loading members...</option>
+                                 <option disabled>{t('loading_members')}</option>
                               ) : (
                                  <>
-                                    <option value="">Choose a user...</option>
+                                    <option value="">{t('choose_user')}</option>
                                     {rawUserList
                                        .filter(u => {
                                           const uCompId = String(u.company?._id || u.company || '');
@@ -1151,20 +1151,20 @@ const Profiles = () => {
                                           <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
                                        ))
                                     }
-                                    {rawUserList.length === 0 && <option disabled>No users found</option>}
+                                    {rawUserList.length === 0 && <option disabled>{t('no_users_found')}</option>}
                                  </>
                               )}
                            </select>
                         </div>
                         <div className="pt-4 flex justify-end space-x-3">
-                           <button onClick={closeModal} className={styles.btnSecondary}>Cancel</button>
+                           <button onClick={closeModal} className={styles.btnSecondary}>{t('cancel')}</button>
                            <button
                               onClick={handleConfirmAddMember}
                               disabled={isSubmitting || !memberToAddId}
                               className={styles.btnPrimary}
                            >
                               {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
-                              Add to Team
+                              {t('add_to_team')}
                            </button>
                         </div>
                      </div>
@@ -1178,31 +1178,31 @@ const Profiles = () => {
             <div className={styles.modalOverlay}>
                <div className={styles.modalContent + " max-w-md"}>
                   <div className="p-6 border-b border-gray-800 flex items-center justify-between">
-                     <h2 className="text-xl font-bold text-white">Move User to Team</h2>
+                     <h2 className="text-xl font-bold text-white">{t('move_user_to_team')}</h2>
                      <button onClick={() => setIsMoveModalOpen(false)} className="text-gray-400 hover:text-white transition text-2xl">&times;</button>
                   </div>
                   <div className="p-6 space-y-4">
                      <div>
-                        <label className={styles.label}>Select Target Team</label>
+                        <label className={styles.label}>{t('select_target_team')}</label>
                         <select
                            className={styles.input}
                            value={newTeamId} onChange={e => setNewTeamId(e.target.value)}
                         >
-                           <option value="">Choose a team...</option>
+                           <option value="">{t('choose_team')}</option>
                            {allTeams.map(t => (
                               <option key={t._id} value={t._id}>{t.name} ({t.companyName})</option>
                            ))}
                         </select>
                      </div>
                      <div className="pt-4 flex justify-end space-x-3">
-                        <button onClick={() => setIsMoveModalOpen(false)} className={styles.btnSecondary}>Cancel</button>
+                        <button onClick={() => setIsMoveModalOpen(false)} className={styles.btnSecondary}>{t('cancel')}</button>
                         <button
                            onClick={handleConfirmMoveTeam}
                            disabled={isSubmitting || !newTeamId}
                            className={styles.btnPrimary}
                         >
                            {isSubmitting ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : null}
-                           Confirm Move
+                           {t('confirm_move')}
                         </button>
                      </div>
                   </div>

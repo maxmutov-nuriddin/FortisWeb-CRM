@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 
 const Company = () => {
-   const { t } = useTranslation();
+   const { t, i18n } = useTranslation();
    const [statusFilter, setStatusFilter] = useState(t('all_statuses'));
    const [searchQuery, setSearchQuery] = useState('');
    const [selectedCompany, setSelectedCompany] = useState(null);
@@ -62,7 +62,7 @@ const Company = () => {
 
    const statusData = [{
       type: 'pie',
-      labels: ['Active', 'Inactive'],
+      labels: [t('active'), t('inactive')],
       values: [
          companiesList.filter(c => c.isActive === true).length,
          companiesList.filter(c => c.isActive === false).length
@@ -72,7 +72,7 @@ const Company = () => {
       },
       textinfo: 'label+percent',
       textfont: { color: '#FFFFFF', size: 11 },
-      hovertemplate: '%{label}: %{value} companies<extra></extra>'
+      hovertemplate: `%{label}: %{value} ${t('companies')}<extra></extra>`
    }];
 
 
@@ -91,7 +91,7 @@ const Company = () => {
    const yValues = months.map(month =>
       companiesList.filter(c => {
          if (!c.createdAt) return false;
-         const monthStr = new Date(c.createdAt).toLocaleString('en-US', { month: 'short' });
+         const monthStr = new Date(c.createdAt).toLocaleString(i18n.language || 'en-US', { month: 'short' });
          return monthStr === month;
       }).length
    );
@@ -99,7 +99,7 @@ const Company = () => {
    const trendData = [{
       type: 'scatter',
       mode: 'lines+markers',
-      name: 'Companies',
+      name: t('companies'),
       x: months,
       y: yValues,
       line: { color: '#FF0000', width: 3 },
@@ -111,7 +111,7 @@ const Company = () => {
       autosize: true,
       title: { text: '', font: { size: 0 } },
       xaxis: { title: '', gridcolor: '#2A2A2A', color: '#9CA3AF' },
-      yaxis: { title: 'Companies', gridcolor: '#2A2A2A', color: '#9CA3AF' },
+      yaxis: { title: t('companies'), gridcolor: '#2A2A2A', color: '#9CA3AF' },
       margin: { t: 20, r: 20, b: 40, l: 60 },
       plot_bgcolor: '#1A1A1A',
       paper_bgcolor: '#1A1A1A',
@@ -124,8 +124,8 @@ const Company = () => {
 
       if (statusFilter !== t('all_statuses')) {
          result = result.filter(company => {
-            if (statusFilter === 'Active') return company.isActive === true;
-            if (statusFilter === 'Inactive') return company.isActive === false;
+            if (statusFilter === 'Active' || statusFilter === t('active')) return company.isActive === true;
+            if (statusFilter === 'Inactive' || statusFilter === t('inactive')) return company.isActive === false;
             return true;
          });
       }
@@ -472,7 +472,7 @@ const Company = () => {
                                        />
                                     </button>
                                     <span className={`ml-3 text-xs font-medium ${company.isActive ? 'text-green-500' : 'text-red-500'}`}>
-                                       {company.isActive ? 'Active' : 'Inactive'}
+                                       {company.isActive ? t('active') : t('inactive')}
                                     </span>
                                  </div>
                               </td>
@@ -482,19 +482,19 @@ const Company = () => {
                                        onClick={(e) => handleViewDetails(e, company)}
                                        className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       View
+                                       {t('view')}
                                     </button>
                                     <button
                                        onClick={(e) => handleEditCompany(e, company)}
                                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       Edit
+                                       {t('edit')}
                                     </button>
                                     <button
                                        onClick={() => handleDeleteCompany(company._id)}
                                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       Delete
+                                       {t('delete')}
                                     </button>
                                  </div>
                               </td>
@@ -504,7 +504,7 @@ const Company = () => {
                         <tr>
                            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                               <i className="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
-                              <p>No companies found matching your filters</p>
+                              <p>{t('no_companies_found')}</p>
                            </td>
                         </tr>
                      )}
@@ -516,8 +516,8 @@ const Company = () => {
          <div id="companies-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Companies by Status</h3>
-                  <p className="text-sm text-gray-400">Distribution of company statuses</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('companies_by_status')}</h3>
+                  <p className="text-sm text-gray-400">{t('status_dist_desc', 'Distribution of company statuses')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -531,8 +531,8 @@ const Company = () => {
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Companies Growth Trend</h3>
-                  <p className="text-sm text-gray-400">Company registrations over time</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('companies_growth_trend')}</h3>
+                  <p className="text-sm text-gray-400">{t('company_registrations_desc')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -551,7 +551,7 @@ const Company = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
                <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
-                     <h2 className="text-xl font-bold text-white">Company Details</h2>
+                     <h2 className="text-xl font-bold text-white">{t('company_details')}</h2>
                      <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
                         <i className="fa-solid fa-times text-xl"></i>
                      </button>
@@ -560,13 +560,13 @@ const Company = () => {
                   <div className="p-6 space-y-6">
                      <div className="flex flex-col sm:flex-row justify-between gap-4">
                         <div>
-                           <span className="text-xs text-gray-500 block mb-1">Company ID</span>
+                           <span className="text-xs text-gray-500 block mb-1">{t('company_id_th')}</span>
                            <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
                               #{selectedCompany._id || 'N/A'}
                            </span>
                         </div>
                         <div>
-                           <span className="text-xs text-gray-500 block mb-1">Status</span>
+                           <span className="text-xs text-gray-500 block mb-1">{t('status')}</span>
                            <span
                               className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
     ${selectedCompany.isActive === true ? 'text-green-500 bg-green-500' :
@@ -581,22 +581,22 @@ const Company = () => {
 
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('company_information')}</h3>
                            <div className="bg-dark-tertiary rounded-lg p-4 space-y-3 h-full">
                               <div>
-                                 <span className="text-xs text-gray-500 block">Company Name</span>
+                                 <span className="text-xs text-gray-500 block">{t('company_name')}</span>
                                  <p className="text-white font-medium">{selectedCompany.name || 'No Name'}</p>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block">Email</span>
+                                 <span className="text-xs text-gray-500 block">{t('email_address')}</span>
                                  <p className="text-gray-300 text-sm">{selectedCompany.email || 'No Email'}</p>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block">Address</span>
+                                 <span className="text-xs text-gray-500 block">{t('main_address')}</span>
                                  <p className="text-gray-300 text-sm">{selectedCompany.address || 'No Address'}</p>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block">Subscription Tier</span>
+                                 <span className="text-xs text-gray-500 block">{t('subscription_tier')}</span>
                                  <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase border ${selectedCompany.subscriptionType === 'enterprise' ? 'border-purple-500 text-purple-400' :
                                     selectedCompany.subscriptionType === 'premium' ? 'border-yellow-500 text-yellow-400' :
                                        'border-gray-500 text-gray-400'
@@ -733,7 +733,7 @@ const Company = () => {
                                     className={`px-3 py-1 rounded text-[10px] font-bold uppercase transition ${selectedCompany.isActive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
                                        }`}
                                  >
-                                    {selectedCompany.isActive ? 'Active' : 'Inactive'}
+                                    {selectedCompany.isActive ? t('active') : t('inactive')}
                                  </button>
                               </div>
                            </div>

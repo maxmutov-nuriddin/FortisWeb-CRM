@@ -16,7 +16,7 @@ const Payments = () => {
    const { t } = useTranslation();
    const [projectAmount, setProjectAmount] = useState(10000);
    const [isSubmitting, setIsSubmitting] = useState(false);
-   const [statusFilter, setStatusFilter] = useState(t('all_statuses'));
+   const [statusFilter, setStatusFilter] = useState('all');
    const [viewCompanyId, setViewCompanyId] = useState('all');
    const [timePeriod, setTimePeriod] = useState('6m');
    const [searchQuery, setSearchQuery] = useState('');
@@ -143,9 +143,10 @@ const Payments = () => {
    const filteredPayments = useMemo(() => {
       let result = paymentsList;
 
-      if (statusFilter !== t('all_statuses')) {
+      if (statusFilter !== 'all') {
          result = result.filter(p => p.status === statusFilter.toLowerCase());
       }
+
 
       if (searchQuery) {
          const query = searchQuery.toLowerCase();
@@ -544,8 +545,8 @@ const Payments = () => {
                               <i className="fa-solid fa-user-tie text-blue-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">Admin</p>
-                              <p className="text-xs text-gray-400">10% of total</p>
+                              <p className="text-white font-medium">{t('admin_generic')}</p>
+                              <p className="text-xs text-gray-400">{t('ten_percent_of_total')}</p>
                            </div>
                         </div>
                         <div className="text-right">
@@ -562,8 +563,8 @@ const Payments = () => {
                               <i className="fa-solid fa-building text-yellow-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">Company</p>
-                              <p className="text-xs text-gray-400">20% of total</p>
+                              <p className="text-white font-medium">{t('company_generic')}</p>
+                              <p className="text-xs text-gray-400">{t('twenty_percent_of_total')}</p>
                            </div>
                         </div>
                         <div className="text-right">
@@ -580,13 +581,13 @@ const Payments = () => {
                               <i className="fa-solid fa-crown text-purple-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">Team Lead</p>
-                              <p className="text-xs text-gray-400">20% of Team Share (14%)</p>
+                              <p className="text-white font-medium">{t('team_lead')}</p>
+                              <p className="text-xs text-gray-400">{t('team_lead_share_desc')}</p>
                            </div>
                         </div>
                         <div className="text-right">
                            <p className="text-white font-bold">${(projectAmount * 0.14).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">Fixed management share</p>
+                           <p className="text-xs text-green-500">{t('fixed_management_share')}</p>
                         </div>
                      </div>
 
@@ -596,13 +597,13 @@ const Payments = () => {
                               <i className="fa-solid fa-microchip text-green-500"></i>
                            </div>
                            <div>
-                              <p className="text-white font-medium">Execution Pool</p>
-                              <p className="text-xs text-gray-400">80% of Team Share (56%)</p>
+                              <p className="text-white font-medium">{t('execution_pool')}</p>
+                              <p className="text-xs text-gray-400">{t('execution_pool_share_desc')}</p>
                            </div>
                         </div>
                         <div className="text-right">
                            <p className="text-white font-bold">${(projectAmount * 0.56).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">Distributed by task weights</p>
+                           <p className="text-xs text-green-500">{t('distributed_by_weights')}</p>
                         </div>
                      </div>
                   </div>
@@ -611,8 +612,8 @@ const Payments = () => {
 
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Distribution Chart</h3>
-                  <p className="text-sm text-gray-400">Visual breakdown</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('distribution_chart')}</h3>
+                  <p className="text-sm text-gray-400">{t('visual_breakdown')}</p>
                </div>
                <div className="w-full h-[350px]">
                   <Plot
@@ -629,15 +630,15 @@ const Payments = () => {
          <div id="pending-payments-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6 mb-8">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">All Payments</h3>
-                  <p className="text-sm text-gray-400">Manage all transactions</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('all_payments')}</h3>
+                  <p className="text-sm text-gray-400">{t('manage_all_transactions')}</p>
                </div>
                <div className="flex items-center space-x-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64">
                      <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
                      <input
                         type="text"
-                        placeholder="Search payments..."
+                        placeholder={t('search_payments_placeholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent"
@@ -648,10 +649,10 @@ const Payments = () => {
                      value={statusFilter}
                      onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                     <option>All Statuses</option>
-                     <option value="pending">Pending</option>
-                     <option value="confirmed">Confirmed</option>
-                     <option value="completed">Completed</option>
+                     <option value="all">{t('all_statuses')}</option>
+                     <option value="pending">{t('pending')}</option>
+                     <option value="confirmed">{t('confirmed')}</option>
+                     <option value="completed">{t('completed')}</option>
                   </select>
                </div>
             </div>
@@ -659,14 +660,14 @@ const Payments = () => {
                <table className="w-full min-w-[800px]">
                   <thead>
                      <tr className="border-b border-gray-800">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Date</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Description</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Client</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Amount</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">My Salary</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Method</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Status</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">Action</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('date_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('description_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('client_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('amount_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('my_salary_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('method_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('status_th')}</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase">{t('action_th')}</th>
                      </tr>
                   </thead>
                   <tbody>
@@ -678,7 +679,7 @@ const Payments = () => {
                                  <p className="text-xs text-gray-400">{new Date(payment.createdAt).toLocaleTimeString()}</p>
                               </td>
                               <td className="py-4 px-4">
-                                 <p className="text-sm text-white font-medium">{payment.description || 'No Description'}</p>
+                                 <p className="text-sm text-white font-medium">{payment.description || t('no_description')}</p>
                                  <p className="text-xs text-gray-400">ID: {payment._id.slice(-8)}</p>
                               </td>
                               <td className="py-4 px-4">
@@ -690,7 +691,7 @@ const Payments = () => {
                                        const clientId = String(clientRef || '');
 
                                        const clientData = usersList.find(u => String(u._id) === clientId);
-                                       const name = clientData?.name || (typeof payment.client === 'object' ? payment.client?.name : null) || (typeof payment.project?.createdBy === 'object' ? payment.project?.createdBy?.name : null) || 'Unknown';
+                                       const name = clientData?.name || (typeof payment.client === 'object' ? payment.client?.name : null) || (typeof payment.project?.createdBy === 'object' ? payment.project?.createdBy?.name : null) || t('unknown');
 
                                        return (
                                           <>
@@ -714,7 +715,7 @@ const Payments = () => {
                                        return (
                                           <div>
                                              <p className="text-sm text-green-400 font-bold">+${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                             <p className="text-[10px] text-gray-500">From tasks</p>
+                                             <p className="text-[10px] text-gray-500">{t('from_tasks')}</p>
                                           </div>
                                        );
                                     }
@@ -730,7 +731,7 @@ const Payments = () => {
                                           const newVal = e.target.value;
                                           try {
                                              await updatePayment(payment._id, { paymentMethod: newVal });
-                                             toast.success(`Method updated to ${newVal}`, {
+                                             toast.success(`${t('method_updated_to')} ${t(newVal)}`, {
                                                 position: 'top-right',
                                                 autoClose: 5000,
                                                 closeOnClick: false,
@@ -738,7 +739,7 @@ const Payments = () => {
                                                 theme: 'dark',
                                              });
                                           } catch (err) {
-                                             toast.error('Update failed', {
+                                             toast.error(t('update_failed'), {
                                                 position: 'top-right',
                                                 autoClose: 5000,
                                                 closeOnClick: false,
@@ -749,12 +750,12 @@ const Payments = () => {
                                        }}
                                        className="bg-dark-secondary text-gray-300 text-xs px-2 py-1 rounded border border-gray-700 focus:outline-none focus:border-dark-accent disabled:opacity-50"
                                     >
-                                       <option value="bank_transfer">Bank Transfer</option>
-                                       <option value="cash">Cash</option>
-                                       <option value="card">Card</option>
-                                       <option value="paypal">PayPal</option>
-                                       <option value="crypto">Crypto</option>
-                                       <option value="other">Other</option>
+                                       <option value="bank_transfer">{t('bank_transfer')}</option>
+                                       <option value="cash">{t('cash')}</option>
+                                       <option value="card">{t('card')}</option>
+                                       <option value="paypal">{t('paypal')}</option>
+                                       <option value="crypto">{t('crypto')}</option>
+                                       <option value="other">{t('other')}</option>
                                     </select>
                                  </div>
                               </td>
@@ -764,7 +765,8 @@ const Payments = () => {
                                        payment.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
                                           payment.status === 'confirmed' ? 'bg-blue-500 bg-opacity-20 text-blue-500' :
                                              'bg-gray-500 bg-opacity-20 text-gray-500'}`}>
-                                    {payment.status}
+                                    {payment.status === 'pending' ? t('pending') :
+                                       payment.status === 'confirmed' ? t('confirmed') : t('completed')}
                                  </span>
                               </td>
                               <td className="py-4 px-4">
@@ -774,23 +776,23 @@ const Payments = () => {
                                           onClick={() => handleConfirm(payment._id)}
                                           disabled={isSubmitting}
                                           className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white border border-green-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
-                                          title="Confirm Receipt"
+                                          title={t('confirm_receipt')}
                                        >
                                           <i className="fa-solid fa-check"></i>
-                                          Confirm
+                                          {t('confirm')}
                                        </button>
                                     ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
                                        <button
                                           onClick={() => handleComplete(payment._id)}
                                           disabled={isSubmitting}
                                           className="bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/20 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 disabled:opacity-50"
-                                          title="Mark as Paid to Team"
+                                          title={t('mark_as_paid_to_team')}
                                        >
                                           <i className="fa-solid fa-flag-checkered"></i>
-                                          Complete
+                                          {t('complete')}
                                        </button>
                                     ) : (
-                                       <span className="text-xs text-gray-500 italic px-2">No actions</span>
+                                       <span className="text-xs text-gray-500 italic px-2">{t('no_actions')}</span>
                                     )}
                                  </div>
                               </td>
@@ -798,7 +800,7 @@ const Payments = () => {
                         ))
                      ) : (
                         <tr>
-                           <td colSpan="8" className="text-center py-8 text-gray-500">No payments found</td>
+                           <td colSpan="8" className="text-center py-8 text-gray-500">{t('no_payments_found')}</td>
                         </tr>
                      )}
                   </tbody>
@@ -809,8 +811,8 @@ const Payments = () => {
          <div id="payment-history-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="col-span-1 lg:col-span-2 bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Recent Completed</h3>
-                  <p className="text-sm text-gray-400">Latest finished transactions</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('recent_completed')}</h3>
+                  <p className="text-sm text-gray-400">{t('latest_finished_transactions')}</p>
                </div>
                <div className="space-y-3">
                   {paymentsList.filter(p => p.status === 'completed').slice(0, 5).map(payment => (
@@ -820,18 +822,18 @@ const Payments = () => {
                               <i className="fa-solid fa-check text-green-500"></i>
                            </div>
                            <div>
-                              <p className="text-sm text-white font-medium">{payment.description || 'Payment'}</p>
-                              <p className="text-xs text-gray-400">Confirmed on {new Date(payment.updatedAt || payment.createdAt).toLocaleDateString()}</p>
+                              <p className="text-sm text-white font-medium">{payment.description || t('payment_title')}</p>
+                              <p className="text-xs text-gray-400">{t('confirmed_on')} {new Date(payment.updatedAt || payment.createdAt).toLocaleDateString()}</p>
                            </div>
                         </div>
                         <div className="text-right">
                            <p className="text-sm text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">Distributed</p>
+                           <p className="text-xs text-green-500">{t('distributed')}</p>
                         </div>
                      </div>
                   ))}
                   {paymentsList.filter(p => p.status === 'completed').length === 0 && (
-                     <p className="text-gray-500 text-center py-4">No completed payments yet.</p>
+                     <p className="text-gray-500 text-center py-4">{t('no_completed_payments_yet')}</p>
                   )}
                </div>
             </div>
@@ -839,16 +841,16 @@ const Payments = () => {
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="flex items-center justify-between mb-6">
                   <div>
-                     <h3 className="text-lg font-semibold text-white mb-1">Revenue Trends</h3>
-                     <p className="text-sm text-gray-400">Past performance</p>
+                     <h3 className="text-lg font-semibold text-white mb-1">{t('revenue_trends')}</h3>
+                     <p className="text-sm text-gray-400">{t('past_performance')}</p>
                   </div>
                   <select
                      value={timePeriod}
                      onChange={(e) => setTimePeriod(e.target.value)}
                      className="bg-dark-tertiary border border-gray-700 rounded px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-dark-accent"
                   >
-                     <option value="6m">Last 6 Months</option>
-                     <option value="1y">Last Year</option>
+                     <option value="6m">{t('last_6_months')}</option>
+                     <option value="1y">{t('last_year')}</option>
                   </select>
                </div>
                <div className="w-full h-[300px]">

@@ -29,7 +29,7 @@ const Tasks = () => {
    const { users: companyUsers, getUsersByCompany, getAllUsers } = useUserStore();
    const { companies, getCompanies } = useCompanyStore();
 
-   const [filter, setFilter] = useState(t('all_tasks'));
+   const [filter, setFilter] = useState('all');
    const [searchQuery, setSearchQuery] = useState('');
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -161,14 +161,8 @@ const Tasks = () => {
    const filteredTasks = useMemo(() => {
       let result = taskList;
 
-      if (filter !== t('all_tasks')) {
-         const statusMap = {
-            [t('todo')]: 'todo',
-            [t('in_progress')]: 'in_progress',
-            [t('review')]: 'review',
-            [t('completed')]: 'completed'
-         };
-         result = result.filter(t => t.status === statusMap[filter]);
+      if (filter !== 'all') {
+         result = result.filter(t => t.status === filter);
       }
 
       if (searchQuery) {
@@ -326,7 +320,7 @@ const Tasks = () => {
          <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[300px]">
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-dark-secondary pb-2 z-10">
                <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(title.toLowerCase().replace(' ', '_'))}</span>
+                  <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(status)}</span>
                </h3>
                <span className="text-sm text-gray-400 bg-dark-tertiary px-2 py-1 rounded">{columnTasks.length}</span>
             </div>
@@ -339,7 +333,7 @@ const Tasks = () => {
                            task.priority === 'high' ? 'bg-orange-500 text-white' :
                               task.priority === 'medium' ? 'bg-yellow-500 text-black' :
                                  'bg-blue-500 text-white'
-                           }`}>{task.priority}</span>
+                           }`}>{t(task.priority)}</span>
                      </div>
                      <p className="text-xs text-gray-400 mb-3 line-clamp-2">{task.description}</p>
 
@@ -378,10 +372,10 @@ const Tasks = () => {
                         {canManageTasks && (
                            <div className="flex border-t border-gray-700 pt-3 gap-3 justify-center">
                               <button onClick={() => handleOpenEdit(task)} className="text-blue-400 hover:text-blue-300 text-xs flex items-center space-x-1">
-                                 <i className="fa-solid fa-edit"></i><span>Edit</span>
+                                 <i className="fa-solid fa-edit"></i><span>{t('edit')}</span>
                               </button>
                               <button onClick={() => handleDeleteTask(task._id)} className="text-red-400 hover:text-red-300 text-xs flex items-center space-x-1">
-                                 <i className="fa-solid fa-trash"></i><span>Delete</span>
+                                 <i className="fa-solid fa-trash"></i><span>{t('delete')}</span>
                               </button>
                            </div>
                         )}
@@ -410,7 +404,7 @@ const Tasks = () => {
                <div className="flex items-center space-x-2 text-sm text-gray-400">
                   <span className="bg-dark-accent/20 text-dark-accent px-2 py-0.5 rounded capitalize">{role?.replace('_', ' ')}</span>
                   <span>•</span>
-                  <span>{taskList.length} tasks total</span>
+                  <span>{taskList.length} {t('tasks_total')}</span>
                </div>
             </div>
             <div className="flex items-center gap-3">
@@ -418,7 +412,7 @@ const Tasks = () => {
                   <i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
                   <input
                      type="text"
-                     placeholder="Search tasks..."
+                     placeholder={t('search_tasks_placeholder')}
                      className="bg-dark-secondary border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-64"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
@@ -426,7 +420,7 @@ const Tasks = () => {
                </div>
                {canManageTasks && (
                   <button onClick={handleOpenCreate} className="bg-dark-accent hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 shadow-lg shadow-dark-accent/10">
-                     <i className="fa-solid fa-plus"></i><span>New Task</span>
+                     <i className="fa-solid fa-plus"></i><span>{t('new_task')}</span>
                   </button>
                )}
             </div>
@@ -435,44 +429,44 @@ const Tasks = () => {
          {/* Stats */}
          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {[
-               { icon: 'fa-tasks', color: 'bg-blue-500', label: 'Total', value: stats.total, sub: 'All statuses' },
-               { icon: 'fa-spinner', color: 'bg-yellow-500', label: 'In Progress', value: stats.inProgress, sub: 'Active now' },
-               { icon: 'fa-check-circle', color: 'bg-green-500', label: 'Completed', value: stats.completed, sub: 'Successful' },
-               { icon: 'fa-calendar-xmark', color: 'bg-red-500', label: 'Overdue', value: stats.overdue, sub: 'Needs attention' },
-               { icon: 'fa-chart-line', color: 'bg-purple-500', label: 'Success Rate', value: stats.avgCompletion, sub: 'Efficiency' },
+               { icon: 'fa-tasks', color: 'bg-blue-500', label: 'total', value: stats.total, sub: 'all_statuses_stat' },
+               { icon: 'fa-spinner', color: 'bg-yellow-500', label: 'in_progress', value: stats.inProgress, sub: 'active_now' },
+               { icon: 'fa-check-circle', color: 'bg-green-500', label: 'completed', value: stats.completed, sub: 'successful' },
+               { icon: 'fa-calendar-xmark', color: 'bg-red-500', label: 'overdue', value: stats.overdue, sub: 'needs_attention' },
+               { icon: 'fa-chart-line', color: 'bg-purple-500', label: 'success_rate', value: stats.avgCompletion, sub: 'efficiency' },
             ].map((stat, i) => (
                <div key={i} className="bg-dark-secondary border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition group">
                   <div className="flex items-center gap-3 mb-2">
                      <div className={`w-8 h-8 ${stat.color} bg-opacity-20 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
                         <i className={`fa-solid ${stat.icon} ${stat.color.replace('bg-', 'text-')} text-sm`}></i>
                      </div>
-                     <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">{stat.label}</span>
+                     <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">{t(stat.label)}</span>
                   </div>
                   <div className="text-2xl font-bold text-white mb-0.5">{stat.value}</div>
-                  <div className="text-[10px] text-gray-500">{stat.sub}</div>
+                  <div className="text-[10px] text-gray-500">{t(stat.sub)}</div>
                </div>
             ))}
          </div>
 
          {/* Filter Tabs */}
          <div className="flex items-center gap-2 bg-dark-secondary p-1 rounded-xl w-fit border border-gray-800">
-            {['All Tasks', 'To Do', 'In Progress', 'Review', 'Completed'].map(f => (
+            {['all', 'todo', 'in_progress', 'review', 'completed'].map(f => (
                <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${filter === f ? 'bg-dark-accent text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-dark-tertiary'}`}
                >
-                  {f}
+                  {f === 'all' ? t('all_tasks') : t(f)}
                </button>
             ))}
          </div>
 
          {/* Kanban Board */}
          <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar">
-            {renderColumn('To Do', 'todo', 'bg-gray-500')}
-            {renderColumn('In Progress', 'in_progress', 'bg-yellow-500')}
-            {renderColumn('Review', 'review', 'bg-purple-500')}
-            {renderColumn('Completed', 'completed', 'bg-green-500')}
+            {renderColumn(t('todo'), 'todo', 'bg-gray-500')}
+            {renderColumn(t('in_progress'), 'in_progress', 'bg-yellow-500')}
+            {renderColumn(t('review'), 'review', 'bg-purple-500')}
+            {renderColumn(t('completed'), 'completed', 'bg-green-500')}
          </div>
 
          {/* Modal Overlay */}
@@ -481,7 +475,7 @@ const Tasks = () => {
                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
                <div className="bg-dark-secondary border border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl animate-modalEnter">
                   <header className="flex items-center justify-between mb-6">
-                     <h2 className="text-2xl font-bold text-white">{isEditModalOpen ? 'Edit Task' : 'Create New Task'}</h2>
+                     <h2 className="text-2xl font-bold text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
                      <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-white transition"><i className="fa-solid fa-times"></i></button>
                   </header>
 
@@ -537,7 +531,7 @@ const Tasks = () => {
                               value={formData.project}
                               onChange={(e) => setFormData({ ...formData, project: e.target.value, assignedTo: '' })}
                            >
-                              <option value="">Select Project</option>
+                              <option value="">{t('select_project')}</option>
                               {projectOptions.map(p => <option key={p._id || p.id} value={p._id || p.id}>{p.title}</option>)}
                            </select>
                         </div>
@@ -549,7 +543,7 @@ const Tasks = () => {
                               value={formData.assignedTo}
                               onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                            >
-                              <option value="">Select Member</option>
+                              <option value="">{t('select_member')}</option>
                               {userOptions.map(u => <option key={u._id || u.id} value={u._id || u.id}>{u.name} ({u.role})</option>)}
                            </select>
                         </div>
@@ -560,10 +554,10 @@ const Tasks = () => {
                               value={formData.priority}
                               onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                            >
-                              <option value="low">Low</option>
-                              <option value="medium">Medium</option>
-                              <option value="high">High</option>
-                              <option value="urgent">Urgent</option>
+                              <option value="low">{t('low')}</option>
+                              <option value="medium">{t('medium')}</option>
+                              <option value="high">{t('high')}</option>
+                              <option value="urgent">{t('urgent')}</option>
                            </select>
                         </div>
                         <div>
@@ -592,13 +586,13 @@ const Tasks = () => {
                            onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}
                            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition"
                         >
-                           Cancel
+                           {t('cancel')}
                         </button>
                         <button
                            type="submit"
                            className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20"
                         >
-                           {isEditModalOpen ? 'Update Task' : 'Create Task'}
+                           {isEditModalOpen ? t('update_task') : t('create_task')}
                         </button>
                      </div>
                   </form>
