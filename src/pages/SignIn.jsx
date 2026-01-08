@@ -57,7 +57,7 @@ const SignIn = () => {
          <div className="w-full max-w-md bg-white dark:bg-dark-secondary rounded-xl shadow-xl dark:shadow-none p-8 mx-4 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-8">
                <Link to="/" className="flex items-center space-x-3">
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h1>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
                </Link>
                <h3 className="text-gray-900 dark:text-white text-xl font-bold">Sign In</h3>
             </div>
