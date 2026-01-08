@@ -7,6 +7,8 @@ import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
 import PageLoader from '../components/loader/PageLoader';
 import { useTranslation } from 'react-i18next';
+import { useTaskStore } from '../store/task.store';
+import { useProjectStore } from '../store/project.store';
 
 const Profiles = () => {
    const { t } = useTranslation();
@@ -16,8 +18,10 @@ const Profiles = () => {
 
    const { users, isLoading: usersLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
    const { companies, selectedCompany, isLoading: companiesLoading, getCompanies, getCompanyById, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
+   const { tasks, getTasksByProjects, isLoading: tasksLoading } = useTaskStore();
+   const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading } = useProjectStore();
 
-   const isLoading = usersLoading || companiesLoading;
+   const isLoading = usersLoading || companiesLoading || tasksLoading || projectsLoading;
 
    const [activeTab, setActiveTab] = useState('members');
    const [filter, setFilter] = useState('All Members');
@@ -60,12 +64,16 @@ const Profiles = () => {
       const userCompanyId = String(userData.company?._id || userData.company?.id || userData.company || '');
 
       if (isSuperAdmin) {
-         getCompanies().then(camps => {
+         getCompanies().then(async camps => {
             const companyList = camps?.data?.companies || camps || [];
             if (companyList.length > 0) {
                const validIds = companyList.map(c => c._id).filter(Boolean);
                if (validIds.length > 0) {
                   getAllUsers(validIds);
+                  const projResult = await getAllProjects(validIds);
+                  const projectList = projResult?.data?.projects || projResult || [];
+                  const pIds = projectList.map(p => p._id || p.id).filter(Boolean);
+                  if (pIds.length > 0) getTasksByProjects(pIds);
                }
             }
          });
@@ -73,6 +81,11 @@ const Profiles = () => {
          // Non-super admins use getCompanyById because getCompanies might be restricted
          getCompanyById(userCompanyId);
          getUsersByCompany(userCompanyId);
+         getProjectsByCompany(userCompanyId).then(projResult => {
+            const projectList = projResult?.data?.projects || projResult || [];
+            const pIds = projectList.map(p => p._id || p.id).filter(Boolean);
+            if (pIds.length > 0) getTasksByProjects(pIds);
+         });
       }
    };
 
@@ -219,12 +232,35 @@ const Profiles = () => {
       showlegend: false
    };
 
-   const performanceData = [{
-      type: 'bar',
-      x: [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')],
-      y: [93, 95, 91, 92, 91],
-      marker: { color: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] }
-   }];
+   const performanceData = useMemo(() => {
+      const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
+      const allUsers = rawUserList;
+
+      const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
+      const labels = [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')];
+
+      const values = roles.map(role => {
+         const roleUsers = allUsers.filter(u => u.role === role);
+         const roleUserIds = new Set(roleUsers.map(u => String(u._id || u.id)));
+
+         const roleTasks = allTasks.filter(task => {
+            const assigneeId = String(task.assignedTo?._id || task.assignedTo || '');
+            return roleUserIds.has(assigneeId);
+         });
+
+         if (roleTasks.length === 0) return 0;
+         const completed = roleTasks.filter(t => t.status === 'completed').length;
+         return Math.round((completed / roleTasks.length) * 100);
+      });
+
+      return [{
+         type: 'bar',
+         x: labels,
+         y: values,
+         marker: { color: ['#10B981', '#06B6D4', '#8B5CF6', '#3B82F6', '#F59E0B'] },
+         hovertemplate: `%{x}: %{y}% ${t('success_rate')}<extra></extra>`
+      }];
+   }, [tasks, rawUserList, t]);
 
    const performanceLayout = {
       autosize: true,
