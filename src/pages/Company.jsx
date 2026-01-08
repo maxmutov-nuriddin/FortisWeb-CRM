@@ -34,18 +34,18 @@ const Company = () => {
    // Local state for rates editing in modal
    const [isRatesEditing, setIsRatesEditing] = useState(false);
    const [ratesData, setRatesData] = useState({
-      adminRate: 10,
-      teamRate: 70,
-      companyRate: 20
+      customAdminRate: 10,
+      customTeamRate: 70,
+      customCommissionRate: 20
    });
 
    useEffect(() => {
       if (isModalOpen && selectedCompany?._id) {
          getUsersByCompany(selectedCompany._id);
          setRatesData({
-            adminRate: selectedCompany.distributionRates?.adminRate || 10,
-            teamRate: selectedCompany.distributionRates?.teamRate || 70,
-            companyRate: selectedCompany.distributionRates?.companyRate || 20
+            customAdminRate: selectedCompany.distributionRates?.customAdminRate || selectedCompany.distributionRates?.adminRate || 10,
+            customTeamRate: selectedCompany.distributionRates?.customTeamRate || selectedCompany.distributionRates?.teamRate || 70,
+            customCommissionRate: selectedCompany.distributionRates?.customCommissionRate || selectedCompany.distributionRates?.companyRate || 20
          });
          setIsRatesEditing(false);
       }
@@ -297,6 +297,12 @@ const Company = () => {
    };
 
    const handleSaveRates = async () => {
+      const total = ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate;
+      if (total !== 100) {
+         toast.error(`The sum of percentages must be 100. Current total: ${total}%`);
+         return;
+      }
+
       try {
          await updateDistributionRates(selectedCompany._id, ratesData);
          toast.success('Distribution rates updated');
@@ -623,15 +629,15 @@ const Company = () => {
                                     <div className="grid grid-cols-3 gap-2 text-center">
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Admin</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.adminRate || 10}%</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customAdminRate || selectedCompany.distributionRates?.adminRate || 10}%</span>
                                        </div>
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Team</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.teamRate || 70}%</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customTeamRate || selectedCompany.distributionRates?.teamRate || 70}%</span>
                                        </div>
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Company</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.companyRate || 20}%</span>
+                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customCommissionRate || selectedCompany.distributionRates?.companyRate || 20}%</span>
                                        </div>
                                     </div>
                                  ) : (
@@ -640,8 +646,8 @@ const Company = () => {
                                           <label className="text-xs text-gray-400">Admin %</label>
                                           <input
                                              type="number"
-                                             value={ratesData.adminRate}
-                                             onChange={e => setRatesData({ ...ratesData, adminRate: Number(e.target.value) })}
+                                             value={ratesData.customAdminRate}
+                                             onChange={e => setRatesData({ ...ratesData, customAdminRate: Number(e.target.value) })}
                                              className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
                                           />
                                        </div>
@@ -649,8 +655,8 @@ const Company = () => {
                                           <label className="text-xs text-gray-400">Team %</label>
                                           <input
                                              type="number"
-                                             value={ratesData.teamRate}
-                                             onChange={e => setRatesData({ ...ratesData, teamRate: Number(e.target.value) })}
+                                             value={ratesData.customTeamRate}
+                                             onChange={e => setRatesData({ ...ratesData, customTeamRate: Number(e.target.value) })}
                                              className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
                                           />
                                        </div>
@@ -658,13 +664,13 @@ const Company = () => {
                                           <label className="text-xs text-gray-400">Company %</label>
                                           <input
                                              type="number"
-                                             value={ratesData.companyRate}
-                                             onChange={e => setRatesData({ ...ratesData, companyRate: Number(e.target.value) })}
+                                             value={ratesData.customCommissionRate}
+                                             onChange={e => setRatesData({ ...ratesData, customCommissionRate: Number(e.target.value) })}
                                              className="w-16 bg-gray-900 border border-gray-600 rounded px-1 py-0.5 text-xs text-right text-white"
                                           />
                                        </div>
-                                       <div className="text-[10px] text-gray-500 text-right">
-                                          Total: {ratesData.adminRate + ratesData.teamRate + ratesData.companyRate}%
+                                       <div className={`text-[10px] text-right ${ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate === 100 ? 'text-green-500' : 'text-red-500'}`}>
+                                          Total: {ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate}% (Must be 100)
                                        </div>
                                     </div>
                                  )}
