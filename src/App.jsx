@@ -21,6 +21,9 @@ import PageLoader from './components/loader/PageLoader';
 import Company from './pages/Company';
 import Chat from './pages/Chat';
 import ProtectedRoute from './components/ProtectedRoute';
+import './i18n';
+import { useSettingsStore } from './store/settings.store';
+import i18n from 'i18next';
 
 const Placeholder = ({ title }) => (
   <div className="p-8">
@@ -32,6 +35,22 @@ const Placeholder = ({ title }) => (
 function App() {
   const { user, isAuthenticated, isLoading: authLoading, error: authError, getMe } = useAuthStore();
   const { updateUserStatus } = useUserStore();
+  const { language, theme } = useSettingsStore();
+
+  // Handle Theme and Language Change
+  useEffect(() => {
+    // Apply theme
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    // Apply language
+    i18n.changeLanguage(language);
+  }, [language]);
 
   // ===================== AUTH =====================
   useEffect(() => {

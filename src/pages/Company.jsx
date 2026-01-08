@@ -5,9 +5,11 @@ import PageLoader from '../components/loader/PageLoader';
 import { useAuthStore } from '../store/auth.store';
 import { useUserStore } from '../store/user.store';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const Company = () => {
-   const [statusFilter, setStatusFilter] = useState('All Statuses');
+   const { t } = useTranslation();
+   const [statusFilter, setStatusFilter] = useState(t('all_statuses'));
    const [searchQuery, setSearchQuery] = useState('');
    const [selectedCompany, setSelectedCompany] = useState(null);
    const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,7 +122,7 @@ const Company = () => {
    const filteredCompaniesMemo = useMemo(() => {
       let result = [...companiesList];
 
-      if (statusFilter !== 'All Statuses') {
+      if (statusFilter !== t('all_statuses')) {
          result = result.filter(company => {
             if (statusFilter === 'Active') return company.isActive === true;
             if (statusFilter === 'Inactive') return company.isActive === false;
@@ -329,14 +331,14 @@ const Company = () => {
                   <div className="flex items-center space-x-3">
                      <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
                         <i className="fa-solid fa-filter"></i>
-                        <span>Filters</span>
+                        <span>{t('filters')}</span>
                      </button>
                      <button
                         onClick={openCreateModal}
                         className="bg-dark-accent hover:bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-3 shadow-lg shadow-red-900/20"
                      >
                         <i className="fa-solid fa-plus text-xs"></i>
-                        <span>Register Company</span>
+                        <span>{t('register_company')}</span>
                      </button>
                   </div>
                )}
@@ -414,10 +416,10 @@ const Company = () => {
                <button
                   className="text-dark-accent hover:text-red-600 text-sm font-medium transition self-start lg:self-center whitespace-nowrap"
                   onClick={() => {
-                     setStatusFilter('All Statuses');
+                     setStatusFilter(t('all_statuses'));
                      setSearchQuery('');
                   }}
-               >Clear Filters</button>
+               >{t('clear_filters')}</button>
             </div>
          </div>
 
@@ -426,13 +428,13 @@ const Company = () => {
                <table className="w-full">
                   <thead className="bg-dark-tertiary">
                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Company ID</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Address</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Created Date</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('company_id_th')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('name_th')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('email_address')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('main_address')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('created_date_th')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('actions')}</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800">
@@ -596,8 +598,8 @@ const Company = () => {
                               <div>
                                  <span className="text-xs text-gray-500 block">Subscription Tier</span>
                                  <span className={`px-2 py-0.5 rounded text-xs font-medium uppercase border ${selectedCompany.subscriptionType === 'enterprise' ? 'border-purple-500 text-purple-400' :
-                                       selectedCompany.subscriptionType === 'premium' ? 'border-yellow-500 text-yellow-400' :
-                                          'border-gray-500 text-gray-400'
+                                    selectedCompany.subscriptionType === 'premium' ? 'border-yellow-500 text-yellow-400' :
+                                       'border-gray-500 text-gray-400'
                                     }`}>
                                     {selectedCompany.subscriptionType || 'Standard'}
                                  </span>

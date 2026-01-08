@@ -7,9 +7,11 @@ import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/user.store';
 import { useChatStore } from '../store/chat.store';
 import { useProjectStore } from '../store/project.store';
+import { useTranslation } from 'react-i18next';
 
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
+   const { t } = useTranslation();
    const navigate = useNavigate()
    const location = useLocation();
 
@@ -65,7 +67,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          ({ closeToast }) => (
             <div className="text-sm">
                <p className="mb-3 text-white">
-                  Are you sure you want to log out?
+                  {t('logout_confirm')}
                </p>
 
                <div className="flex justify-end gap-2">
@@ -73,7 +75,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      onClick={closeToast}
                      className="px-3 py-1 rounded bg-gray-600 text-white text-xs"
                   >
-                     Cancel
+                     {t('cancel')}
                   </button>
 
                   <button
@@ -92,7 +94,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      }}
                      className="px-3 py-1 rounded bg-red-600 text-white text-xs"
                   >
-                     Log out
+                     {t('logout')}
                   </button>
                </div>
             </div>
@@ -139,47 +141,47 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                <div className="space-y-1">
                   <Link to="/" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/')}`}>
                      <i className="fa-solid fa-chart-line w-5"></i>
-                     <span className="font-medium">Dashboard</span>
+                     <span className="font-medium">{t('dashboard')}</span>
                   </Link>
                   {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
                      <Link to="/company" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/company')}`}>
                         <i className="fa-solid fa-building w-5"></i>
-                        <span className="font-medium">Company</span>
+                        <span className="font-medium">{t('company')}</span>
                      </Link>
                   )}
                   <Link to="/orders" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/orders')}`}>
                      <i className="fa-brands fa-telegram w-5"></i>
-                     <span className="font-medium">Orders</span>
+                     <span className="font-medium">{t('orders')}</span>
                      {newOrdersCount > 0 && (
                         <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">{newOrdersCount}</span>
                      )}
                   </Link>
                   <Link to="/profiles" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/profiles')}`}>
                      <i className="fa-solid fa-users w-5"></i>
-                     <span className="font-medium">Profiles</span>
+                     <span className="font-medium">{t('profiles')}</span>
                   </Link>
                   <Link to="/tasks" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/tasks')}`}>
                      <i className="fa-solid fa-tasks w-5"></i>
-                     <span className="font-medium">Tasks</span>
+                     <span className="font-medium">{t('tasks')}</span>
                   </Link>
                   <Link to="/team-chats" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/team')}`}>
                      <i className="fa-solid fa-comments w-5"></i>
-                     <span className="font-medium">Team Chats</span>
+                     <span className="font-medium">{t('team_chats')}</span>
                      {newChatsCount > 0 && (
                         <span className="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full">{newChatsCount}</span>
                      )}
                   </Link>
                   <Link to="/payments" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/payments')}`}>
                      <i className="fa-solid fa-credit-card w-5"></i>
-                     <span className="font-medium">Payments</span>
+                     <span className="font-medium">{t('payments')}</span>
                   </Link>
                   <Link to="/projects" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/projects')}`}>
                      <i className="fa-solid fa-folder-open w-5"></i>
-                     <span className="font-medium">Projects</span>
+                     <span className="font-medium">{t('projects')}</span>
                   </Link>
                   <Link to="/settings" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/settings')}`}>
                      <i className="fa-solid fa-cog w-5"></i>
-                     <span className="font-medium">Settings</span>
+                     <span className="font-medium">{t('settings')}</span>
                   </Link>
                </div>
 
@@ -187,15 +189,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   <div className="bg-dark-tertiary rounded-lg p-4 border border-gray-700">
                      <div className="flex items-center space-x-2 mb-2">
                         <i className="fa-solid fa-bolt text-dark-accent"></i>
-                        <span className="text-sm font-semibold text-white">Quick Stats</span>
+                        <span className="text-sm font-semibold text-white">{t('quick_stats')}</span>
                      </div>
                      <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
-                           <span className="text-gray-400">Active Projects</span>
+                           <span className="text-gray-400">{t('active_projects')}</span>
                            <span className="text-white font-semibold">24</span>
                         </div>
                         <div className="flex justify-between">
-                           <span className="text-gray-400">Team Members</span>
+                           <span className="text-gray-400">{t('team_members')}</span>
                            <span className="text-white font-semibold">18</span>
                         </div>
                      </div>

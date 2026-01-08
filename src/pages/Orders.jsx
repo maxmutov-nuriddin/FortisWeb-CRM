@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import Plot from 'react-plotly.js';
+import { useTranslation } from 'react-i18next';
 import { useCompanyStore } from '../store/company.store';
 import { useProjectStore } from '../store/project.store';
 import { usePaymentStore } from '../store/payment.store';
@@ -12,6 +13,7 @@ import PageLoader from '../components/loader/PageLoader';
 import { useUserStore } from '../store/user.store';
 
 const Orders = () => {
+   const { t } = useTranslation();
    const [statusFilter, setStatusFilter] = useState('All Statuses');
    const [dateFilter, setDateFilter] = useState('All Time');
    const [amountFilter, setAmountFilter] = useState('All Amounts');
@@ -776,8 +778,8 @@ const Orders = () => {
          <div id="orders-header-section">
             <div className="flex items-center justify-between">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Orders Management</h1>
-                  <p className="text-gray-400">Manage all orders received from @fortisweb_bot and manual entries</p>
+                  <h1 className="text-3xl font-bold text-white mb-2">{t('orders_management')}</h1>
+                  <p className="text-gray-400">{t('orders_desc')}</p>
                </div>
                <div className="flex items-center space-x-3">
                   <button className="bg-dark-tertiary hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-700">
@@ -808,7 +810,7 @@ const Orders = () => {
                      <i className="fa-solid fa-clock text-yellow-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Pending</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('pending')}</h3>
                <p className="text-2xl font-bold text-white">{pendingOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -817,7 +819,7 @@ const Orders = () => {
                      <i className="fa-solid fa-user-check text-blue-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Completed & Paid</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('completed_paid')}</h3>
                <p className="text-2xl font-bold text-white">{assignedOrders.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -826,7 +828,7 @@ const Orders = () => {
                      <i className="fa-solid fa-spinner text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">In Progress</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('in_progress')}</h3>
                <p className="text-2xl font-bold text-white">{inProgressOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -835,7 +837,7 @@ const Orders = () => {
                      <i className="fa-solid fa-check-circle text-green-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Completed</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('completed')}</h3>
                <p className="text-2xl font-bold text-white">{completedOrders?.length || 0}</p>
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 hover:border-dark-accent transition">
@@ -844,7 +846,7 @@ const Orders = () => {
                      <i className="fa-solid fa-times-circle text-red-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-400 text-xs mb-1">Cancelled</h3>
+               <h3 className="text-gray-400 text-xs mb-1">{t('cancelled')}</h3>
                <p className="text-2xl font-bold text-white">{cancelledOrders?.length || 0}</p>
             </div>
          </div>
@@ -853,11 +855,11 @@ const Orders = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-wrap w-full">
                   <div className="w-full sm:w-auto flex-grow max-w-md">
-                     <label className="text-xs text-gray-400 mb-1 block">Search</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('search_label')}</label>
                      <div className="relative">
                         <input
                            type="text"
-                           placeholder="Search by ID, Client, or Title..."
+                           placeholder={t('search_orders_placeholder')}
                            className="bg-dark-tertiary border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
                            value={searchQuery}
                            onChange={(e) => setSearchQuery(e.target.value)}
@@ -866,30 +868,30 @@ const Orders = () => {
                      </div>
                   </div>
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">Status</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('status')}</label>
                      <select
                         className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                      >
-                        <option>All Statuses</option>
-                        <option>Pending</option>
-                        <option>In Progress</option>
-                        <option>Review</option>
-                        <option>Revision</option>
-                        <option>Completed</option>
-                        <option>Cancelled</option>
+                        <option>{t('all_statuses')}</option>
+                        <option>{t('pending')}</option>
+                        <option>{t('in_progress')}</option>
+                        <option>{t('review')}</option>
+                        <option>{t('revision')}</option>
+                        <option>{t('completed')}</option>
+                        <option>{t('cancelled')}</option>
                      </select>
                   </div>
                   {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
                      <div className="flex-1 min-w-[200px]">
-                        <label className="text-xs text-gray-400 mb-1 block">Filter by Company</label>
+                        <label className="text-xs text-gray-400 mb-1 block">{t('filter_by_company')}</label>
                         <select
                            className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full"
                            value={viewCompanyId}
                            onChange={(e) => setViewCompanyId(e.target.value)}
                         >
-                           <option value="all">All Companies</option>
+                           <option value="all">{t('all_companies')}</option>
                            {allCompanies.map(company => (
                               <option key={company._id} value={company._id}>
                                  {company.name}
@@ -899,26 +901,26 @@ const Orders = () => {
                      </div>
                   )}
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">Date Range</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('date_range')}</label>
                      <select
                         className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={dateFilter}
                         onChange={(e) => setDateFilter(e.target.value)}
                      >
-                        <option>All Time</option>
-                        <option>Last 7 Days</option>
-                        <option>Last 30 Days</option>
-                        <option>Last 3 Months</option>
+                        <option>{t('all_time')}</option>
+                        <option>{t('last_7_days')}</option>
+                        <option>{t('last_30_days')}</option>
+                        <option>{t('last_3_months')}</option>
                      </select>
                   </div>
                   <div>
-                     <label className="text-xs text-gray-400 mb-1 block">Amount Range</label>
+                     <label className="text-xs text-gray-400 mb-1 block">{t('amount_range')}</label>
                      <select
                         className="bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-dark-accent w-full sm:w-auto"
                         value={amountFilter}
                         onChange={(e) => setAmountFilter(e.target.value)}
                      >
-                        <option>All Amounts</option>
+                        <option>{t('all_amounts')}</option>
                         <option>$0 - $1,000</option>
                         <option>$1,000 - $5,000</option>
                         <option>$5,000 - $10,000</option>
@@ -934,7 +936,7 @@ const Orders = () => {
                      setAmountFilter('All Amounts');
                      setSearchQuery('');
                   }}
-               >Clear Filters</button>
+               >{t('clear_filters')}</button>
             </div>
          </div>
 
@@ -943,15 +945,15 @@ const Orders = () => {
                <table className="w-full">
                   <thead className="bg-dark-tertiary">
                      <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Order ID</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Date & Time</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Client</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Source</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Payment</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('order_id')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('date_time')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('client')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('description')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('amount')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('source')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('status')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('payment')}</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('actions')}</th>
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-800 relative">
@@ -1074,14 +1076,14 @@ const Orders = () => {
                                        onClick={(e) => handleViewDetails(e, order)}
                                        className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
-                                       View
+                                       {t('view')}
                                     </button>
                                     {(isSuperAdmin || isCompanyAdmin) && (
                                        <button
                                           onClick={(e) => handleEditOrder(e, order)}
                                           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                        >
-                                          Edit
+                                          {t('edit')}
                                        </button>
                                     )}
                                     {(isSuperAdmin || isCompanyAdmin) && (
@@ -1089,7 +1091,7 @@ const Orders = () => {
                                           onClick={(e) => handleDeleteOrder(e, order._id)}
                                           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                        >
-                                          Delete
+                                          {t('delete')}
                                        </button>)
                                     }
                                  </div>
@@ -1100,7 +1102,7 @@ const Orders = () => {
                         <tr>
                            <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                               <i className="fa-solid fa-folder-open text-4xl mb-3 opacity-50"></i>
-                              <p>No orders found matching your filters</p>
+                              <p>{t('no_orders_found')}</p>
                            </td>
                         </tr>
                      )}
@@ -1112,8 +1114,8 @@ const Orders = () => {
          <div id="orders-chart-section" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Orders by Status</h3>
-                  <p className="text-sm text-gray-400">Distribution of order statuses</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('orders_by_status')}</h3>
+                  <p className="text-sm text-gray-400">{t('status_dist_desc')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -1127,8 +1129,8 @@ const Orders = () => {
             </div>
             <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-white mb-1">Monthly Orders Trend</h3>
-                  <p className="text-sm text-gray-400">Order volume over time</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('monthly_orders_trend')}</h3>
+                  <p className="text-sm text-gray-400">{t('order_vol_desc')}</p>
                </div>
                <div className="w-full h-[300px]">
                   <Plot
@@ -1145,12 +1147,12 @@ const Orders = () => {
          <div id="telegram-integration-section" className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
             <div className="flex items-center justify-between mb-6">
                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Telegram Bot Integration</h3>
-                  <p className="text-sm text-gray-400">Connect with @fortisweb_bot for automatic order intake</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">{t('telegram_bot_integration')}</h3>
+                  <p className="text-sm text-gray-400">{t('bot_connect_desc')}</p>
                </div>
                <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-500 text-sm font-medium">Connected</span>
+                  <span className="text-green-500 text-sm font-medium">{t('connected')}</span>
                </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -1160,11 +1162,11 @@ const Orders = () => {
                         <i className="fa-brands fa-telegram text-blue-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 className="text-white font-medium">Bot Status</h4>
+                        <h4 className="text-white font-medium">{t('bot_status')}</h4>
                      </div>
                   </div>
-                  <p className="text-2xl font-bold text-white mb-1">Active</p>
-                  <p className="text-xs text-gray-500">Last sync: 2 min ago</p>
+                  <p className="text-2xl font-bold text-white mb-1">{t('active')}</p>
+                  <p className="text-xs text-gray-500">{t('last_sync')}: 2 min ago</p>
                </div>
                <div className="bg-dark-tertiary rounded-lg p-5">
                   <div className="flex items-center space-x-3 mb-3">
@@ -1172,11 +1174,11 @@ const Orders = () => {
                         <i className="fa-solid fa-inbox text-purple-500 text-xl"></i>
                      </div>
                      <div>
-                        <h4 className="text-white font-medium">Messages</h4>
+                        <h4 className="text-white font-medium">{t('messages')}</h4>
                      </div>
                   </div>
                   <p className="text-2xl font-bold text-white mb-1">1,247</p>
-                  <p className="text-xs text-gray-500">Total received</p>
+                  <p className="text-xs text-gray-500">{t('total_received')}</p>
                </div>
             </div>
          </div>
@@ -1186,7 +1188,7 @@ const Orders = () => {
                <div className="bg-dark-secondary border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-dark-tertiary">
                      <h2 className="text-xl font-bold text-white">
-                        {isCreateMode ? 'Create New Order' : isEditMode ? 'Edit Order' : 'Order Details'}
+                        {isCreateMode ? t('create_new_order') : isEditMode ? t('edit_order') : t('order_details')}
                      </h2>
                      <button onClick={closeModal} className="text-gray-400 hover:text-white transition">
                         <i className="fa-solid fa-times text-xl"></i>
@@ -1208,7 +1210,7 @@ const Orders = () => {
                                     className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent"
                                     required
                                  >
-                                    <option value="">Select a company ({allCompanies.length} available)</option>
+                                    <option value="">{t('select_company_placeholder')} ({allCompanies.length} available)</option>
                                     {allCompanies.map((company) => (
                                        <option key={company._id} value={company._id}>
                                           {company.name || company.title || `Company ${company._id}`}
@@ -1236,26 +1238,26 @@ const Orders = () => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Project Title <span className="text-red-500">*</span></label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('project_title')} <span className="text-red-500">*</span></label>
                                  <input
                                     type="text"
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
                                     className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="e.g., Website Redesign"
+                                    placeholder={t('website_redesign_placeholder')}
                                     required
                                  />
                               </div>
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Budget <span className="text-red-500">*</span></label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('budget')} <span className="text-red-500">*</span></label>
                                  <input
                                     type="number"
                                     name="budget"
                                     value={formData.budget}
                                     onChange={handleInputChange}
                                     className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                    placeholder="e.g., 1500"
+                                    placeholder={t('budget_placeholder')}
                                     required
                                  />
                               </div>
@@ -1263,7 +1265,7 @@ const Orders = () => {
 
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Deadline <span className="text-red-500">*</span></label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('deadline')} <span className="text-red-500">*</span></label>
                                  <input
                                     type="date"
                                     name="deadline"
@@ -1274,36 +1276,36 @@ const Orders = () => {
                                  />
                               </div>
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Priority</label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('priority')}</label>
                                  <select
                                     name="priority"
                                     value={formData.priority}
                                     onChange={handleInputChange}
                                     className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
                                  >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
+                                    <option value="low">{t('low')}</option>
+                                    <option value="medium">{t('medium')}</option>
+                                    <option value="high">{t('high')}</option>
+                                    <option value="urgent">{t('urgent')}</option>
                                  </select>
                               </div>
                            </div>
 
                            <div>
-                              <label className="text-sm font-medium text-gray-300 block mb-2">Description</label>
+                              <label className="text-sm font-medium text-gray-300 block mb-2">{t('description')}</label>
                               <textarea
                                  name="description"
                                  value={formData.description}
                                  onChange={handleInputChange}
                                  rows="3"
                                  className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                 placeholder="Project details..."
+                                 placeholder={t('project_details_placeholder')}
                               ></textarea>
                            </div>
 
                            <div>
                               <label className="text-sm font-medium text-gray-300 block mb-2">
-                                 Status
+                                 {t('status')}
                               </label>
                               <select
                                  name="status"
@@ -1321,21 +1323,21 @@ const Orders = () => {
                            </div>
 
                            <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Client Information</h3>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{t('client_information')}</h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Name</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_name')}</label>
                                     <input
                                        type="text"
                                        name="clientName"
                                        value={formData.clientName}
                                        onChange={handleInputChange}
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
-                                       placeholder="Full Name"
+                                       placeholder={t('full_name')}
                                     />
                                  </div>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Username</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_username')}</label>
                                     <input
                                        type="text"
                                        name="clientUsername"
@@ -1348,7 +1350,7 @@ const Orders = () => {
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Email</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_email')}</label>
                                     <input
                                        type="email"
                                        name="clientEmail"
@@ -1359,7 +1361,7 @@ const Orders = () => {
                                     />
                                  </div>
                                  <div>
-                                    <label className="text-sm font-medium text-gray-300 block mb-2">Client Phone</label>
+                                    <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_phone')}</label>
                                     <input
                                        type="text"
                                        name="clientPhone"
@@ -1371,7 +1373,7 @@ const Orders = () => {
                                  </div>
                               </div>
                               <div className="mt-4">
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Client Company</label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_company')}</label>
                                  <input
                                     type="text"
                                     name="clientCompany"
@@ -1384,9 +1386,9 @@ const Orders = () => {
                            </div>
 
                            <div className="border-t border-gray-800 pt-4">
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assignment</h3>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{t('assignment')}</h3>
                               <div>
-                                 <label className="text-sm font-medium text-gray-300 block mb-2">Team Lead</label>
+                                 <label className="text-sm font-medium text-gray-300 block mb-2">{t('team_lead')}</label>
                                  <select
                                     name="teamLead"
                                     value={formData.teamLead}
@@ -1456,14 +1458,14 @@ const Orders = () => {
                                  onClick={closeModal}
                                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition"
                               >
-                                 Cancel
+                                 {t('cancel')}
                               </button>
                               <button
                                  type="submit"
                                  disabled={isSubmitting}
                                  className={`bg-dark-accent hover:bg-red-600 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                               >
-                                 {isSubmitting ? 'Processing...' : (isCreateMode ? 'Create Order' : 'Save Changes')}
+                                 {isSubmitting ? t('processing') : (isCreateMode ? t('create_order') : t('save_changes'))}
                               </button>
                            </div>
                         </form>
@@ -1471,17 +1473,17 @@ const Orders = () => {
                         <div className="space-y-6">
                            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
                               <i className="fa-solid fa-circle-info mr-2 text-dark-accent"></i>
-                              Order Details
+                              {t('order_details')}
                            </h3>
                            <div className="flex flex-col sm:flex-row justify-between gap-4">
                               <div>
-                                 <span className="text-xs text-gray-500 block mb-1">Order ID</span>
+                                 <span className="text-xs text-gray-500 block mb-1">{t('order_id')}</span>
                                  <span className="text-white font-mono bg-dark-tertiary px-2 py-1 rounded text-sm">
                                     #{selectedOrder._id}
                                  </span>
                               </div>
                               <div>
-                                 <span className="text-xs text-gray-500 block mb-1">Status</span>
+                                 <span className="text-xs text-gray-500 block mb-1">{t('status')}</span>
                                  <span className={`px-3 py-1 bg-opacity-20 rounded-full text-xs font-medium inline-block
                                  ${selectedOrder.status === 'pending' ? 'text-yellow-500 bg-yellow-500' :
                                        selectedOrder.status === 'completed' ? 'text-green-500 bg-green-500' :
@@ -1492,7 +1494,7 @@ const Orders = () => {
                            </div>
 
                            <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Company Information</h3>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('company_information')}</h3>
                               <div className="bg-dark-tertiary rounded-lg p-4">
                                  <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-indigo-500 bg-opacity-20 rounded-lg flex items-center justify-center">
@@ -1500,35 +1502,35 @@ const Orders = () => {
                                     </div>
                                     <div>
                                        <p className="text-white font-medium">
-                                          {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || 'Manual Entry / Unknown'}
+                                          {allCompanies.find(c => c._id === (selectedOrder.company?._id || selectedOrder.company))?.name || t('manual_entry_unknown')}
                                        </p>
-                                       <p className="text-xs text-gray-500 italic">Project source entity</p>
+                                       <p className="text-xs text-gray-500 italic">{t('project_source_entity')}</p>
                                     </div>
                                  </div>
                               </div>
                            </div>
 
                            <div>
-                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Project Info</h3>
+                              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{t('project_info')}</h3>
                               <div className="bg-dark-tertiary rounded-lg p-4 space-y-3">
                                  <div>
-                                    <span className="text-xs text-gray-500 block">Title</span>
-                                    <p className="text-white font-medium">{selectedOrder.title || 'No Title'}</p>
+                                    <span className="text-xs text-gray-500 block">{t('project_title')}</span>
+                                    <p className="text-white font-medium">{selectedOrder.title || t('no_title')}</p>
                                  </div>
                                  <div>
-                                    <span className="text-xs text-gray-500 block">Description</span>
-                                    <p className="text-gray-300 text-sm">{selectedOrder.description || 'No Description'}</p>
+                                    <span className="text-xs text-gray-500 block">{t('description')}</span>
+                                    <p className="text-gray-300 text-sm">{selectedOrder.description || t('no_description')}</p>
                                  </div>
                                  <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                       <span className="text-xs text-gray-500 block">Budget/Amount</span>
+                                       <span className="text-xs text-gray-500 block">{t('budget_amount')}</span>
                                        <p className="text-white font-semibold">${(selectedOrder.budget || 0).toLocaleString()}</p>
                                        <div className="mt-4">
-                                          <span className="text-xs text-gray-500 block">Date Created</span>
+                                          <span className="text-xs text-gray-500 block">{t('date_created')}</span>
                                           <p className="text-white text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
                                        </div>
                                        <div className="mt-4">
-                                          <span className="text-xs text-gray-500 block">Source</span>
+                                          <span className="text-xs text-gray-500 block">{t('source')}</span>
                                           <p className="text-white text-sm capitalize">{selectedOrder.source || 'Manual'}</p>
                                        </div>
                                     </div>

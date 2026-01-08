@@ -10,8 +10,10 @@ import { isOnline, isToday, isYesterday } from '../utils/date';
 import { useUserStore } from '../store/user.store';
 import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
+   const { t } = useTranslation();
    //! DATA
    const { user, isLoading: authLoading, error: authError } = useAuthStore();
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
@@ -631,8 +633,8 @@ const Dashboard = () => {
          )}
          <div className="p-8 space-y-8">
             <div id="dashboard-header-section">
-               <h1 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h1>
-               <p className="text-gray-400">Welcome back! Here's what's happening with your projects today.</p>
+               <h1 className="text-3xl font-bold text-white mb-2">{t('dashboard_overview')}</h1>
+               <p className="text-gray-400">{t('welcome_back_desc')}</p>
             </div>
 
             <div id="stats-cards-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -641,13 +643,13 @@ const Dashboard = () => {
                      <div className="w-12 h-12 bg-dark-accent bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-brands fa-telegram text-dark-accent text-2xl"></i>
                      </div>
-                     <span className="text-green-500 text-sm font-medium">+{todayProjects.length ?? 0} New</span>
+                     <span className="text-green-500 text-sm font-medium">+{todayProjects.length ?? 0} {t('new')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">New Orders</h3>
+                  <h3 className="text-gray-400 text-sm mb-1">{t('new_orders')}</h3>
                   <p className="text-3xl font-bold text-white">
                      {newOrder ?? 0}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">From system</p>
+                  <p className="text-xs text-gray-500 mt-2">{t('from_system')}</p>
                </div>
 
                <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
@@ -655,13 +657,13 @@ const Dashboard = () => {
                      <div className="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-folder-open text-blue-500 text-2xl"></i>
                      </div>
-                     <span className="text-blue-500 text-sm font-medium">{activeProjects ?? 0} Active</span>
+                     <span className="text-blue-500 text-sm font-medium">{activeProjects ?? 0} {t('active')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">Total Projects</h3>
+                  <h3 className="text-gray-400 text-sm mb-1">{t('total_projects')}</h3>
                   <p className="text-3xl font-bold text-white">
                      {totalProjects ?? 0}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">{inProgress ?? 0} in progress</p>
+                  <p className="text-xs text-gray-500 mt-2">{inProgress ?? 0} {t('in_progress_stat')}</p>
                </div>
 
                <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
@@ -672,13 +674,13 @@ const Dashboard = () => {
                      <span className={`${revenuePercent >= 0 ? "text-green-500" : "text-dark-accent"} text-sm font-medium`}> {revenuePercent >= 0 ? '+' : ''}
                         {revenuePercent ?? 0}%</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">Today's Revenue</h3>
+                  <h3 className="text-gray-400 text-sm mb-1">{t('today_revenue')}</h3>
                   <div className="h-[36px] flex items-center">
                      <span className="text-3xl font-bold text-white">
                         ${todayRevenue ?? 0}
                      </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">From {todayProjectsCount} projects</p>
+                  <p className="text-xs text-gray-500 mt-2">{t('from_system')} {todayProjectsCount} {t('projects').toLowerCase()}</p>
                </div>
 
                <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6 hover:border-dark-accent transition">
@@ -686,11 +688,11 @@ const Dashboard = () => {
                      <div className="w-12 h-12 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
                         <i className="fa-solid fa-users text-purple-500 text-2xl"></i>
                      </div>
-                     <span className="text-purple-500 text-sm font-medium">{onlineMembers} Online</span>
+                     <span className="text-purple-500 text-sm font-medium">{onlineMembers} {t('online')}</span>
                   </div>
-                  <h3 className="text-gray-400 text-sm mb-1">Team Members</h3>
+                  <h3 className="text-gray-400 text-sm mb-1">{t('team_members')}</h3>
                   <p className="text-3xl font-bold text-white">{totalMembers}</p>
-                  <p className="text-xs text-gray-500 mt-2">{activeRoles} roles active</p>
+                  <p className="text-xs text-gray-500 mt-2">{activeRoles} {t('roles_active')}</p>
                </div>
             </div>
 
@@ -913,7 +915,7 @@ const Dashboard = () => {
 
                </div>
             </div>
-         </div>
+         </div >
       </>
    );
 };

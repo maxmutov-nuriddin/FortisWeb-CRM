@@ -5,8 +5,10 @@ import { useProjectStore } from '../store/project.store';
 import { useAuthStore } from '../store/auth.store';
 import { useCompanyStore } from '../store/company.store';
 import PageLoader from '../components/loader/PageLoader';
+import { useTranslation } from 'react-i18next';
 
 const Projects = () => {
+   const { t } = useTranslation();
    const { user } = useAuthStore();
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
 
@@ -65,7 +67,7 @@ const Projects = () => {
    }, [myProjects, statusFilter]);
 
    const handleAccept = async (project) => {
-      if (!window.confirm('Are you sure you want to accept this project assignment?')) return;
+      if (!window.confirm(t('confirm_accept_project'))) return;
 
       setIsSubmitting(true);
       try {
@@ -73,10 +75,10 @@ const Projects = () => {
             acceptedBy: userData._id,
             note: 'Accepted via Dashboard'
          });
-         toast.success('Project accepted successfully!');
+         toast.success(t('project_accepted_success'));
       } catch (error) {
          console.error(error);
-         toast.error(error.response?.data?.message || 'Failed to accept project');
+         toast.error(error.response?.data?.message || t('failed_accept_project'));
       } finally {
          setIsSubmitting(false);
       }
@@ -88,8 +90,8 @@ const Projects = () => {
       <div className="p-8 space-y-8">
          <div className="flex items-center justify-between">
             <div>
-               <h1 className="text-3xl font-bold text-white mb-2">My Projects</h1>
-               <p className="text-gray-400">Manage your active assignments and history</p>
+               <h1 className="text-3xl font-bold text-white mb-2">{t('my_projects')}</h1>
+               <p className="text-gray-400">{t('manage_active_assignments')}</p>
             </div>
             <div className="flex items-center space-x-3">
                <select
@@ -97,11 +99,11 @@ const Projects = () => {
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                >
-                  <option value="All">All Statuses</option>
-                  <option value="assigned">Assigned (New)</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="review">Review</option>
-                  <option value="completed">Completed</option>
+                  <option value="All">{t('all_statuses')}</option>
+                  <option value="assigned">{t('assigned_new')}</option>
+                  <option value="in_progress">{t('in_progress')}</option>
+                  <option value="review">{t('review')}</option>
+                  <option value="completed">{t('completed')}</option>
                </select>
             </div>
          </div>
@@ -143,7 +145,7 @@ const Projects = () => {
                                        project.status === 'in_progress' ? 'bg-yellow-500 bg-opacity-20 text-yellow-500' :
                                           project.status === 'completed' ? 'bg-green-500 bg-opacity-20 text-green-500' :
                                              'bg-gray-700 text-gray-400'}`}>
-                                    {project.status?.replace('_', ' ')}
+                                    {t(project.status)}
                                  </span>
                               </td>
                               <td className="px-6 py-4">

@@ -8,10 +8,10 @@ const DashboardLayout = () => {
 
    const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
-   
+
 
    return (
-      <div id="dashboard-layout" className="flex h-screen overflow-hidden bg-dark-primary text-gray-300 font-sans">
+      <div id="dashboard-layout" className="flex h-screen overflow-hidden bg-white dark:bg-dark-primary text-gray-900 dark:text-gray-300 font-sans transition-colors duration-300">
          {/* Mobile Overlay */}
          {isSidebarOpen && (
             <div

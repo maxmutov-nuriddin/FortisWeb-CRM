@@ -6,8 +6,10 @@ import { useUserStore } from '../store/user.store';
 import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
 import PageLoader from '../components/loader/PageLoader';
+import { useTranslation } from 'react-i18next';
 
 const Tasks = () => {
+   const { t } = useTranslation();
    const { user: authUser } = useAuthStore();
    const {
       tasks,
@@ -27,7 +29,7 @@ const Tasks = () => {
    const { users: companyUsers, getUsersByCompany, getAllUsers } = useUserStore();
    const { companies, getCompanies } = useCompanyStore();
 
-   const [filter, setFilter] = useState('All Tasks');
+   const [filter, setFilter] = useState(t('all_tasks'));
    const [searchQuery, setSearchQuery] = useState('');
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -159,12 +161,12 @@ const Tasks = () => {
    const filteredTasks = useMemo(() => {
       let result = taskList;
 
-      if (filter !== 'All Tasks') {
+      if (filter !== t('all_tasks')) {
          const statusMap = {
-            'To Do': 'todo',
-            'In Progress': 'in_progress',
-            'Review': 'review',
-            'Completed': 'completed'
+            [t('todo')]: 'todo',
+            [t('in_progress')]: 'in_progress',
+            [t('review')]: 'review',
+            [t('completed')]: 'completed'
          };
          result = result.filter(t => t.status === statusMap[filter]);
       }
@@ -194,7 +196,7 @@ const Tasks = () => {
       const id = taskId?._id || taskId?.id || taskId;
       try {
          await updateTaskStatus(id, newStatus);
-         toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
+         toast.success(t('status_updated_to', { status: newStatus.replace('_', ' ') }));
       } catch (error) {
          toast.error('Failed to update status');
       }
@@ -202,12 +204,12 @@ const Tasks = () => {
 
    const handleDeleteTask = async (taskOrId) => {
       const id = taskOrId?._id || taskOrId?.id || taskOrId;
-      if (window.confirm('Are you sure you want to delete this task?')) {
+      if (window.confirm(t('confirm_delete_task'))) {
          try {
             await deleteTask(id);
-            toast.success('Task deleted successfully');
+            toast.success(t('task_deleted_success'));
          } catch (error) {
-            toast.error('Failed to delete task');
+            toast.error(t('failed_delete_task'));
          }
       }
    };
@@ -324,7 +326,7 @@ const Tasks = () => {
          <div className="bg-dark-secondary border border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[300px]">
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-dark-secondary pb-2 z-10">
                <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{title}</span>
+                  <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(title.toLowerCase().replace(' ', '_'))}</span>
                </h3>
                <span className="text-sm text-gray-400 bg-dark-tertiary px-2 py-1 rounded">{columnTasks.length}</span>
             </div>
@@ -343,11 +345,11 @@ const Tasks = () => {
 
                      <div className="flex items-center space-x-2 mb-3">
                         <span className="text-[10px] bg-dark-secondary text-gray-300 px-2 py-0.5 rounded border border-gray-700">
-                           {task.project?.title || 'No Project'}
+                           {task.project?.title || t('no_project')}
                         </span>
                         {task.weight > 1 && (
                            <span className="text-[10px] bg-purple-500 bg-opacity-20 text-purple-400 px-2 py-0.5 rounded">
-                              Weight: {task.weight}
+                              {t('weight')}: {task.weight}
                            </span>
                         )}
                      </div>
@@ -357,21 +359,21 @@ const Tasks = () => {
                            <div className="w-6 h-6 rounded-full bg-dark-accent flex items-center justify-center text-[10px] text-white font-bold">
                               {task.assignedTo?.name?.[0] || 'U'}
                            </div>
-                           <span className="text-[11px] text-gray-400 truncate max-w-[80px]">{task.assignedTo?.name || 'Unassigned'}</span>
+                           <span className="text-[11px] text-gray-400 truncate max-w-[80px]">{task.assignedTo?.name || t('unassigned')}</span>
                         </div>
                         <span className={`text-[10px] flex items-center space-x-1 ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? 'text-red-500' : 'text-gray-500'}`}>
                            <i className="fa-regular fa-calendar text-[9px]"></i>
-                           <span>{task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No Deadline'}</span>
+                           <span>{task.deadline ? new Date(task.deadline).toLocaleDateString() : t('no_deadline')}</span>
                         </span>
                      </div>
 
                      {/* Action Overlay */}
                      <div className="absolute inset-0 bg-dark-tertiary bg-opacity-95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center p-4">
                         <div className="flex flex-wrap gap-2 justify-center mb-4">
-                           {status !== 'todo' && <button onClick={() => handleStatusChange(task._id, 'todo')} className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs flex items-center justify-center" title="Move to Todo"><i className="fa-solid fa-arrow-left"></i></button>}
-                           {status !== 'in_progress' && <button onClick={() => handleStatusChange(task._id, 'in_progress')} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title="Start Process"><i className="fa-solid fa-play"></i></button>}
-                           {status !== 'review' && <button onClick={() => handleStatusChange(task._id, 'review')} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title="Send to Review"><i className="fa-solid fa-eye"></i></button>}
-                           {status !== 'completed' && <button onClick={() => handleStatusChange(task._id, 'completed')} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title="Complete"><i className="fa-solid fa-check"></i></button>}
+                           {status !== 'todo' && <button onClick={() => handleStatusChange(task._id, 'todo')} className="w-8 h-8 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
+                           {status !== 'in_progress' && <button onClick={() => handleStatusChange(task._id, 'in_progress')} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
+                           {status !== 'review' && <button onClick={() => handleStatusChange(task._id, 'review')} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
+                           {status !== 'completed' && <button onClick={() => handleStatusChange(task._id, 'completed')} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
                         </div>
                         {canManageTasks && (
                            <div className="flex border-t border-gray-700 pt-3 gap-3 justify-center">
@@ -389,7 +391,7 @@ const Tasks = () => {
                {columnTasks.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 opacity-50">
                      <i className="fa-solid fa-inbox text-2xl mb-2"></i>
-                     <p className="text-xs">No tasks here</p>
+                     <p className="text-xs">{t('no_tasks_here')}</p>
                   </div>
                )}
             </div>
@@ -404,7 +406,7 @@ const Tasks = () => {
          {/* Header */}
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-               <h1 className="text-3xl font-bold text-white mb-2">Task Management</h1>
+               <h1 className="text-3xl font-bold text-white mb-2">{t('task_management')}</h1>
                <div className="flex items-center space-x-2 text-sm text-gray-400">
                   <span className="bg-dark-accent/20 text-dark-accent px-2 py-0.5 rounded capitalize">{role?.replace('_', ' ')}</span>
                   <span>•</span>
@@ -497,10 +499,10 @@ const Tasks = () => {
                         if (isEditModalOpen) {
                            const id = currentTask?._id || currentTask?.id;
                            await updateTask(id, finalData);
-                           toast.success('Task updated');
+                           toast.success(t('task_updated'));
                         } else {
                            await createTask(finalData);
-                           toast.success('Task created');
+                           toast.success(t('task_created'));
                         }
                         setIsCreateModalOpen(false);
                         setIsEditModalOpen(false);
@@ -510,7 +512,7 @@ const Tasks = () => {
                   }} className="space-y-6">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Title</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('title_label')}</label>
                            <input
                               type="text" required
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"
@@ -519,7 +521,7 @@ const Tasks = () => {
                            />
                         </div>
                         <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Description</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('description_label')}</label>
                            <textarea
                               rows="3" required
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent resize-none"
@@ -528,7 +530,7 @@ const Tasks = () => {
                            ></textarea>
                         </div>
                         <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Project</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('project')}</label>
                            <select
                               required
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
@@ -540,7 +542,7 @@ const Tasks = () => {
                            </select>
                         </div>
                         <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Assignee</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('assignee')}</label>
                            <select
                               required
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
@@ -552,7 +554,7 @@ const Tasks = () => {
                            </select>
                         </div>
                         <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Priority</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('priority')}</label>
                            <select
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent appearance-none"
                               value={formData.priority}
@@ -565,7 +567,7 @@ const Tasks = () => {
                            </select>
                         </div>
                         <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Estimated Hours</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('estimated_hours')}</label>
                            <input
                               type="number" min="0"
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"
@@ -574,7 +576,7 @@ const Tasks = () => {
                            />
                         </div>
                         <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Task Weight (1-10)</label>
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('task_weight')}</label>
                            <input
                               type="number" min="1" max="10"
                               className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-dark-accent"

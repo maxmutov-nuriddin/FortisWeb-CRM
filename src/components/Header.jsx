@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
 import { useProjectStore } from '../store/project.store';
 import { useChatStore } from '../store/chat.store';
+import { useTranslation } from 'react-i18next';
 
 const Header = ({ toggleSidebar }) => {
+   const { t } = useTranslation();
    const { user, error: authError } = useAuthStore();
    const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
    const { chats, error: chatsError } = useChatStore();
@@ -58,7 +60,7 @@ const Header = ({ toggleSidebar }) => {
                   {/* Search Bar */}
                   <div className="relative flex-1 max-w-md hidden sm:block">
                      <i className="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
-                     <input type="text" placeholder="Search..." className="w-full bg-dark-tertiary border border-gray-700 rounded-lg pl-11 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-dark-accent" />
+                     <input type="text" placeholder={t('search')} className="w-full bg-dark-tertiary border border-gray-700 rounded-lg pl-11 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-dark-accent" />
                   </div>
                   {/* Mobile Search Icon (optional replacement for full bar) */}
                   <button className="sm:hidden text-gray-400 hover:text-white">

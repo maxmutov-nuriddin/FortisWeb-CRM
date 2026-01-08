@@ -10,11 +10,13 @@ import { useUserStore } from '../store/user.store';
 import { useProjectStore } from '../store/project.store';
 import { useTaskStore } from '../store/task.store';
 import PageLoader from '../components/loader/PageLoader';
+import { useTranslation } from 'react-i18next';
 
 const Payments = () => {
+   const { t } = useTranslation();
    const [projectAmount, setProjectAmount] = useState(10000);
    const [isSubmitting, setIsSubmitting] = useState(false);
-   const [statusFilter, setStatusFilter] = useState('All Statuses');
+   const [statusFilter, setStatusFilter] = useState(t('all_statuses'));
    const [viewCompanyId, setViewCompanyId] = useState('all');
    const [timePeriod, setTimePeriod] = useState('6m');
    const [searchQuery, setSearchQuery] = useState('');
@@ -82,7 +84,7 @@ const Payments = () => {
          }
       } catch (error) {
          console.error('Error fetching payments:', error);
-         toast.error('Failed to load payments');
+         toast.error(t('failed_load_payments'));
       }
    };
 
@@ -141,7 +143,7 @@ const Payments = () => {
    const filteredPayments = useMemo(() => {
       let result = paymentsList;
 
-      if (statusFilter !== 'All Statuses') {
+      if (statusFilter !== t('all_statuses')) {
          result = result.filter(p => p.status === statusFilter.toLowerCase());
       }
 
@@ -323,7 +325,7 @@ const Payments = () => {
 
    const distributionData = [{
       type: 'pie',
-      labels: ['Execution Pool (56%)', 'Lead Management (14%)', 'Company (20%)', 'Admin (10%)'],
+      labels: [t('execution_pool_label'), t('lead_management_label'), t('company'), t('admin_label')],
       values: [
          stats.totalRevenue * 0.56,
          stats.totalRevenue * 0.14,
@@ -406,11 +408,11 @@ const Payments = () => {
       setIsSubmitting(true);
       try {
          await confirmPayment(id);
-         toast.success('Payment confirmed successfully!');
+         toast.success(t('payment_confirmed_success'));
          fetchData();
       } catch (error) {
          console.error(error);
-         toast.error('Failed to confirm payment');
+         toast.error(t('failed_confirm_payment'));
       } finally {
          setIsSubmitting(false);
       }
@@ -420,11 +422,11 @@ const Payments = () => {
       setIsSubmitting(true);
       try {
          await completePayment(id);
-         toast.success('Payment marked as paid!');
+         toast.success(t('payment_marked_paid'));
          fetchData();
       } catch (error) {
          console.error(error);
-         toast.error('Failed to complete payment');
+         toast.error(t('failed_complete_payment'));
       } finally {
          setIsSubmitting(false);
       }
@@ -433,7 +435,7 @@ const Payments = () => {
    const handleExport = async () => {
       try {
          await exportPaymentHistory();
-         toast.success('Export started!');
+         toast.success(t('export_started_success'));
       } catch (error) {
          // Error should be handled by store logic
       }
@@ -446,8 +448,8 @@ const Payments = () => {
          <div id="payments-header-section">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                <div>
-                  <h1 className="text-3xl font-bold text-white mb-2">Payment Management</h1>
-                  <p className="text-gray-400">Confirm payments and manage automatic salary distribution</p>
+                  <h1 className="text-3xl font-bold text-white mb-2">{t('payment_management')}</h1>
+                  <p className="text-gray-400">{t('payment_management_desc')}</p>
                </div>
                <div className="flex flex-wrap items-center gap-3">
                   {isSuperAdmin && (

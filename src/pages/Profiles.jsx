@@ -6,8 +6,10 @@ import { useAuthStore } from '../store/auth.store';
 import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
 import PageLoader from '../components/loader/PageLoader';
+import { useTranslation } from 'react-i18next';
 
 const Profiles = () => {
+   const { t } = useTranslation();
    const { user: currentUser } = useAuthStore();
    const userData = useMemo(() => currentUser?.data?.user || currentUser?.user || currentUser, [currentUser]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);

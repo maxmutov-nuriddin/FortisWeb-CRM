@@ -4,8 +4,10 @@ import { useAuthStore } from '../store/auth.store';
 import { useUserStore } from '../store/user.store';
 import PageLoader from '../components/loader/PageLoader';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 const Chat = () => {
+   const { t } = useTranslation();
    const { user } = useAuthStore();
    const {
       chats,
@@ -235,8 +237,8 @@ const Chat = () => {
          {/* Sidebar */}
          <div className="w-1/4 bg-dark-secondary/50 backdrop-blur-xl border border-gray-800/50 rounded-3xl flex flex-col shadow-2xl overflow-hidden animate-fadeIn">
             <div className="p-6 border-b border-gray-800/50 bg-gradient-to-br from-dark-secondary to-dark-tertiary/20">
-               <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Messages</h2>
-               <p className="text-xs text-gray-400 font-medium opacity-60 uppercase tracking-widest">Team Collaboration</p>
+               <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">{t('messages_sidebar_title')}</h2>
+               <p className="text-xs text-gray-400 font-medium opacity-60 uppercase tracking-widest">{t('team_collaboration_desc')}</p>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
@@ -248,8 +250,8 @@ const Chat = () => {
                      <i className="fa-solid fa-globe text-lg"></i>
                   </div>
                   <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">Company Global</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'global' ? 'text-dark-accent/80' : 'text-gray-500'}`}>Public channel</p>
+                     <p className="font-bold text-sm tracking-tight">{t('company_global')}</p>
+                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'global' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('public_channel_desc')}</p>
                   </div>
                </button>
 
@@ -261,8 +263,8 @@ const Chat = () => {
                      <i className="fa-solid fa-users text-lg"></i>
                   </div>
                   <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">Department Team</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'team' ? 'text-dark-accent/80' : 'text-gray-500'}`}>Private updates</p>
+                     <p className="font-bold text-sm tracking-tight">{t('department_team')}</p>
+                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'team' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('private_updates_desc')}</p>
                   </div>
                </button>
 
@@ -274,14 +276,14 @@ const Chat = () => {
                      <i className="fa-solid fa-headset text-lg"></i>
                   </div>
                   <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">Help Desk</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'support' ? 'text-dark-accent/80' : 'text-gray-500'}`}>Contact Support</p>
+                     <p className="font-bold text-sm tracking-tight">{t('help_desk')}</p>
+                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'support' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('contact_support_desc')}</p>
                   </div>
                </button>
 
                {IsSuperAdmin && activeTab === 'support' && (
                   <div className="mt-8 border-t border-gray-800/50 pt-6 px-2">
-                     <p className="text-[10px] font-bold text-gray-500 uppercase px-2 mb-4 tracking-widest">Active Tickets</p>
+                     <p className="text-[10px] font-bold text-gray-500 uppercase px-2 mb-4 tracking-widest">{t('active_tickets')}</p>
                      {supportChats.length > 0 ? (
                         supportChats.map(chat => (
                            <button
