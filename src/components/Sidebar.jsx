@@ -154,12 +154,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             md:static md:translate-x-0
             ${isOpen ? 'translate-x-0' : '-translate-x-full'}
          `}>
-            <div id="logo-section" className="p-6 border-b border-gray-200 dark:border-gray-800">
+            <div id="logo-section" className="p-5 border-b border-gray-200 dark:border-gray-800">
                <Link to="/" className="flex items-center space-x-3">
-                  {/* <div className="w-12 h-12 flex items-center justify-center">
+                  <div className="w-12 h-12 flex items-center justify-center">
                      <img className='rounded-full border-2 border-dark-accent' src="fortislogo.JPG" alt="" />
-                  </div> */}
-                  <h2 className="text-4xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
                </Link>
             </div>
 
