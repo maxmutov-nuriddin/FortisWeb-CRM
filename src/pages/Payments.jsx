@@ -31,6 +31,16 @@ const Payments = () => {
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
+   const distributionRates = useMemo(() => {
+      const comp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany || {};
+      const rates = comp.distributionRates || {};
+      return {
+         admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
+         team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
+         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
+      };
+   }, [selectedCompany]);
+
    const allCompanies = useMemo(() => companies?.data?.companies || (Array.isArray(companies) ? companies : []), [companies]);
    const activeCompanyId = useMemo(() => isSuperAdmin ? viewCompanyId : (userData?.company?._id || userData?.company || ''), [isSuperAdmin, viewCompanyId, userData]);
 
@@ -241,11 +251,9 @@ const Payments = () => {
 
       const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
 
-      // New Policy: 70% Team Share
-      // - 20% of Team Share (14% of Total) is Lead Management Reward
-      // - 80% of Team Share (56% of Total) is Execution Pool
-      const managementReward = totalAmount * 0.14;
-      const executionPool = totalAmount * 0.56;
+      // Use dynamic rates: Team Share split into Execution (80%) and Lead Management (20%)
+      const managementReward = totalAmount * distributionRates.team * 0.2;
+      const executionPool = totalAmount * distributionRates.team * 0.8;
 
       // 2. Sum Total Weight for Execution Pool
       const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
@@ -266,18 +274,18 @@ const Payments = () => {
          share += (executionPool * (myWeight / totalWeight));
       }
 
-      // 3. Add Admin Share if Company Admin (10%)
+      // 3. Add Admin Share if Company Admin
       if (userData.role === 'company_admin') {
-         share += (totalAmount * 0.10);
+         share += (totalAmount * distributionRates.admin);
       }
 
-      // 4. Add Company Share if Super Admin (20%) - Optional view
+      // 4. Add Company Share if Super Admin - Optional view
       if (userData.role === 'super_admin') {
-         share += (totalAmount * 0.20);
+         share += (totalAmount * distributionRates.company);
       }
 
       return share;
-   }, [userData, tasks, projects]);
+   }, [userData, tasks, projects, distributionRates]);
 
    const stats = useMemo(() => {
       const activeList = filteredPayments;
@@ -317,21 +325,21 @@ const Payments = () => {
          return sum + calculateMyShare(mockPayment);
       }, 0) : 0;
 
-      const teamPayouts = totalRevenue * 0.70; // Total Team Share
-      const leadManagementPool = totalRevenue * 0.14; // 20% of 70%
-      const executionPool = totalRevenue * 0.56; // 80% of 70%
+      const teamPayouts = totalRevenue * distributionRates.team; // Total Team Share
+      const leadManagementPool = totalRevenue * distributionRates.team * 0.2; // 20% of Team Share
+      const executionPool = totalRevenue * distributionRates.team * 0.8; // 80% of Team Share
 
       return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare, leadManagementPool, executionPool };
-   }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin]);
+   }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin, distributionRates]);
 
    const distributionData = [{
       type: 'pie',
       labels: [t('execution_pool_label'), t('lead_management_label'), t('company'), t('admin_label')],
       values: [
-         stats.totalRevenue * 0.56,
-         stats.totalRevenue * 0.14,
-         stats.totalRevenue * 0.20,
-         stats.totalRevenue * 0.10
+         stats.totalRevenue * distributionRates.team * 0.8,
+         stats.totalRevenue * distributionRates.team * 0.2,
+         stats.totalRevenue * distributionRates.company,
+         stats.totalRevenue * distributionRates.admin
       ],
       marker: {
          colors: ['#10B981', '#8B5CF6', '#3B82F6', '#FF0000']
@@ -550,8 +558,8 @@ const Payments = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * 0.10).toLocaleString()}</p>
-                           <p className="text-xs text-blue-500">10%</p>
+                           <p className="text-xl font-bold text-white">${(projectAmount * distributionRates.admin).toLocaleString()}</p>
+                           <p className="text-xs text-blue-500">{Math.round(distributionRates.admin * 100)}%</p>
                         </div>
                      </div>
                   </div>
@@ -568,8 +576,8 @@ const Payments = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-xl font-bold text-white">${(projectAmount * 0.20).toLocaleString()}</p>
-                           <p className="text-xs text-yellow-500">20%</p>
+                           <p className="text-xl font-bold text-white">${(projectAmount * distributionRates.company).toLocaleString()}</p>
+                           <p className="text-xs text-yellow-500">{Math.round(distributionRates.company * 100)}%</p>
                         </div>
                      </div>
                   </div>
@@ -586,8 +594,8 @@ const Payments = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-white font-bold">${(projectAmount * 0.14).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">{t('fixed_management_share')}</p>
+                           <p className="text-white font-bold">${(projectAmount * distributionRates.team * 0.2).toLocaleString()}</p>
+                           <p className="text-xs text-green-500">{Math.round(distributionRates.team * 0.2 * 100)}%</p>
                         </div>
                      </div>
 
@@ -602,8 +610,8 @@ const Payments = () => {
                            </div>
                         </div>
                         <div className="text-right">
-                           <p className="text-white font-bold">${(projectAmount * 0.56).toLocaleString()}</p>
-                           <p className="text-xs text-green-500">{t('distributed_by_weights')}</p>
+                           <p className="text-white font-bold">${(projectAmount * distributionRates.team * 0.8).toLocaleString()}</p>
+                           <p className="text-xs text-green-500">{Math.round(distributionRates.team * 0.8 * 100)}%</p>
                         </div>
                      </div>
                   </div>

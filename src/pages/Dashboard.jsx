@@ -59,6 +59,16 @@ const Dashboard = () => {
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
    const isAdmin = useMemo(() => isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'team_lead', [userData, isSuperAdmin]);
 
+   const distributionRates = useMemo(() => {
+      const comp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
+      const rates = comp?.distributionRates || {};
+      return {
+         admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
+         team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
+         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
+      };
+   }, [selectedCompany]);
+
    const allTeams = useMemo(() => {
       if (!userData) return [];
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
@@ -152,14 +162,14 @@ const Dashboard = () => {
          totalRevenue += amount
       })
 
-      // 56% Execution Pool, 14% Lead Management, 10% Admin, 20% Company
+      // Use dynamic rates: Team Share split into Execution (80%) and Lead Management (20%)
       setSalaryTotals({
-         execution: totalRevenue * 0.56,
-         leadManagement: totalRevenue * 0.14,
-         admin: totalRevenue * 0.1,
-         company: totalRevenue * 0.2
+         execution: totalRevenue * distributionRates.team * 0.8,
+         leadManagement: totalRevenue * distributionRates.team * 0.2,
+         admin: totalRevenue * distributionRates.admin,
+         company: totalRevenue * distributionRates.company
       })
-   }, [filteredPayments])
+   }, [filteredPayments, distributionRates])
 
    // Personal Task Stats for restricted users (Workers)
    useEffect(() => {
@@ -201,7 +211,7 @@ const Dashboard = () => {
             const projectPayment = (payments?.data?.payments || []).find(pay => String(pay._id) === String(project.payment));
             if (projectPayment) {
                const totalRevenue = Number(projectPayment.totalAmount) || 0;
-               const executionPool = totalRevenue * 0.56;
+               const executionPool = totalRevenue * distributionRates.team * 0.8;
                const pId = String(project._id);
                const totalPWeight = projectTotalWeights[pId] || 100; // Fallback if no other tasks found
 
@@ -218,7 +228,7 @@ const Dashboard = () => {
          completedWeight: cWeight,
          earnings: earn
       });
-   }, [tasks, filteredProjects, payments, isAdmin, userData]);
+   }, [tasks, filteredProjects, payments, isAdmin, userData, distributionRates]);
 
    console.log(filteredPayments);
 
@@ -856,7 +866,7 @@ const Dashboard = () => {
                            <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center space-x-2">
                                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                 <span className="text-gray-400">{t('company')} (20%)</span>
+                                 <span className="text-gray-400">{t('company')} ({Math.round(distributionRates.company * 100)}%)</span>
                               </div>
                               <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
                            </div>
