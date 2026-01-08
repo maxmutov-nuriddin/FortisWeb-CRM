@@ -242,16 +242,7 @@ const Projects = () => {
                         key={project._id}
                         className="group relative flex flex-col bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-dark-accent/30 transition-all duration-300"
                      >
-                        {/* Trash Button - Only if super_admin */}
-                        {['super_admin', 'company_admin'].includes(userData?.role) && (
-                           <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(project); }}
-                              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors z-10"
-                              title="Delete Project"
-                           >
-                              <i className="fa-solid fa-trash-can"></i>
-                           </button>
-                        )}
+
 
                         {/* Files Section  */}
                         <div className="flex-1 space-y-3 mb-4">
@@ -299,7 +290,7 @@ const Projects = () => {
                                           </div>
 
                                           {/* File Actions */}
-                                          <div className="flex flex-col gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                                          <div className="flex flex-col gap-1 opacity-40 group-hover/file:opacity-100 transition-opacity">
                                              <button
                                                 onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }}
                                                 className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1 rounded transition-colors"
