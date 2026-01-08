@@ -11,7 +11,8 @@ const Header = ({ toggleSidebar }) => {
    const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
    const { chats, error: chatsError } = useChatStore();
 
-   const currentUserId = user?._id;
+   const userData = user?.data?.user || user?.user || user;
+   const currentUserId = userData?._id;
 
    // ===================== COUNTS =====================
    const newChatsCount =
@@ -30,10 +31,10 @@ const Header = ({ toggleSidebar }) => {
 
    // ===================== PROJECTS =====================
    useEffect(() => {
-      const companyId = user?.data?.user?.company?._id;
+      const companyId = userData?.company?._id || userData?.company;
       if (!companyId) return;
       getProjectsByCompany(companyId);
-   }, [user?.data?.user?.company?._id]);
+   }, [userData?.company?._id || userData?.company]);
 
    // ===================== ERRORS =====================
    useEffect(() => {
@@ -70,14 +71,14 @@ const Header = ({ toggleSidebar }) => {
 
                {/* Right Side: Icons & Profile */}
                <div className="flex items-center space-x-3 md:space-x-6">
-                  <Link to="/orders" className="relative text-gray-400 hover:text-white transition">
-                     <i className="fa-solid fa-envelope text-xl"></i>
+                  <Link title={t('orders')} to="/orders" className="relative text-gray-400 hover:text-white transition">
+                     <i className="fa-solid fa-bell text-xl"></i>
                      {newOrdersCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount}</span>
                      )}
                   </Link>
-                  <Link to="/team-chats" className="relative text-gray-400 hover:text-white transition">
-                     <i className="fa-solid fa-bell text-xl"></i>
+                  <Link title={t('team_chats')} to="/team-chats" className="relative text-gray-400 hover:text-white transition">
+                     <i className="fa-solid fa-comment-dots text-xl"></i>
                      {newChatsCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newChatsCount}</span>
                      )}
@@ -85,22 +86,23 @@ const Header = ({ toggleSidebar }) => {
                   <div className="h-8 w-px bg-gray-700 hidden md:block"></div>
 
                   {/* Profile Section */}
-                  <div className="flex items-center space-x-3 cursor-pointer hover:bg-dark-tertiary px-2 py-1 md:px-3 md:py-2 rounded-lg transition">
+                  <Link to="/settings" className="flex items-center space-x-3 cursor-pointer hover:bg-dark-tertiary px-2 py-1 md:px-3 md:py-2 rounded-lg transition">
                      <img
-                        src={user?.data?.user.avatar || `https://ui-avatars.com/api/?name=${user?.data?.user.name}`}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent"
+                        src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent object-cover"
+                        alt={userData?.name}
                      />
                      <div className="hidden md:block">
-                        <div className="text-md font-medium text-white">{user?.data?.user.name}</div>
-                        <div className="text-xs text-gray-400">{user?.data?.user?.role}</div>
+                        <div className="text-md font-medium text-white">{userData?.name || 'User'}</div>
+                        <div className="text-xs text-gray-400 capitalize">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
                      </div>
-                     {/* <i className="fa-solid fa-chevron-down text-gray-400 text-sm hidden md:block"></i> */}
-                  </div>
+                  </Link>
                </div>
             </div>
          </header >
       </>
    );
+
 };
 
 export default Header;

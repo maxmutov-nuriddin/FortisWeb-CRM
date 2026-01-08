@@ -8,6 +8,7 @@ import { useUserStore } from '../store/user.store';
 import { useChatStore } from '../store/chat.store';
 import { useProjectStore } from '../store/project.store';
 import { useTranslation } from 'react-i18next';
+import { useCompanyStore } from '../store/company.store';
 
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -15,13 +16,16 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
    const navigate = useNavigate()
    const location = useLocation();
 
-   const { user, logout, isLoading: authLoading, error: authError } = useAuthStore();
-   const { projects, getProjectsByCompany, error: projectsError } = useProjectStore();
+   const { user, logout, error: authError } = useAuthStore();
+   const { projects, getProjectsByCompany, getAllProjects, error: projectsError } = useProjectStore();
+   const { users, getUsersByCompany, getAllUsers, error: usersError } = useUserStore();
+   const { companies, getCompanies } = useCompanyStore();
    const { chats, error: chatsError } = useChatStore();
    const { updateUserStatus } = useUserStore();
 
-
-   const currentUserId = user?._id;
+   const userData = user?.data?.user || user?.user || user;
+   const currentUserId = userData?._id;
+   const isSuperAdmin = userData?.role === 'super_admin';
 
    // ===================== COUNTS =====================
    const newChatsCount =
@@ -35,22 +39,48 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          (project) => project.status === 'pending'
       ).length || 0;
 
-   // ===================== AUTH =====================
+   // ===================== STATS LOGIC =====================
+   const [activeProjectsCount, setActiveProjectsCount] = React.useState(0);
+   const [teamMembersCount, setTeamMembersCount] = React.useState(0);
 
-
-   // ===================== PROJECTS =====================
    useEffect(() => {
-      const companyId = user?.data?.user?.company?._id;
-      if (!companyId) return;
-      getProjectsByCompany(companyId);
-   }, [user?.data?.user?.company?._id]);
+      const initSidebarData = async () => {
+         if (!userData) return;
+         const companyId = userData.company?._id || userData.company;
 
-   // ===================== ERRORS =====================
+         if (isSuperAdmin) {
+            const res = await getCompanies();
+            const companiesList = res?.data?.companies || res?.companies || (Array.isArray(res) ? res : []);
+            const companyIds = companiesList.map(c => c._id).filter(Boolean);
+            if (companyIds.length > 0) {
+               getAllProjects(companyIds);
+               getAllUsers(companyIds);
+            }
+         } else if (companyId) {
+            getProjectsByCompany(companyId);
+            getUsersByCompany(companyId);
+         }
+      };
+      initSidebarData();
+   }, [userData, isSuperAdmin]);
+
    useEffect(() => {
-      if (authError) console.error(authError);
-      if (projectsError) console.error(projectsError);
-      if (chatsError) console.error(chatsError);
-   }, [authError, projectsError, chatsError]);
+      const projectsList = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+      const usersList = users?.data?.users || (Array.isArray(users) ? users : []);
+
+      // Role-based filtering for projects (similar to Dashboard)
+      let filteredProjects = projectsList;
+      if (!isSuperAdmin && userData?.role !== 'company_admin') {
+         filteredProjects = projectsList.filter(p => {
+            const isAssigned = p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
+            return isAssigned || String(p.team?._id || p.team || '') !== ''; // Simplified for sidebar
+         });
+      }
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveProjectsCount(filteredProjects.filter(p => ['in_progress', 'review', 'revision'].includes(p.status)).length);
+      setTeamMembersCount(usersList.length);
+   }, [projects, users, userData, isSuperAdmin, currentUserId]);
 
    // Check if link is active, including sub-routes or specific matches
    const isActive = (path) => {
@@ -59,8 +89,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          ? 'bg-dark-accent text-white'
          : 'text-gray-400 hover:bg-dark-tertiary hover:text-white';
    };
-
-   // HandelLogOut
 
    const handleLogout = () => {
       toast.warn(
@@ -81,8 +109,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   <button
                      onClick={async () => {
                         try {
-                           if (user?.data?.user?._id) {
-                              await updateUserStatus(user.data.user._id, false)
+                           if (userData?._id) {
+                              await updateUserStatus(userData._id, false)
                            }
 
                            logout();
@@ -109,15 +137,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       )
    }
 
-
-
-   // ===================== AUTH =====================
-
-
    // ===================== ERRORS =====================
    useEffect(() => {
-      if (authError) console.error(authError)
-   }, [authError])
+      if (authError) console.error(authError);
+      if (projectsError) console.error(projectsError);
+      if (chatsError) console.error(chatsError);
+      if (usersError) console.error(usersError);
+   }, [authError, projectsError, chatsError, usersError]);
 
    return (
       <>
@@ -143,7 +169,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      <i className="fa-solid fa-chart-line w-5"></i>
                      <span className="font-medium">{t('dashboard')}</span>
                   </Link>
-                  {(user?.data?.user?.role === 'super_admin' || user?.role === 'super_admin') && (
+                  {(userData?.role === 'super_admin') && (
                      <Link to="/company" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/company')}`}>
                         <i className="fa-solid fa-building w-5"></i>
                         <span className="font-medium">{t('company')}</span>
@@ -194,11 +220,11 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      <div className="space-y-2 text-xs">
                         <div className="flex justify-between">
                            <span className="text-gray-400">{t('active_projects')}</span>
-                           <span className="text-white font-semibold">24</span>
+                           <span className="text-white font-semibold">{activeProjectsCount}</span>
                         </div>
                         <div className="flex justify-between">
                            <span className="text-gray-400">{t('team_members')}</span>
-                           <span className="text-white font-semibold">18</span>
+                           <span className="text-white font-semibold">{teamMembersCount}</span>
                         </div>
                      </div>
                   </div>
@@ -208,16 +234,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             <div id="sidebar-footer" className="p-4 border-t border-gray-800">
                <div className="flex items-center space-x-3">
                   <img
-                     src={user?.data?.user.avatar || `https://ui-avatars.com/api/?name=${user?.data?.user.name}`}
-                     className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent"
+                     src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
+                     className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent object-cover"
+                     alt={userData?.name}
                   />
-                  <div className="flex-1">
-                     <div className="text-md font-medium text-white">{user?.data?.user.name}</div>
-                     <div className="text-xs text-dark-accent">{user?.data?.user?.role}</div>
+                  <div className="flex-1 min-w-0">
+                     <div className="text-sm font-medium text-white truncate">{userData?.name || 'User'}</div>
+                     <div className="text-xs text-dark-accent truncate capitalize">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
                   </div>
                   <i
                      onClick={handleLogout}
-                     className="fa-solid fa-sign-out-alt text-gray-400 hover:text-white cursor-pointer"
+                     className="fa-solid fa-sign-out-alt text-gray-400 hover:text-white cursor-pointer transition-colors"
                   />
                </div>
             </div>
@@ -225,5 +252,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </>
    );
 };
+
 
 export default Sidebar;
