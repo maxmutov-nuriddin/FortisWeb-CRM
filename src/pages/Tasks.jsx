@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/immutability */
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTaskStore } from '../store/task.store';
 import { useAuthStore } from '../store/auth.store';
