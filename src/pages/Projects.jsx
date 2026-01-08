@@ -8,6 +8,7 @@ import { useProjectUploadStore } from '../store/project-upload.store';
 import { projectUploadsApi } from '../api/project-uploads.api';
 import PageLoader from '../components/loader/PageLoader';
 import UniversalUploadModal from '../components/common/UniversalUploadModal';
+import ProjectDetailsModal from '../components/projects/ProjectDetailsModal';
 import { useTranslation } from 'react-i18next';
 
 const Projects = () => {
@@ -29,6 +30,7 @@ const Projects = () => {
    const [statusFilter, setStatusFilter] = useState('All');
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+   const [selectedProjectForDetails, setSelectedProjectForDetails] = useState(null);
 
    // File Replacement State
    const [replacingFileId, setReplacingFileId] = useState(null);
@@ -183,16 +185,6 @@ const Projects = () => {
       }
    };
 
-   const getStatusStyle = (status) => {
-      switch (status) {
-         case 'assigned': return 'bg-blue-100 text-blue-700 border-blue-200';
-         case 'in_progress': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-         case 'completed': return 'bg-green-100 text-green-700 border-green-200';
-         case 'review': return 'bg-purple-100 text-purple-700 border-purple-200';
-         default: return 'bg-gray-100 text-gray-700 border-gray-200';
-      }
-   };
-
    return (
       <div className="p-8 space-y-8 min-h-screen bg-gray-50 dark:bg-dark-primary">
          {/* Hidden File Input for Replacement */}
@@ -236,69 +228,45 @@ const Projects = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                {filteredProjects.map((project, index) => {
                   const projectFiles = uploads.filter(file => file.orderId === project._id);
-                  const isPaid = project.statusFlags?.isPaymentAccepted;
-                  const isStarted = project.statusFlags?.isWorkStarted;
+                  // const isPaid = project.statusFlags?.isPaymentAccepted; // Moved to modal
+                  // const isStarted = project.statusFlags?.isWorkStarted; // Moved to modal
 
                   return (
                      <div
                         key={project._id}
-                        className="group relative flex flex-col bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-dark-accent/30 transition-all duration-300"
+                        className="group relative flex flex-col bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-dark-accent/30 transition-all duration-300"
                      >
-                        {/* Trash Button Absolute */}
+                        {/* Trash Button - Only if super_admin */}
                         {['super_admin', 'company_admin'].includes(userData?.role) && (
                            <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(project); }}
-                              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              className="absolute top-4 right-4 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors z-10"
                               title="Delete Project"
                            >
                               <i className="fa-solid fa-trash-can"></i>
                            </button>
                         )}
 
-                        {/* Top Section: Client & Status */}
-                        <div className="flex items-start justify-between mb-4 pr-8">
-                           <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                                 {project.client?.name ? project.client.name.charAt(0).toUpperCase() : 'C'}
+                        {/* Minimal Header: Title Only */}
+                        <div className="mb-4 pr-8">
+                           <div className="flex items-center gap-3 mb-2">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-sm">
+                                 #{index + 1}
                               </div>
-                              <div>
-                                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {project.client?.name || 'Unknown Client'}
-                                 </h3>
-                                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'No Deadline'}
-                                 </p>
-                              </div>
+                              <h2 className="text-lg font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-dark-accent transition-colors" title={project.title}>
+                                 {project.title}
+                              </h2>
                            </div>
                         </div>
 
-                        {/* Title & Description */}
-                        <div className="mb-5 flex-1">
-                           <div className="flex items-center gap-2 mb-2">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusStyle(project.status)}`}>
-                                 {t(project.status)}
-                              </span>
-                              {isPaid && <span className="text-green-500 text-xs" title="Paid"><i className="fa-solid fa-check-circle"></i></span>}
-                              {isStarted && <span className="text-blue-500 text-xs" title="Started"><i className="fa-solid fa-play"></i></span>}
-                           </div>
-                           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-dark-accent transition-colors">
-                              {project.title}
-                           </h2>
-                           <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed">
-                              {project.description}
-                           </p>
-                        </div>
-
-                        <div className="h-px bg-gray-100 dark:bg-gray-800 mb-4 w-full"></div>
-
-                        {/* Files Section */}
-                        <div className="space-y-3">
+                        {/* Files Section  */}
+                        <div className="flex-1 space-y-3 mb-4">
                            <div className="flex items-center justify-between text-xs text-gray-400 uppercase font-semibold tracking-wider">
-                              <span>Attachments ({projectFiles.length})</span>
+                              <span>Files ({projectFiles.length})</span>
                            </div>
 
                            {projectFiles.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 customize-scrollbar">
                                  {projectFiles.map(file => {
                                     const ext = (file.originalName || '').split('.').pop().toLowerCase();
                                     let iconClass = 'fa-solid fa-file';
@@ -318,11 +286,11 @@ const Projects = () => {
                                           <i className={`${iconClass} ${iconColor} text-lg mr-2`}></i>
 
                                           <div className="flex-1 min-w-0 mr-1">
-                                             <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{file.originalName}</p>
-                                             <p className="text-[9px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
+                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{file.originalName}</p>
+                                             <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
                                           </div>
 
-                                          {/* File Actions (Edit/Delete) - Only visible on hover */}
+                                          {/* File Actions */}
                                           <div className="flex flex-col gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
                                              <button
                                                 onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }}
@@ -344,15 +312,26 @@ const Projects = () => {
                                  })}
                               </div>
                            ) : (
-                              <div className="text-center py-4 bg-gray-50 dark:bg-dark-tertiary rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                              <div className="text-center py-6 bg-gray-50 dark:bg-dark-tertiary rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
                                  <p className="text-xs text-gray-400">No files uploaded</p>
                               </div>
                            )}
                         </div>
 
-                        {/* Actions Footer */}
+                        {/* View Details Button */}
+                        <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                           <button
+                              onClick={() => setSelectedProjectForDetails(project)}
+                              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-dark-tertiary dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 py-2.5 rounded-lg text-sm font-semibold transition"
+                           >
+                              <i className="fa-solid fa-circle-info text-blue-500"></i>
+                              View Project Details
+                           </button>
+                        </div>
+
+                        {/* Actions Footer (Accept) - Only if team lead & assigned */}
                         {userData?.role === 'team_lead' && project.status === 'assigned' && (
-                           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                           <div className="mt-3">
                               <button
                                  onClick={() => handleAccept(project)}
                                  disabled={isSubmitting}
@@ -388,6 +367,11 @@ const Projects = () => {
                   getFiles({ companyId: cId });
                }
             }}
+         />
+         <ProjectDetailsModal
+            isOpen={!!selectedProjectForDetails}
+            onClose={() => setSelectedProjectForDetails(null)}
+            project={selectedProjectForDetails}
          />
       </div>
    );
