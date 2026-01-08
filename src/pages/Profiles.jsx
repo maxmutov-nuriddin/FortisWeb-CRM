@@ -756,7 +756,7 @@ const Profiles = () => {
                         <div className="flex items-start justify-between mb-4">
                            <div className="relative">
                               <img
-                                 src={item.avatar || `https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-${(item.name?.length % 9) + 1}.jpg`}
+                                 src={item.avatar || `https://ui-avatars.com/api/?name=${item?.name}.jpg`}
                                  alt="Profile"
                                  className={`w-16 h-16 rounded-full border-2 ${item.isActive ? 'border-dark-accent' : 'border-gray-600'}`}
                               />
