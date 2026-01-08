@@ -73,13 +73,10 @@ const SignUp = () => {
       <div className="w-full min-h-screen bg-gray-100 dark:bg-black flex items-center justify-center">
          <div className="w-full max-w-md bg-white dark:bg-dark-secondary rounded-xl shadow-xl dark:shadow-none p-8 mx-4 border border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between mb-8">
-               <Link to="/" className="flex items-center">
-                  <span className="text-red-600 dark:text-dark-accent text-2xl mr-2">
-                     <i className="fa fa-user-edit"></i>
-                  </span>
-                  <h3 className="text-red-600 dark:text-dark-accent text-2xl font-bold">DarkPan</h3>
+               <Link to="/" className="flex items-center space-x-3">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
                </Link>
-               <h3 className="text-gray-900 dark:text-white text-2xl font-bold">Sign Up</h3>
+               <h3 className="text-gray-900 dark:text-white text-xl font-bold">Sign Up</h3>
             </div>
             {authError && (
                <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500 rounded-lg">
