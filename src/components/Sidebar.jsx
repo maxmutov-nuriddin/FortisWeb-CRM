@@ -156,10 +156,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          `}>
             <div id="logo-section" className="p-6 border-b border-gray-200 dark:border-gray-800">
                <Link to="/" className="flex items-center space-x-3">
-                  <div className="w-12 h-12 flex items-center justify-center">
+                  {/* <div className="w-12 h-12 flex items-center justify-center">
                      <img className='rounded-full border-2 border-dark-accent' src="fortislogo.JPG" alt="" />
-                  </div>
-                  <span className="text-xl font-bold text-gray-900 dark:text-white">FortisWeb</span>
+                  </div> */}
+                  <h2 className="text-4xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
                </Link>
             </div>
 
