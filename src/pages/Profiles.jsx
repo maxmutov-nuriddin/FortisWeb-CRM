@@ -975,7 +975,14 @@ const Profiles = () => {
                            <label className={styles.label}>{t('email_address')}</label>
                            <input
                               type="email" required className={styles.input} placeholder="john@example.com"
-                              value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                              value={formData.email}
+                              onChange={e => setFormData({ ...formData, email: e.target.value })}
+                              onBlur={e => {
+                                 const val = e.target.value;
+                                 if (val && !val.includes('@')) {
+                                    setFormData({ ...formData, email: val.trim() + '@gmail.com' });
+                                 }
+                              }}
                            />
                         </div>
                         {!isEditMode && (

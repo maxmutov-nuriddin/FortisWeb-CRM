@@ -568,7 +568,7 @@ const Payments = () => {
 
                <div className="bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-700">
                   <label className="text-sm text-gray-400 mb-2 block">{t('calculator_amount_label')}</label>
-                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(Number(e.target.value))} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
+                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-dark-secondary border border-gray-700 rounded-lg px-4 py-3 text-white text-xl font-semibold focus:outline-none focus:border-dark-accent" id="project-amount" />
                </div>
 
                <div className="space-y-4">

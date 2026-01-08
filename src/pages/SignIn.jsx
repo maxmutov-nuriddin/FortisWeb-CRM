@@ -80,6 +80,12 @@ const SignIn = () => {
                      placeholder="Email address"
                      value={formData.email}
                      onChange={handleChange}
+                     onBlur={e => {
+                        const val = e.target.value;
+                        if (val && !val.includes('@')) {
+                           setFormData(prev => ({ ...prev, email: val.trim() + '@gmail.com' }));
+                        }
+                     }}
                      required
                   />
                </div>

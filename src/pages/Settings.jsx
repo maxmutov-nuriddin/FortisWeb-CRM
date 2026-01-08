@@ -196,6 +196,12 @@ const Settings = () => {
                                  type="email"
                                  value={profileData.email}
                                  onChange={e => setProfileData({ ...profileData, email: e.target.value })}
+                                 onBlur={e => {
+                                    const val = e.target.value;
+                                    if (val && !val.includes('@')) {
+                                       setProfileData({ ...profileData, email: val.trim() + '@gmail.com' });
+                                    }
+                                 }}
                                  className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-gray-600"
                                  placeholder="email@example.com"
                               />
@@ -302,6 +308,12 @@ const Settings = () => {
                                  type="email"
                                  value={compData.email}
                                  onChange={e => setCompData({ ...compData, email: e.target.value })}
+                                 onBlur={e => {
+                                    const val = e.target.value;
+                                    if (val && !val.includes('@')) {
+                                       setCompData({ ...compData, email: val.trim() + '@gmail.com' });
+                                    }
+                                 }}
                                  className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300"
                               />
                            </div>

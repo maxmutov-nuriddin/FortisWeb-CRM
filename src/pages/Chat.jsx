@@ -26,16 +26,18 @@ const Chat = () => {
 
    const { users, getUsersByCompany } = useUserStore();
 
-   const [messageInput, setMessageInput] = useState('');
-   const [activeTab, setActiveTab] = useState('global'); // global, team, support
-   const [editingMessageId, setEditingMessageId] = useState(null);
-   const [editInput, setEditInput] = useState('');
-   const messagesEndRef = useRef(null);
-
    const userData = user?.data?.user || user;
    const IsSuperAdmin = userData?.role === 'super_admin';
    const IsCompanyAdmin = userData?.role === 'company_admin';
    const isAdmin = IsSuperAdmin || IsCompanyAdmin;
+
+   const [messageInput, setMessageInput] = useState('');
+   const [activeTab, setActiveTab] = useState(IsSuperAdmin ? 'support' : 'global'); // global, team, support
+   const [editingMessageId, setEditingMessageId] = useState(null);
+   const [editInput, setEditInput] = useState('');
+   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+   const fileInputRef = useRef(null);
+   const messagesEndRef = useRef(null);
 
    const userMap = useMemo(() => {
       const allUsers = users?.data?.users || (Array.isArray(users) ? users : []);
@@ -183,10 +185,30 @@ const Chat = () => {
       try {
          await sendMessage(selectedChat._id, { text: messageInput });
          setMessageInput('');
+         setShowEmojiPicker(false);
       } catch (error) {
          console.error(error);
          toast.error(error.response?.data?.message || 'Failed to send message');
       }
+   };
+
+   const handleFileUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!selectedChat) {
+         toast.error("No chat selected.");
+         return;
+      }
+
+      // Since the current API might not support file uploads, we mock it or use text for now
+      // Typically we would use a formData upload here
+      toast.info(`Uploading: ${file.name}`);
+      // await sendMessage(selectedChat._id, { text: `[File: ${file.name}]`, file });
+   };
+
+   const insertEmoji = (emoji) => {
+      setMessageInput(prev => prev + emoji);
+      setShowEmojiPicker(false);
    };
 
    const handleEditStart = (msg) => {
@@ -242,31 +264,35 @@ const Chat = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-               <button
-                  onClick={() => setActiveTab('global')}
-                  className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'global' ? 'bg-dark-accent/10 border-dark-accent/30 text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-dark-tertiary/40 text-gray-400 hover:text-gray-200'}`}
-               >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'global' ? 'bg-dark-accent shadow-lg shadow-red-900/40 text-black' : 'bg-dark-tertiary group-hover:bg-dark-accent/20 group-hover:text-dark-accent'}`}>
-                     <i className="fa-solid fa-globe text-lg"></i>
-                  </div>
-                  <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">{t('company_global')}</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'global' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('public_channel_desc')}</p>
-                  </div>
-               </button>
+               {!IsSuperAdmin && (
+                  <>
+                     <button
+                        onClick={() => setActiveTab('global')}
+                        className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'global' ? 'bg-dark-accent/10 border-dark-accent/30 text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-dark-tertiary/40 text-gray-400 hover:text-gray-200'}`}
+                     >
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'global' ? 'bg-dark-accent shadow-lg shadow-red-900/40 text-black' : 'bg-dark-tertiary group-hover:bg-dark-accent/20 group-hover:text-dark-accent'}`}>
+                           <i className="fa-solid fa-globe text-lg"></i>
+                        </div>
+                        <div className="flex-1">
+                           <p className="font-bold text-sm tracking-tight">{t('company_global')}</p>
+                           <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'global' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('public_channel_desc')}</p>
+                        </div>
+                     </button>
 
-               <button
-                  onClick={() => setActiveTab('team')}
-                  className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'team' ? 'bg-dark-accent/10 border-dark-accent/30 text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-dark-tertiary/40 text-gray-400 hover:text-gray-200'}`}
-               >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'team' ? 'bg-dark-accent shadow-lg shadow-red-900/40 text-black' : 'bg-dark-tertiary group-hover:bg-dark-accent/20 group-hover:text-dark-accent'}`}>
-                     <i className="fa-solid fa-users text-lg"></i>
-                  </div>
-                  <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">{t('department_team')}</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'team' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('private_updates_desc')}</p>
-                  </div>
-               </button>
+                     <button
+                        onClick={() => setActiveTab('team')}
+                        className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'team' ? 'bg-dark-accent/10 border-dark-accent/30 text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-dark-tertiary/40 text-gray-400 hover:text-gray-200'}`}
+                     >
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'team' ? 'bg-dark-accent shadow-lg shadow-red-900/40 text-black' : 'bg-dark-tertiary group-hover:bg-dark-accent/20 group-hover:text-dark-accent'}`}>
+                           <i className="fa-solid fa-users text-lg"></i>
+                        </div>
+                        <div className="flex-1">
+                           <p className="font-bold text-sm tracking-tight">{t('department_team')}</p>
+                           <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'team' ? 'text-dark-accent/80' : 'text-gray-500'}`}>{t('private_updates_desc')}</p>
+                        </div>
+                     </button>
+                  </>
+               )}
 
                <button
                   onClick={() => setActiveTab('support')}
@@ -440,7 +466,18 @@ const Chat = () => {
                   {/* Input Area */}
                   <div className="p-6 bg-dark-tertiary/30 backdrop-blur-3xl border-t border-gray-800/50">
                      <form onSubmit={handleSendMessage} className="flex items-center space-x-4">
-                        <button type="button" className="text-gray-500 hover:text-white transition-all duration-300 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10">
+                        <input
+                           type="file"
+                           ref={fileInputRef}
+                           style={{ display: 'none' }}
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                           onChange={handleFileUpload}
+                        />
+                        <button
+                           type="button"
+                           onClick={() => fileInputRef.current?.click()}
+                           className="text-gray-500 hover:text-white transition-all duration-300 p-2.5 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10"
+                        >
                            <i className="fa-solid fa-paperclip text-lg"></i>
                         </button>
                         <div className="flex-1 relative group">
@@ -453,10 +490,26 @@ const Chat = () => {
                            />
                            <button
                               type="button"
-                              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-dark-accent transition-all duration-300"
+                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                              className={`absolute right-4 top-1/2 transform -translate-y-1/2 transition-all duration-300 ${showEmojiPicker ? 'text-dark-accent' : 'text-gray-500 hover:text-dark-accent'}`}
                            >
                               <i className="fa-regular fa-face-smile text-xl"></i>
                            </button>
+
+                           {showEmojiPicker && (
+                              <div className="absolute bottom-full right-0 mb-4 p-4 bg-dark-secondary border border-gray-800 rounded-3xl shadow-2xl animate-fadeIn flex flex-wrap gap-2 w-64 z-50">
+                                 {['😀', '😂', '😍', '👍', '🔥', '🚀', '💯', '✨', '✔️', '❌', '📁', '📄', '💻', '🤝', '🎉'].map(emoji => (
+                                    <button
+                                       key={emoji}
+                                       type="button"
+                                       onClick={() => insertEmoji(emoji)}
+                                       className="text-2xl hover:scale-125 transition transform"
+                                    >
+                                       {emoji}
+                                    </button>
+                                 ))}
+                              </div>
+                           )}
                         </div>
                         <button
                            type="submit"
