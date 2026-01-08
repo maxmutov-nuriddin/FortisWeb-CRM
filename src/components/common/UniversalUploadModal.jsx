@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { useAuthStore } from '../../store/auth.store';
@@ -18,6 +19,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
    const isEmployee = !isSuperAdmin && !isCompanyAdmin && !isTeamLead;
 
    const { companies, getCompanies } = useCompanyStore();
+   // eslint-disable-next-line no-unused-vars
    const { projects, getProjectsByCompany, getAllProjects } = useProjectStore();
    const { tasks, getTasksByProject } = useTaskStore();
    const { uploadFile, isLoading: uploading } = useProjectUploadStore(); // Use store hook

@@ -30,6 +30,7 @@ const Chat = () => {
    const userData = user?.data?.user || user;
    const IsSuperAdmin = userData?.role === 'super_admin';
    const IsCompanyAdmin = userData?.role === 'company_admin';
+   // eslint-disable-next-line no-unused-vars
    const isAdmin = IsSuperAdmin || IsCompanyAdmin;
 
    const [messageInput, setMessageInput] = useState('');
@@ -180,7 +181,13 @@ const Chat = () => {
       e.preventDefault();
       if (!messageInput.trim()) return;
       if (!selectedChat) {
-         toast.error("No chat selected.");
+         toast.error("No chat selected.", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          return;
       }
       try {
@@ -189,7 +196,13 @@ const Chat = () => {
          setShowEmojiPicker(false);
       } catch (error) {
          console.error(error);
-         toast.error(error.response?.data?.message || 'Failed to send message');
+         toast.error(error.response?.data?.message || 'Failed to send message', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
       }
    };
 
@@ -197,7 +210,13 @@ const Chat = () => {
       const file = e.target.files[0];
       if (!file) return;
       if (!selectedChat) {
-         toast.error("No chat selected.");
+         toast.error("No chat selected.", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          return;
       }
 
@@ -212,6 +231,7 @@ const Chat = () => {
       setShowEmojiPicker(false);
    };
 
+   // eslint-disable-next-line no-unused-vars
    const handleEditStart = (msg) => {
       setEditingMessageId(msg._id);
       setEditInput(msg.text);

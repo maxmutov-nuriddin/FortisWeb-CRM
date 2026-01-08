@@ -243,16 +243,34 @@ const Company = () => {
             const updateData = { ...formData };
             if (!updateData.password) delete updateData.password;
             await updateCompany(editingCompanyId, updateData);
-            toast.success(formData.name + " Company updated successfully");
+            toast.success(formData.name + " Company updated successfully", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          } else {
             await createCompany(formData);
-            toast.success(formData.name + " Company created successfully");
+            toast.success(formData.name + " Company created successfully", {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          }
          closeCreateModal();
          await getCompanies();
       } catch (error) {
          console.error('Error submitting company:', error);
-         toast.error('Failed to save company:' + (error.response?.data?.message || error.message));
+         toast.error('Failed to save company:' + (error.response?.data?.message || error.message), {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
       }
    };
 
@@ -268,10 +286,22 @@ const Company = () => {
                         await deleteCompany(companyId);
                         closeModal();
                         await getCompanies();
-                        toast.success('Company deleted successfully');
+                        toast.success('Company deleted successfully', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
                      } catch (error) {
                         console.error('Error deleting company:', error);
-                        toast.error('Failed to delete company');
+                        toast.error('Failed to delete company', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           closeOnClick: false,
+                           draggable: false,
+                           theme: 'dark',
+                        });
                      }
                   }}
                   style={{
@@ -314,13 +344,25 @@ const Company = () => {
    const handleSaveRates = async () => {
       const total = ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate;
       if (total !== 100) {
-         toast.error(`The sum of percentages must be 100. Current total: ${total}%`);
+         toast.error(`The sum of percentages must be 100. Current total: ${total}%`, {
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
+         });
          return;
       }
 
       try {
          await updateDistributionRates(selectedCompany._id, ratesData);
-         toast.success('Distribution rates updated');
+         toast.success('Distribution rates updated', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
          setIsRatesEditing(false);
          // Update selected company locally
          setSelectedCompany(prev => ({
@@ -330,7 +372,13 @@ const Company = () => {
          getCompanies();
       } catch (error) {
          console.error(error);
-         toast.error(error.response?.data?.message || 'Failed to update rates');
+         toast.error(error.response?.data?.message || 'Failed to update rates', {
+               position: 'top-right',
+               autoClose: 5000,
+               closeOnClick: false,
+               draggable: false,
+               theme: 'dark',
+            });
       }
    };
 

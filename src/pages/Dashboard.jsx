@@ -469,8 +469,11 @@ const Dashboard = () => {
    useEffect(() => {
       if (users?.partialFailure) {
          toast.warning('Some dashboard data could not be fully loaded. Check console for details.', {
-            toastId: 'dashboard-partial-load',
-            autoClose: 5000
+            position: 'top-right',
+            autoClose: 5000,
+            closeOnClick: false,
+            draggable: false,
+            theme: 'dark',
          });
       }
    }, [users?.partialFailure]);
