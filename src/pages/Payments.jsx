@@ -31,15 +31,17 @@ const Payments = () => {
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
-   const distributionRates = useMemo(() => {
-      const comp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany || {};
-      const rates = comp.distributionRates || {};
+   const getCompanyRates = useMemo(() => (comp) => {
+      const realComp = comp?.company || comp?.data?.company || comp || {};
+      const rates = realComp.distributionRates || realComp.settings || realComp || {};
       return {
          admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
          team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
          company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
       };
-   }, [selectedCompany]);
+   }, []);
+
+   const distributionRates = useMemo(() => getCompanyRates(selectedCompany), [selectedCompany, getCompanyRates]);
 
    const allCompanies = useMemo(() => companies?.data?.companies || (Array.isArray(companies) ? companies : []), [companies]);
    const activeCompanyId = useMemo(() => isSuperAdmin ? viewCompanyId : (userData?.company?._id || userData?.company || ''), [isSuperAdmin, viewCompanyId, userData]);
@@ -74,6 +76,10 @@ const Payments = () => {
          } else if (userData?._id || userData?.id) {
             const userId = userData._id || userData.id;
             const companyId = userData.company?._id || userData.company || '';
+
+            // Ensure company data is fetched for rates
+            if (companyId) getCompanyById(companyId);
+
             // Team Lead: Needs visibility of Project Payouts (Client -> Company) to see revenue
             if (userData.role === 'team_lead') {
                const promises = [
@@ -250,10 +256,14 @@ const Payments = () => {
       );
 
       const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
+      const pCompId = String(payment.company?._id || payment.company || fullProject.company?._id || fullProject.company || '');
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+      const rates = getCompanyRates(pComp);
 
       // Use dynamic rates: Team Share split into Execution (80%) and Lead Management (20%)
-      const managementReward = totalAmount * distributionRates.team * 0.2;
-      const executionPool = totalAmount * distributionRates.team * 0.8;
+      const managementReward = totalAmount * rates.team * 0.2;
+      const executionPool = totalAmount * rates.team * 0.8;
 
       // 2. Sum Total Weight for Execution Pool
       const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
@@ -276,16 +286,16 @@ const Payments = () => {
 
       // 3. Add Admin Share if Company Admin
       if (userData.role === 'company_admin') {
-         share += (totalAmount * distributionRates.admin);
+         share += (totalAmount * rates.admin);
       }
 
       // 4. Add Company Share if Super Admin - Optional view
       if (userData.role === 'super_admin') {
-         share += (totalAmount * distributionRates.company);
+         share += (totalAmount * rates.company);
       }
 
       return share;
-   }, [userData, tasks, projects, distributionRates]);
+   }, [userData, tasks, projects, companies, selectedCompany, getCompanyRates]);
 
    const stats = useMemo(() => {
       const activeList = filteredPayments;
@@ -325,21 +335,37 @@ const Payments = () => {
          return sum + calculateMyShare(mockPayment);
       }, 0) : 0;
 
-      const teamPayouts = totalRevenue * distributionRates.team; // Total Team Share
-      const leadManagementPool = totalRevenue * distributionRates.team * 0.2; // 20% of Team Share
-      const executionPool = totalRevenue * distributionRates.team * 0.8; // 80% of Team Share
+      let teamPayouts = 0;
+      let leadManagementPool = 0;
+      let executionPool = 0;
+      let adminPool = 0;
+      let companyPool = 0;
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
 
-      return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare, leadManagementPool, executionPool };
-   }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin, distributionRates]);
+      activeList.forEach(p => {
+         const amount = Number(p.totalAmount) || Number(p.amount) || 0;
+         const pCompId = String(p.company?._id || p.company || p.project?.company?._id || p.project?.company || '');
+         const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+         const rates = getCompanyRates(pComp);
+
+         teamPayouts += amount * rates.team;
+         leadManagementPool += amount * rates.team * 0.2;
+         executionPool += amount * rates.team * 0.8;
+         adminPool += amount * rates.admin;
+         companyPool += amount * rates.company;
+      });
+
+      return { totalRevenue, pendingAmount, pendingCount, thisMonthAmount, teamPayouts, myTotalEarnings, myEstimatedShare, leadManagementPool, executionPool, adminPool, companyPool };
+   }, [filteredPayments, calculateMyShare, tasks, userData, projects, isSuperAdmin, distributionRates, getCompanyRates, companies, selectedCompany]);
 
    const distributionData = [{
       type: 'pie',
       labels: [t('execution_pool_label'), t('lead_management_label'), t('company'), t('admin_label')],
       values: [
-         stats.totalRevenue * distributionRates.team * 0.8,
-         stats.totalRevenue * distributionRates.team * 0.2,
-         stats.totalRevenue * distributionRates.company,
-         stats.totalRevenue * distributionRates.admin
+         stats.executionPool,
+         stats.leadManagementPool,
+         stats.companyPool,
+         stats.adminPool
       ],
       marker: {
          colors: ['#10B981', '#8B5CF6', '#3B82F6', '#FF0000']

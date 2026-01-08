@@ -59,15 +59,17 @@ const Dashboard = () => {
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
    const isAdmin = useMemo(() => isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'team_lead', [userData, isSuperAdmin]);
 
-   const distributionRates = useMemo(() => {
-      const comp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
-      const rates = comp?.distributionRates || {};
+   const getCompanyRates = useMemo(() => (comp) => {
+      const realComp = comp?.company || comp?.data?.company || comp || {};
+      const rates = realComp.distributionRates || realComp.settings || realComp || {};
       return {
          admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
          team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
          company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
       };
-   }, [selectedCompany]);
+   }, []);
+
+   const distributionRates = useMemo(() => getCompanyRates(selectedCompany), [selectedCompany, getCompanyRates]);
 
    const allTeams = useMemo(() => {
       if (!userData) return [];
@@ -105,7 +107,7 @@ const Dashboard = () => {
             t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
          );
       }
-   }, [companies, selectedCompany, userData, isSuperAdmin]);
+   }, [companies, selectedCompany, userData, isSuperAdmin, getCompanyRates]);
 
    const filteredProjects = useMemo(() => {
       const all = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
@@ -154,22 +156,32 @@ const Dashboard = () => {
    useEffect(() => {
       if (!filteredPayments) return
 
-      let totalRevenue = 0
+      let execution = 0;
+      let leadManagement = 0;
+      let admin = 0;
+      let company = 0;
+
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
 
       filteredPayments.forEach(p => {
-         // Using robust amount check similar to Payments.jsx
-         const amount = Number(p.totalAmount) || Number(p.amount) || 0
-         totalRevenue += amount
-      })
+         const amount = Number(p.totalAmount) || Number(p.amount) || 0;
+         const pCompId = String(p.company?._id || p.company || '');
+         const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+         const rates = getCompanyRates(pComp);
 
-      // Use dynamic rates: Team Share split into Execution (80%) and Lead Management (20%)
+         execution += amount * rates.team * 0.8;
+         leadManagement += amount * rates.team * 0.2;
+         admin += amount * rates.admin;
+         company += amount * rates.company;
+      });
+
       setSalaryTotals({
-         execution: totalRevenue * distributionRates.team * 0.8,
-         leadManagement: totalRevenue * distributionRates.team * 0.2,
-         admin: totalRevenue * distributionRates.admin,
-         company: totalRevenue * distributionRates.company
-      })
-   }, [filteredPayments, distributionRates])
+         execution,
+         leadManagement,
+         admin,
+         company
+      });
+   }, [filteredPayments, distributionRates, companies, selectedCompany, getCompanyRates])
 
    // Personal Task Stats for restricted users (Workers)
    useEffect(() => {
@@ -210,10 +222,15 @@ const Dashboard = () => {
          if (project) {
             const projectPayment = (payments?.data?.payments || []).find(pay => String(pay._id) === String(project.payment));
             if (projectPayment) {
-               const totalRevenue = Number(projectPayment.totalAmount) || 0;
-               const executionPool = totalRevenue * distributionRates.team * 0.8;
+               const amount = Number(projectPayment.totalAmount) || Number(projectPayment.amount) || 0;
+               const pCompId = String(projectPayment.company?._id || projectPayment.company || project.company?._id || project.company || '');
+               const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+               const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+               const rates = getCompanyRates(pComp);
+
+               const executionPool = amount * rates.team * 0.8;
                const pId = String(project._id);
-               const totalPWeight = projectTotalWeights[pId] || 100; // Fallback if no other tasks found
+               const totalPWeight = projectTotalWeights[pId] || 100;
 
                const share = (weight / totalPWeight) * executionPool;
                if (earn[task.status] !== undefined) {

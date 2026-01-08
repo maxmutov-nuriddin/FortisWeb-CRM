@@ -42,10 +42,11 @@ const Company = () => {
    useEffect(() => {
       if (isModalOpen && selectedCompany?._id) {
          getUsersByCompany(selectedCompany._id);
+         const rates = selectedCompany.distributionRates || selectedCompany.settings || selectedCompany || {};
          setRatesData({
-            customAdminRate: selectedCompany.distributionRates?.customAdminRate || selectedCompany.distributionRates?.adminRate || 10,
-            customTeamRate: selectedCompany.distributionRates?.customTeamRate || selectedCompany.distributionRates?.teamRate || 70,
-            customCommissionRate: selectedCompany.distributionRates?.customCommissionRate || selectedCompany.distributionRates?.companyRate || 20
+            customAdminRate: rates.customAdminRate || rates.adminRate || 10,
+            customTeamRate: rates.customTeamRate || rates.teamRate || 70,
+            customCommissionRate: rates.customCommissionRate || rates.companyRate || 20
          });
          setIsRatesEditing(false);
       }
@@ -629,15 +630,27 @@ const Company = () => {
                                     <div className="grid grid-cols-3 gap-2 text-center">
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Admin</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customAdminRate || selectedCompany.distributionRates?.adminRate || 10}%</span>
+                                          <span className="text-white font-bold">{
+                                             (selectedCompany.distributionRates?.customAdminRate || selectedCompany.distributionRates?.adminRate ||
+                                                selectedCompany.settings?.customAdminRate || selectedCompany.settings?.adminRate ||
+                                                selectedCompany.customAdminRate || selectedCompany.adminRate || 10)
+                                          }%</span>
                                        </div>
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Team</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customTeamRate || selectedCompany.distributionRates?.teamRate || 70}%</span>
+                                          <span className="text-white font-bold">{
+                                             (selectedCompany.distributionRates?.customTeamRate || selectedCompany.distributionRates?.teamRate ||
+                                                selectedCompany.settings?.customTeamRate || selectedCompany.settings?.teamRate ||
+                                                selectedCompany.customTeamRate || selectedCompany.teamRate || 70)
+                                          }%</span>
                                        </div>
                                        <div className="bg-gray-800 p-2 rounded">
                                           <span className="block text-[10px] text-gray-500">Company</span>
-                                          <span className="text-white font-bold">{selectedCompany.distributionRates?.customCommissionRate || selectedCompany.distributionRates?.companyRate || 20}%</span>
+                                          <span className="text-white font-bold">{
+                                             (selectedCompany.distributionRates?.customCommissionRate || selectedCompany.distributionRates?.companyRate ||
+                                                selectedCompany.settings?.customCommissionRate || selectedCompany.settings?.companyRate ||
+                                                selectedCompany.customCommissionRate || selectedCompany.companyRate || 20)
+                                          }%</span>
                                        </div>
                                     </div>
                                  ) : (
