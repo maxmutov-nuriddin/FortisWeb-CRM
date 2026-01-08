@@ -11,6 +11,7 @@ import { useUserStore } from '../store/user.store';
 import { useCompanyStore } from '../store/company.store';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import { useTaskStore } from '../store/task.store';
 
 const Dashboard = () => {
    const { t, i18n } = useTranslation();
@@ -20,6 +21,7 @@ const Dashboard = () => {
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
    const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
    const { companies, selectedCompany, getCompanies, getCompanyById, isLoading: companiesLoading, } = useCompanyStore();
+   const { tasks, getTasksByUser, getTasksByProjects } = useTaskStore();
 
    //! State
    const [newOrder, setNewOrder] = useState([])
@@ -41,9 +43,21 @@ const Dashboard = () => {
       admin: 0,
       company: 0
    })
+   const [personalStats, setPersonalStats] = useState({
+      totalWeight: 0,
+      completedWeight: 0,
+      earnings: {
+         completed: 0,
+         in_progress: 0,
+         review: 0,
+         revision: 0,
+         todo: 0
+      }
+   });
 
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
+   const isAdmin = useMemo(() => isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'team_lead', [userData, isSuperAdmin]);
 
    const allTeams = useMemo(() => {
       if (!userData) return [];
@@ -147,19 +161,84 @@ const Dashboard = () => {
       })
    }, [filteredPayments])
 
+   // Personal Task Stats for restricted users (Workers)
+   useEffect(() => {
+      if (isAdmin || !tasks || !filteredProjects) return;
+
+      const allTasks = Array.isArray(tasks) ? tasks : (tasks.data?.tasks || []);
+
+      let tWeight = 0;
+      let cWeight = 0;
+      const earn = {
+         completed: 0,
+         in_progress: 0,
+         review: 0,
+         revision: 0,
+         todo: 0
+      };
+
+      // To calculate accurate share, we need total weight of ALL tasks in each project
+      const projectTotalWeights = {};
+
+      // If tasks contains tasks from other users in the same projects, we can calculate totalWeight
+      allTasks.forEach(t => {
+         const pId = String(t.project?._id || t.project || '');
+         if (pId) {
+            projectTotalWeights[pId] = (projectTotalWeights[pId] || 0) + (Number(t.weight) || 0);
+         }
+      });
+
+      const currentUserId = String(userData?._id || '');
+      const myTasks = allTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === currentUserId);
+
+      myTasks.forEach(task => {
+         const weight = Number(task.weight) || 0;
+         tWeight += weight;
+         if (task.status === 'completed') cWeight += weight;
+
+         const project = filteredProjects.find(p => String(p._id) === String(task.project?._id || task.project));
+         if (project) {
+            const projectPayment = (payments?.data?.payments || []).find(pay => String(pay._id) === String(project.payment));
+            if (projectPayment) {
+               const totalRevenue = Number(projectPayment.totalAmount) || 0;
+               const executionPool = totalRevenue * 0.56;
+               const pId = String(project._id);
+               const totalPWeight = projectTotalWeights[pId] || 100; // Fallback if no other tasks found
+
+               const share = (weight / totalPWeight) * executionPool;
+               if (earn[task.status] !== undefined) {
+                  earn[task.status] += share;
+               }
+            }
+         }
+      });
+
+      setPersonalStats({
+         totalWeight: tWeight,
+         completedWeight: cWeight,
+         earnings: earn
+      });
+   }, [tasks, filteredProjects, payments, isAdmin, userData]);
+
    console.log(filteredPayments);
 
 
    const salaryData = [{
       type: 'pie',
-      labels: [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')],
-      values: [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company],
+      labels: isAdmin
+         ? [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')]
+         : [t('completed'), t('pending')],
+      values: isAdmin
+         ? [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company]
+         : [personalStats.completedWeight, personalStats.totalWeight - personalStats.completedWeight],
       marker: {
-         colors: ['#10B981', '#8B5CF6', '#FF0000', '#3B82F6']
+         colors: isAdmin
+            ? ['#10B981', '#8B5CF6', '#FF0000', '#3B82F6']
+            : ['#10B981', '#F59E0B']
       },
-      textinfo: 'label+value',
+      textinfo: 'label+percent',
       textfont: { color: '#FFFFFF', size: 12 },
-      hovertemplate: '%{label}: $%{value}<extra></extra>'
+      hovertemplate: isAdmin ? '%{label}: $%{value}<extra></extra>' : '%{label}: %{value} weight<extra></extra>'
    }]
 
 
@@ -344,11 +423,19 @@ const Dashboard = () => {
             getProjectsByCompany(companyId);
             getPaymentsByCompany(companyId);
             getUsersByCompany(companyId);
+            if (role !== 'company_admin' && role !== 'team_lead') {
+               const myProjects = filteredProjects.map(p => p._id);
+               if (myProjects.length > 0) {
+                  getTasksByProjects(myProjects);
+               } else {
+                  getTasksByUser(userData._id || userData.id);
+               }
+            }
          }
       };
 
       initDashboard();
-   }, [userData, getCompanies, getCompanyById, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany]);
+   }, [userData, getCompanies, getCompanyById, getAllProjects, getAllPayments, getAllUsers, getProjectsByCompany, getPaymentsByCompany, getUsersByCompany, getTasksByUser]);
 
    useEffect(() => {
       if (users?.partialFailure) {
@@ -726,8 +813,12 @@ const Dashboard = () => {
 
                <div className="bg-dark-secondary border border-gray-800 rounded-xl p-6">
                   <div className="mb-6">
-                     <h3 className="text-lg font-semibold text-white mb-1">{t('salary_distribution')}</h3>
-                     <p className="text-sm text-gray-400">{t('per_project_breakdown')}</p>
+                     <h3 className="text-lg font-semibold text-white mb-1">
+                        {isAdmin ? t('salary_distribution') : t('my_tasks_progress')}
+                     </h3>
+                     <p className="text-sm text-gray-400">
+                        {isAdmin ? t('per_project_breakdown') : t('personal_earnings_breakdown')}
+                     </p>
                   </div>
                   <div className="w-full h-[300px]">
                      <Plot
@@ -739,34 +830,69 @@ const Dashboard = () => {
                      />
                   </div>
                   <div className="mt-4 space-y-2">
-                     <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                           <span className="text-gray-400">{t('execution_pool_label')}</span>
-                        </div>
-                        <span className="text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
-                     </div>
-                     <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                           <span className="text-gray-400">{t('lead_management_label')}</span>
-                        </div>
-                        <span className="text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
-                     </div>
-                     <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                           <span className="text-gray-400">{t('admin_label')}</span>
-                        </div>
-                        <span className="text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
-                     </div>
-                     <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-2">
-                           <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                           <span className="text-gray-400">{t('company')} (20%)</span>
-                        </div>
-                        <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
-                     </div>
+                     {isAdmin ? (
+                        <>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                 <span className="text-gray-400">{t('execution_pool_label')}</span>
+                              </div>
+                              <span className="text-white font-medium">${salaryTotals?.execution?.toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                                 <span className="text-gray-400">{t('lead_management_label')}</span>
+                              </div>
+                              <span className="text-white font-medium">${salaryTotals?.leadManagement?.toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                 <span className="text-gray-400">{t('admin_label')}</span>
+                              </div>
+                              <span className="text-white font-medium">${salaryTotals?.admin?.toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                 <span className="text-gray-400">{t('company')} (20%)</span>
+                              </div>
+                              <span className="text-white font-medium">${salaryTotals?.company?.toFixed(2)}</span>
+                           </div>
+                        </>
+                     ) : (
+                        <>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                 <span className="text-gray-400">{t('completed')}</span>
+                              </div>
+                              <span className="text-white font-medium">${personalStats.earnings.completed.toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                 <span className="text-gray-400">{t('in_progress')}</span>
+                              </div>
+                              <span className="text-white font-medium">${personalStats.earnings.in_progress.toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                 <span className="text-gray-400">{t('review')} / {t('revision')}</span>
+                              </div>
+                              <span className="text-white font-medium">${(personalStats.earnings.review + personalStats.earnings.revision).toFixed(2)}</span>
+                           </div>
+                           <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center space-x-2">
+                                 <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+                                 <span className="text-gray-400">{t('todo')}</span>
+                              </div>
+                              <span className="text-white font-medium">${personalStats.earnings.todo.toFixed(2)}</span>
+                           </div>
+                        </>
+                     )}
                   </div>
                </div>
             </div>

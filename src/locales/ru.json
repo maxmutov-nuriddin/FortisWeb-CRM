@@ -430,5 +430,7 @@
    "twenty_percent_of_total": "20% от суммы",
    "team_lead_share_desc": "20% от доли команды (14%)",
    "fixed_management_share": "Фиксированная доля управления",
-   "execution_pool_share_desc": "80% of Team Share (56%)"
+   "execution_pool_share_desc": "80% от доли команды (56%)",
+   "my_tasks_progress": "Прогресс моих задач",
+   "personal_earnings_breakdown": "Персональный расчет заработка"
 }
