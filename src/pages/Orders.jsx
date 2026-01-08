@@ -1365,6 +1365,9 @@ const Orders = () => {
                                        className="w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-dark-accent"
                                        placeholder="email@example.com"
                                     />
+                                    <p className="text-[10px] text-gray-500 mt-1">
+                                       Domain @gmail.com will be added automatically if missing
+                                    </p>
                                  </div>
                                  <div>
                                     <label className="text-sm font-medium text-gray-300 block mb-2">{t('client_phone')}</label>

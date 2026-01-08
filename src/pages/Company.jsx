@@ -806,11 +806,20 @@ const Company = () => {
                               name="email"
                               value={formData.email}
                               onChange={handleInputChange}
+                              onBlur={e => {
+                                 const val = e.target.value;
+                                 if (val && !val.includes('@')) {
+                                    setFormData({ ...formData, email: val.trim() + '@gmail.com' });
+                                 }
+                              }}
                               required
                               disabled={isEditMode}
                               className={`w-full bg-dark-tertiary border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-dark-accent ${isEditMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                               placeholder="Enter email address"
                            />
+                           <p className="text-[10px] text-gray-500 mt-1">
+                              Domain @gmail.com will be added automatically if missing
+                           </p>
                         </div>
                      </div>
 

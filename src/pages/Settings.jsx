@@ -205,6 +205,9 @@ const Settings = () => {
                                  className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300 placeholder:text-gray-400 dark:placeholder:text-gray-600"
                                  placeholder="email@example.com"
                               />
+                              <p className="text-[10px] text-gray-500 ml-1 mt-1">
+                                 Domain @gmail.com will be added automatically if missing
+                              </p>
                            </div>
                            <div className="space-y-2.5">
                               <label className="text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest ml-1">{t('phone_number')}</label>
@@ -316,6 +319,9 @@ const Settings = () => {
                                  }}
                                  className="w-full bg-gray-100 dark:bg-dark-tertiary/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl px-5 py-4 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent/50 focus:ring-2 focus:ring-dark-accent/10 transition-all duration-300"
                               />
+                              <p className="text-[10px] text-gray-500 ml-1 mt-1">
+                                 Domain @gmail.com will be added automatically if missing
+                              </p>
                            </div>
                            <div className="space-y-2.5">
                               <label className="text-xs font-bold text-gray-500 dark:text-gray-500 uppercase tracking-widest ml-1">{t('contact_phone')}</label>

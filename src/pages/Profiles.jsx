@@ -984,6 +984,9 @@ const Profiles = () => {
                                  }
                               }}
                            />
+                           <p className="text-[10px] text-gray-500 mt-1">
+                              Domain @gmail.com will be added automatically if missing
+                           </p>
                         </div>
                         {!isEditMode && (
                            <div style={{ position: 'relative' }}>
