@@ -24,11 +24,15 @@ const Projects = () => {
    } = useProjectStore();
 
    const { selectedCompany } = useCompanyStore();
-   const { uploads, getFiles, isLoading: uploadsLoading } = useProjectUploadStore();
+   const { uploads, getFiles, deleteFile, editFile, uploadFile, isLoading: uploadsLoading } = useProjectUploadStore();
 
    const [statusFilter, setStatusFilter] = useState('All');
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+   // File Replacement State
+   const [replacingFileId, setReplacingFileId] = useState(null);
+   const replaceInputRef = React.useRef(null);
 
    // Fetch projects and files on mount
    useEffect(() => {
@@ -119,6 +123,66 @@ const Projects = () => {
       }
    };
 
+   const handleFileDelete = async (fileId) => {
+      if (!window.confirm('Are you sure you want to delete this file?')) return;
+      try {
+         await deleteFile(fileId);
+         toast.success('File deleted successfully');
+      } catch (error) {
+         toast.error('Failed to delete file');
+      }
+   };
+
+   const handleStartReplace = (fileId) => {
+      setReplacingFileId(fileId);
+      if (replaceInputRef.current) {
+         replaceInputRef.current.value = ''; // Reset input
+         replaceInputRef.current.click();
+      }
+   };
+
+   const handleFileReplace = async (e) => {
+      const file = e.target.files[0];
+      if (!file || !replacingFileId) return;
+
+      const oldFile = uploads.find(u => u._id === replacingFileId);
+      if (!oldFile) {
+         toast.error('Original file not found');
+         return;
+      }
+
+      // 1. Delete old file
+      try {
+         await deleteFile(replacingFileId);
+      } catch (error) {
+         console.error('Failed to delete old file during replacement', error);
+         toast.error('Failed to replace file (could not remove old one)');
+         return;
+      }
+
+      // 2. Upload new file with same metadata
+      const formData = new FormData();
+      formData.append('file', file);
+      if (oldFile.companyId) formData.append('companyId', oldFile.companyId);
+      if (oldFile.orderId) formData.append('orderId', oldFile.orderId);
+      if (oldFile.taskId) formData.append('taskId', oldFile.taskId);
+      if (oldFile.description) formData.append('description', oldFile.description);
+
+      try {
+         await uploadFile(formData);
+         toast.success('File replaced successfully');
+         setReplacingFileId(null);
+
+         if (userData?.company) {
+            const companyId = userData.company._id || userData.company;
+            getFiles({ companyId });
+         }
+      } catch (error) {
+         console.error(error);
+         toast.error('Failed to upload new file during replacement');
+      }
+   };
+
    const getStatusStyle = (status) => {
       switch (status) {
          case 'assigned': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -131,6 +195,13 @@ const Projects = () => {
 
    return (
       <div className="p-8 space-y-8 min-h-screen bg-gray-50 dark:bg-dark-primary">
+         {/* Hidden File Input for Replacement */}
+         <input
+            type="file"
+            ref={replaceInputRef}
+            className="hidden"
+            onChange={handleFileReplace}
+         />
 
          {/* Header */}
          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -245,13 +316,28 @@ const Projects = () => {
                                           className="flex items-center p-2 rounded-lg bg-gray-50 dark:bg-dark-tertiary border border-gray-100 dark:border-gray-700 hover:border-dark-accent/50 cursor-pointer transition-all group/file relative overflow-hidden"
                                        >
                                           <i className={`${iconClass} ${iconColor} text-lg mr-2`}></i>
-                                          <div className="flex-1 min-w-0">
+
+                                          <div className="flex-1 min-w-0 mr-1">
                                              <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{file.originalName}</p>
                                              <p className="text-[9px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
                                           </div>
-                                          {/* Hover Download Icon */}
-                                          <div className="absolute right-2 opacity-0 group-hover/file:opacity-100 transition-opacity bg-white dark:bg-gray-800 rounded-full p-1 shadow-sm">
-                                             <i className="fa-solid fa-download text-dark-accent text-xs"></i>
+
+                                          {/* File Actions (Edit/Delete) - Only visible on hover */}
+                                          <div className="flex flex-col gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                                             <button
+                                                onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }}
+                                                className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1 rounded transition-colors"
+                                                title="Replace File"
+                                             >
+                                                <i className="fa-solid fa-pen text-[10px]"></i>
+                                             </button>
+                                             <button
+                                                onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }}
+                                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded transition-colors"
+                                                title="Delete File"
+                                             >
+                                                <i className="fa-solid fa-trash text-[10px]"></i>
+                                             </button>
                                           </div>
                                        </div>
                                     )

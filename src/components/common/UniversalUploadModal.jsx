@@ -29,6 +29,8 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
    const [description, setDescription] = useState('');
    // const [uploading, setUploading] = useState(false); // Managed by store now
 
+   const fileInputRef = React.useRef(null);
+
    // Reset state when modal opens
    useEffect(() => {
       if (isOpen) {
@@ -37,6 +39,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
          setSelectedTask('');
          setFile(null);
          setDescription('');
+         if (fileInputRef.current) fileInputRef.current.value = '';
 
          if (isSuperAdmin) {
             getCompanies();
@@ -228,6 +231,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
                         </div>
                         <input
                            type="file"
+                           ref={fileInputRef}
                            className="hidden"
                            onChange={handleFileChange}
                         />
