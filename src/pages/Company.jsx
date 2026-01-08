@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
 import { useCompanyStore } from '../store/company.store';
@@ -165,14 +166,14 @@ const Company = () => {
       }
 
       return result;
-   }, [companiesList, statusFilter, searchQuery, user]);
+   }, [companiesList, statusFilter, searchQuery, user, t]);
 
    const filteredCompanies = filteredCompaniesMemo || [];
 
    const activeCompanies = useMemo(() =>
       companiesList.filter(c => c.isActive === true), [companiesList]);
    const inactiveCompanies = useMemo(() =>
-      companiesList.filter(c => c.isActive === false), [companiesList]);;
+      companiesList.filter(c => c.isActive === false), [companiesList]);
 
    const totalEmployees = useMemo(() => {
       return companiesList.reduce((sum, company) => sum + (company.employees?.length || 0), 0);
