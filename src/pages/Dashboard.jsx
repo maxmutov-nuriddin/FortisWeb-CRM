@@ -71,6 +71,38 @@ const Dashboard = () => {
       };
    }, []);
 
+   const calculateShare = React.useCallback((payment) => {
+      if (!userData) return 0;
+      const amount = Number(payment.totalAmount) || Number(payment.amount) || 0;
+      if (isSuperAdmin || userData.role === 'company_admin') return amount;
+
+      const pCompId = String(payment.company?._id || payment.company || '');
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+      const rates = getCompanyRates(pComp);
+
+      if (userData.role === 'team_lead') {
+         // Team Leads see the entire "Team Pool" (e.g., 70% of the project budget)
+         return amount * rates.team;
+      }
+
+      // Worker/Employee calculation
+      const projectId = String(payment.project?._id || payment.project || '');
+      const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
+      const projectTasks = allTasks.filter(t => String(t.project?._id || t.project || '') === projectId && t.status === 'completed');
+
+      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+      const executionPool = amount * rates.team * 0.8;
+
+      if (totalWeight > 0) {
+         const myTasks = projectTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(userData._id));
+         const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+         return (myWeight / totalWeight) * executionPool;
+      }
+
+      return 0;
+   }, [userData, isSuperAdmin, companies, selectedCompany, getCompanyRates, tasks]);
+
    const distributionRates = useMemo(() => getCompanyRates(selectedCompany), [selectedCompany, getCompanyRates]);
 
    const allTeams = useMemo(() => {
@@ -396,14 +428,14 @@ const Dashboard = () => {
       )
 
       const todaySum = todayPayments.reduce(
-         (sum, p) => sum + Number(p.totalAmount),
+         (sum, p) => sum + calculateShare(p),
          0
       )
 
       // 💰 Вчера
       const yesterdaySum = paymentsList
          .filter(p => isYesterday(p.createdAt))
-         .reduce((sum, p) => sum + Number(p.totalAmount), 0)
+         .reduce((sum, p) => sum + calculateShare(p), 0)
 
       // 📊 Процент роста
       const percent = yesterdaySum
@@ -415,10 +447,10 @@ const Dashboard = () => {
          todayPayments.map(p => p.project?._id)
       ).size
 
-      setTodayRevenue(todaySum)
+      setTodayRevenue(Math.round(todaySum))
       setRevenuePercent(percent)
       setTodayProjectsCount(projectsCount)
-   }, [filteredPayments])
+   }, [filteredPayments, calculateShare])
 
 
 
