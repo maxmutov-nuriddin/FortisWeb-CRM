@@ -911,21 +911,30 @@ const Profiles = () => {
                         </div>
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                            <div className="flex items-center justify-between text-xs">
-                              <div>
-                                 <p className="text-gray-500 dark:text-gray-400 mb-1">{t('salary')}</p>
-                                 <p className="text-gray-900 dark:text-white font-semibold">${calculateUserEarnings(item)}</p>
-                              </div>
-                              <div>
-                                 <p className="text-gray-500 dark:text-gray-400 mb-1">{t('company')}</p>
-                                 <p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">
-                                    {(() => {
-                                       const cId = String(item.company?._id || item.company || '');
-                                       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-                                       const found = companyList.find(c => String(c._id) === cId);
-                                       return found?.name || item.company?.name || 'N/A';
-                                    })()}
-                                 </p>
-                              </div>
+                              {(userData?.role === 'super_admin' || userData?.role === 'company_admin' || item.role === 'company_admin' || item.role === 'super_admin') ? (
+                                 <>
+                                    <div>
+                                       <p className="text-gray-500 dark:text-gray-400 mb-1">{t('salary')}</p>
+                                       <p className="text-gray-900 dark:text-white font-semibold">${calculateUserEarnings(item)}</p>
+                                    </div>
+                                    <div>
+                                       <p className="text-gray-500 dark:text-gray-400 mb-1">{t('company')}</p>
+                                       <p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">
+                                          {(() => {
+                                             const cId = String(item.company?._id || item.company || '');
+                                             const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+                                             const found = companyList.find(c => String(c._id) === cId) || (selectedCompany?.company || selectedCompany?.data?.company || selectedCompany);
+
+                                             if (item.role === 'company_admin') {
+                                                const userTeam = allTeams.find(t => t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === String(item._id)) || String(t.teamLead?._id || t.teamLead || '') === String(item._id));
+                                                return userTeam?.name || found?.name || item.company?.name || 'N/A';
+                                             }
+                                             return found?.name || item.company?.name || 'N/A';
+                                          })()}
+                                       </p>
+                                    </div>
+                                 </>
+                              ) : null}
                               <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('created')}</p><p className="text-gray-900 dark:text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
                            </div>
                         </div>
