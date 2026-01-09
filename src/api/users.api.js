@@ -6,7 +6,7 @@ export const usersApi = {
    getById: (id) => api.get(`/api/users/${id}`),
    update: (id, data) => api.put(`/api/users/${id}`, data),
    updateStatus: (id) => api.patch(`/api/users/${id}/status`),
-   delete: (id) => api.delete(`/api/users/${id}`),
+   delete: (id) => api.delete(`/api/users/employee/${id}`),
    getStats: (id) => api.get(`/api/users/${id}/stats`),
    moveUser: (id, teamId) => api.put(`/api/users/employee/${id}/move`, { teamId }),
 };
