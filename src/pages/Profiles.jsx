@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store/task.store';
 import { useProjectStore } from '../store/project.store';
 import { useSettingsStore } from '../store/settings.store';
+import { usePaymentStore } from '../store/payment.store';
 
 const Profiles = () => {
    const { t } = useTranslation();
@@ -22,8 +23,9 @@ const Profiles = () => {
    const { companies, selectedCompany, isLoading: companiesLoading, getCompanies, getCompanyById, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
    const { tasks, getTasksByProjects, isLoading: tasksLoading } = useTaskStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading } = useProjectStore();
+   const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading } = usePaymentStore();
 
-   const isLoading = usersLoading || companiesLoading || tasksLoading || projectsLoading;
+   const isLoading = usersLoading || companiesLoading || tasksLoading || projectsLoading || paymentsLoading;
 
    const [activeTab, setActiveTab] = useState('members');
    const [filter, setFilter] = useState('All Members');
@@ -72,6 +74,7 @@ const Profiles = () => {
                const validIds = companyList.map(c => c._id).filter(Boolean);
                if (validIds.length > 0) {
                   getAllUsers(validIds);
+                  getAllPayments(validIds);
                   const projResult = await getAllProjects(validIds);
                   const projectList = projResult?.data?.projects || projResult || [];
                   const pIds = projectList.map(p => p._id || p.id).filter(Boolean);
@@ -83,6 +86,7 @@ const Profiles = () => {
          // Non-super admins use getCompanyById because getCompanies might be restricted
          getCompanyById(userCompanyId);
          getUsersByCompany(userCompanyId);
+         getPaymentsByCompany(userCompanyId);
          getProjectsByCompany(userCompanyId).then(projResult => {
             const projectList = projResult?.data?.projects || projResult || [];
             const pIds = projectList.map(p => p._id || p.id).filter(Boolean);
@@ -285,6 +289,65 @@ const Profiles = () => {
       paper_bgcolor: 'transparent',
       showlegend: false
    };
+
+   const getCompanyRates = useMemo(() => (comp) => {
+      const realComp = comp?.company || comp?.data?.company || comp || {};
+      const rates = realComp.distributionRates || realComp.settings || realComp || {};
+      return {
+         admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
+         team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
+         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
+      };
+   }, []);
+
+   const calculateUserEarnings = React.useCallback((user) => {
+      const uId = String(user._id || user.id || '');
+      const role = user.role;
+      const uCompId = String(user.company?._id || user.company || '');
+
+      const allPayments = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+      const allProjects = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+      const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+
+      let total = 0;
+
+      allPayments.forEach(p => {
+         const pCompId = String(p.company?._id || p.company || '');
+         if (uCompId && pCompId !== uCompId && role !== 'super_admin') return;
+
+         const pAmount = Number(p.totalAmount) || Number(p.amount) || 0;
+         const pProjectId = String(p.project?._id || p.project || '');
+         const proj = allProjects.find(pr => String(pr._id) === pProjectId);
+         if (!proj) return;
+
+         const pComp = companyList.find(c => String(c._id) === pCompId);
+         const rates = getCompanyRates(pComp);
+
+         if (role === 'company_admin') {
+            total += (pAmount * rates.admin);
+         } else if (role === 'super_admin') {
+            total += (pAmount * rates.company);
+         } else if (role === 'team_lead') {
+            const isLead = String(proj.teamLead?._id || proj.teamLead || '') === uId;
+            if (isLead) {
+               total += (pAmount * rates.team);
+            }
+         } else {
+            // Worker/Employee
+            const projTasks = allTasks.filter(t => String(t.project?._id || t.project || '') === pProjectId && t.status === 'completed');
+            const totalWeight = projTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+            if (totalWeight > 0) {
+               const myTasks = projTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === uId);
+               const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+               const executionPool = pAmount * rates.team * 0.8;
+               total += (myWeight / totalWeight) * executionPool;
+            }
+         }
+      });
+
+      return Math.round(total);
+   }, [payments, projects, tasks, companies, getCompanyRates]);
 
    const styles = {
       modalOverlay: "fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 backdrop-blur-sm",
@@ -776,55 +839,59 @@ const Profiles = () => {
                               />
                               <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-dark-secondary ${item.isActive ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                            </div>
-                           <div className="flex items-center space-x-2">
-                              <button onClick={() => openModal(item)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-edit"></i></button>
-                              <div className="relative">
-                                 <button
-                                    onClick={(e) => {
-                                       e.preventDefault();
-                                       e.stopPropagation();
-                                       setOpenMenuUserId(openMenuUserId === item._id ? null : item._id);
-                                    }}
-                                    className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition p-1"
-                                 >
-                                    <i className="fa-solid fa-ellipsis-v"></i>
+                           {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+                              <div className="flex items-center space-x-2">
+                                 <button onClick={() => openModal(item)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition">
+                                    <i className="fa-solid fa-edit"></i>
                                  </button>
-                                 {openMenuUserId === item._id && (
-                                    <div
-                                       className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-20"
-                                       onClick={(e) => e.stopPropagation()}
+                                 <div className="relative">
+                                    <button
+                                       onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setOpenMenuUserId(openMenuUserId === item._id ? null : item._id);
+                                       }}
+                                       className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition p-1"
                                     >
-                                       <button
-                                          onClick={() => {
-                                             toggleStatus(item._id);
-                                             setOpenMenuUserId(null);
-                                          }}
-                                          className="w-full text-left px-4 py-3 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center"
+                                       <i className="fa-solid fa-ellipsis-v"></i>
+                                    </button>
+                                    {openMenuUserId === item._id && (
+                                       <div
+                                          className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl overflow-hidden z-20"
+                                          onClick={(e) => e.stopPropagation()}
                                        >
-                                          <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
-                                          {item.isActive ? t('deactivate') : t('activate')}
-                                       </button>
-                                       <button
-                                          onClick={() => openMoveTeamModal(item._id)}
-                                          className="w-full text-left px-4 py-3 text-xs text-blue-500 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
-                                       >
-                                          <i className="fa-solid fa-people-arrows mr-2"></i>
-                                          {t('move_to_team')}
-                                       </button>
-                                       <button
-                                          onClick={() => {
-                                             handleDelete(item._id);
-                                             setOpenMenuUserId(null);
-                                          }}
-                                          className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
-                                       >
-                                          <i className="fa-solid fa-trash-can mr-2"></i>
-                                          {t('delete_member')}
-                                       </button>
-                                    </div>
-                                 )}
+                                          <button
+                                             onClick={() => {
+                                                toggleStatus(item._id);
+                                                setOpenMenuUserId(null);
+                                             }}
+                                             className="w-full text-left px-4 py-3 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center"
+                                          >
+                                             <i className={`fa-solid ${item.isActive ? 'fa-user-slash' : 'fa-user-check'} mr-2`}></i>
+                                             {item.isActive ? t('deactivate') : t('activate')}
+                                          </button>
+                                          <button
+                                             onClick={() => openMoveTeamModal(item._id)}
+                                             className="w-full text-left px-4 py-3 text-xs text-blue-500 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
+                                          >
+                                             <i className="fa-solid fa-people-arrows mr-2"></i>
+                                             {t('move_to_team')}
+                                          </button>
+                                          <button
+                                             onClick={() => {
+                                                handleDelete(item._id);
+                                                setOpenMenuUserId(null);
+                                             }}
+                                             className="w-full text-left px-4 py-3 text-xs text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition border-t border-gray-200 dark:border-gray-700 flex items-center"
+                                          >
+                                             <i className="fa-solid fa-trash-can mr-2"></i>
+                                             {t('delete_member')}
+                                          </button>
+                                       </div>
+                                    )}
+                                 </div>
                               </div>
-                           </div>
+                           )}
                         </div>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{item.name}</h3>
                         <p className="text-sm text-dark-accent mb-3">{item.position || item.role?.replace('_', ' ')}</p>
@@ -844,8 +911,21 @@ const Profiles = () => {
                         </div>
                         <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                            <div className="flex items-center justify-between text-xs">
-                              <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('salary')}</p><p className="text-gray-900 dark:text-white font-semibold">${item.salary || 0}</p></div>
-                              <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('company')}</p><p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">{item.company?.name || 'N/A'}</p></div>
+                              <div>
+                                 <p className="text-gray-500 dark:text-gray-400 mb-1">{t('salary')}</p>
+                                 <p className="text-gray-900 dark:text-white font-semibold">${calculateUserEarnings(item)}</p>
+                              </div>
+                              <div>
+                                 <p className="text-gray-500 dark:text-gray-400 mb-1">{t('company')}</p>
+                                 <p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">
+                                    {(() => {
+                                       const cId = String(item.company?._id || item.company || '');
+                                       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+                                       const found = companyList.find(c => String(c._id) === cId);
+                                       return found?.name || item.company?.name || 'N/A';
+                                    })()}
+                                 </p>
+                              </div>
                               <div><p className="text-gray-500 dark:text-gray-400 mb-1">{t('created')}</p><p className="text-gray-900 dark:text-white font-semibold">{new Date(item.createdAt).toLocaleDateString([], { month: 'short', year: '2-digit' })}</p></div>
                            </div>
                         </div>
@@ -868,14 +948,16 @@ const Profiles = () => {
                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{team.name}</h3>
                            <p className="text-xs text-gray-500 dark:text-gray-400">Company: {team.companyName}</p>
                         </div>
-                        <div className="flex items-center space-x-3">
-                           <button onClick={() => handleDeleteTeam(team.companyId, team._id)} className="text-gray-500 hover:text-red-500 transition text-sm">
-                              <i className="fa-solid fa-trash-can mr-1"></i>
-                           </button>
-                           <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-red-600 dark:hover:text-white text-sm font-medium transition">
-                              <i className="fa-solid fa-plus mr-1"></i> {t('add_member')}
-                           </button>
-                        </div>
+                        {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+                           <div className="flex items-center space-x-3">
+                              <button onClick={() => handleDeleteTeam(team.companyId, team._id)} className="text-gray-500 hover:text-red-500 transition text-sm">
+                                 <i className="fa-solid fa-trash-can mr-1"></i>
+                              </button>
+                              <button onClick={() => handleAddMemberToTeam(team._id, team.companyId)} className="text-dark-accent hover:text-red-600 dark:hover:text-white text-sm font-medium transition">
+                                 <i className="fa-solid fa-plus mr-1"></i> {t('add_member')}
+                              </button>
+                           </div>
+                        )}
                      </div>
                      <div className="mb-6">
                         <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-3">{t('team_lead')}</p>
