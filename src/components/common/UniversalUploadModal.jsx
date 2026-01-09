@@ -61,10 +61,19 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
    // Helper to extract clean array of projects
    const projectList = useMemo(() => {
       const list = projects?.data?.projects || (Array.isArray(projects) ? projects : []) || [];
-      // Filter if needed? For super admin, we might want to filter by selected company if we fetch all.
-      // But getProjectsByCompany(selectedCompany) should handle it.
-      return list;
-   }, [projects]);
+      const myRole = userData?.role;
+      const myId = String(userData?._id || userData?.id || '');
+
+      if (isSuperAdmin || isCompanyAdmin) return list;
+
+      return list.filter(p => {
+         if (isTeamLead) {
+            return String(p.teamLead?._id || p.teamLead || '') === myId;
+         }
+         // Employee/Worker
+         return p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === myId);
+      });
+   }, [projects, isSuperAdmin, isCompanyAdmin, isTeamLead, userData]);
 
    // Helper to extract clean array of tasks
    const taskList = useMemo(() => {

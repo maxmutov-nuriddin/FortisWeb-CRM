@@ -141,7 +141,15 @@ const Payments = () => {
          }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
-      return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      // Filter for Team Lead and Workers
+      const filtered = list.filter(p => {
+         const project = p.project || {};
+         const isLead = String(project.teamLead?._id || project.teamLead || '') === currentUserId;
+         const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
+         return isLead || isAssigned;
+      });
+
+      return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
    }, [payments, isSuperAdmin, userData, viewCompanyId]);
 
    const filteredPayments = useMemo(() => {

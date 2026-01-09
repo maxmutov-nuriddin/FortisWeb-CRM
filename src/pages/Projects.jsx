@@ -75,17 +75,9 @@ const Projects = () => {
    }, [projects, userData]);
 
    const filteredProjects = useMemo(() => {
-      // 1. Filter by status
-      let result = statusFilter === 'All' ? myProjects : myProjects.filter(p => p.status === statusFilter.toLowerCase());
-
-      // 2. Filter out projects with NO files (Hide empty orders)
-      result = result.filter(project => {
-         const projectFiles = uploads.filter(file => file.orderId === project._id);
-         return projectFiles.length > 0;
-      });
-
-      return result;
-   }, [myProjects, statusFilter, uploads]);
+      // Filter by status
+      return statusFilter === 'All' ? myProjects : myProjects.filter(p => p.status === statusFilter.toLowerCase());
+   }, [myProjects, statusFilter]);
 
    const handleAccept = async (project) => {
       if (!window.confirm(t('confirm_accept_project'))) return;
