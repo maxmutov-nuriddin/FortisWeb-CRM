@@ -160,11 +160,19 @@ const Profiles = () => {
 
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
-      // Filter out super_admin for everyone else
-      let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
+      const currentUserId = String(userData?._id || userData?.id || '');
 
+      // 1. Initial filter: Hide super_admin from others, AND always hide self
+      let filtered = all.filter(u => {
+         const uId = String(u._id || u.id || '');
+         if (uId === currentUserId) return false;
+         if (!isSuperAdmin && u.role === 'super_admin') return false;
+         return true;
+      });
+
+      // 2. Role-specific subsetting for non-admins
       if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         // Show only members of their teams (team_lead, backend, frontend, marketer, designer, employee)
+         // Show only members of their teams
          const myTeams = allTeams;
          const memberIds = new Set();
          myTeams.forEach(t => {
@@ -177,9 +185,6 @@ const Profiles = () => {
             const leadId = String(t.teamLead?._id || t.teamLead || '');
             if (leadId) memberIds.add(leadId);
          });
-
-         const currentUserId = String(userData?._id || userData?.id || '');
-         if (currentUserId) memberIds.add(currentUserId); // Always include self
 
          filtered = filtered.filter(u => {
             const uId = String(u._id || u.id || '');
