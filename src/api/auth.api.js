@@ -6,4 +6,5 @@ export const authApi = {
    getMe: () => api.get('/api/auth/me'),
    updateProfile: (data, config) => api.put('/api/auth/profile', data, config),
    updatePassword: (data) => api.put('/api/auth/password', data),
+   changeTempPassword: (data) => api.put('/api/auth/change-temp-password', data),
 };

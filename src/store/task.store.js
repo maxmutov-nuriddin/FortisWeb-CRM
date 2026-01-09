@@ -113,10 +113,10 @@ export const useTaskStore = create((set) => ({
       }
    },
 
-   updateTaskStatus: async (id, status) => {
+   updateTaskStatus: async (id, data) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await tasksApi.updateStatus(id, status);
+         const response = await tasksApi.updateStatus(id, data);
          const updatedTask = response.data.data?.task || response.data.task || response.data;
          set((state) => ({
             tasks: Array.isArray(state.tasks)
@@ -128,6 +128,74 @@ export const useTaskStore = create((set) => ({
          return updatedTask;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update task status', isLoading: false });
+         throw error;
+      }
+   },
+
+   reorderTasks: async (data) => {
+      set({ isLoading: true, error: null });
+      try {
+         await tasksApi.reorderTasks(data);
+         set({ isLoading: false });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to reorder tasks', isLoading: false });
+         throw error;
+      }
+   },
+
+   addSubtask: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.addSubtask(id, data);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map(t => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
+            isLoading: false
+         }));
+         return updatedTask;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to add subtask', isLoading: false });
+         throw error;
+      }
+   },
+
+   addAttachment: async (id, file) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.addAttachment(id, file);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map(t => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
+            isLoading: false
+         }));
+         return updatedTask;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to add attachment', isLoading: false });
+         throw error;
+      }
+   },
+
+   addDependency: async (id, dependencyId) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await tasksApi.addDependency(id, dependencyId);
+         const updatedTask = response.data.data?.task || response.data.task || response.data;
+         set((state) => ({
+            tasks: Array.isArray(state.tasks)
+               ? state.tasks.map(t => (t._id === id || t.id === id) ? updatedTask : t)
+               : state.tasks,
+            selectedTask: (state.selectedTask?._id === id || state.selectedTask?.id === id) ? updatedTask : state.selectedTask,
+            isLoading: false
+         }));
+         return updatedTask;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to add dependency', isLoading: false });
          throw error;
       }
    },
@@ -151,10 +219,10 @@ export const useTaskStore = create((set) => ({
       }
    },
 
-   addTaskComment: async (id, text) => {
+   addTaskComment: async (id, data) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await tasksApi.addComment(id, text);
+         const response = await tasksApi.addComment(id, data);
          const updatedTask = response.data.data?.task || response.data.task || response.data;
          set((state) => ({
             tasks: Array.isArray(state.tasks)

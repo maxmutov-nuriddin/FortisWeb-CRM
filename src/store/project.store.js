@@ -170,16 +170,25 @@ export const useProjectStore = create((set) => ({
       }
    },
 
-   updateWorkPercentage: async (id, percentage) => {
+   updateWorkPercentage: async (id, membersWork) => {
       set({ isLoading: true, error: null });
       try {
-         const response = await projectsApi.updateWorkPercentage(id, percentage);
+         const response = await projectsApi.updateWorkPercentage(id, membersWork);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update percentage', isLoading: false });
       }
@@ -192,6 +201,43 @@ export const useProjectStore = create((set) => ({
          set({ isLoading: false });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add results', isLoading: false });
+      }
+   },
+
+   addRepository: async (id, data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.addRepository(id, data);
+         const updatedProject = response.data.data?.project || response.data;
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to add repository', isLoading: false });
+         throw error;
+      }
+   },
+
+   getRepoCommits: async (id) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await projectsApi.getRepoCommits(id);
+         set({ repoCommits: response.data.data || response.data, isLoading: false });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to get commits', isLoading: false });
       }
    },
 
@@ -210,11 +256,20 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.complete(id);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to complete project', isLoading: false });
       }
@@ -225,11 +280,20 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.accept(id, data);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to accept project', isLoading: false });
@@ -242,11 +306,20 @@ export const useProjectStore = create((set) => ({
       try {
          const response = await projectsApi.updateStatusFlags(id, data);
          const updatedProject = response.data.data?.project || response.data;
-         set((state) => ({
-            projects: state.projects.map(p => (p._id === id || p.id === id) ? updatedProject : p),
-            selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
-            isLoading: false
-         }));
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? updatedProject : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? updatedProject : state.selectedProject,
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to update project status flags', isLoading: false });
@@ -258,7 +331,6 @@ export const useProjectStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectsApi.getOrderHistory();
-         // Assuming this returns a list of history items, distinct from 'projects' state
          set({ orderHistory: response.data.data || response.data, isLoading: false });
          return response.data;
       } catch (error) {

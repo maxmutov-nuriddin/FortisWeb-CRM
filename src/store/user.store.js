@@ -35,6 +35,31 @@ export const useUserStore = create((set) => ({
       }
    },
 
+   createEmployee: async (data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await usersApi.createEmployee(data);
+         const newUser = response.data.data?.user || response.data;
+         set((state) => {
+            const currentList = state.users?.data?.users || (Array.isArray(state.users) ? state.users : []);
+            return {
+               users: {
+                  ...state.users,
+                  data: {
+                     ...state.users?.data,
+                     users: [...currentList, newUser]
+                  }
+               },
+               isLoading: false
+            };
+         });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to create employee', isLoading: false });
+         throw error;
+      }
+   },
+
    getUsersByCompany: async (companyId) => {
       set({ isLoading: true, error: null });
       try {

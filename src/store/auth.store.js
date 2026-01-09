@@ -70,6 +70,18 @@ export const useAuthStore = create((set) => ({
       }
    },
 
+   changeTempPassword: async (data) => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await authApi.changeTempPassword(data);
+         set({ isLoading: false });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Change temporary password failed', isLoading: false });
+         throw error;
+      }
+   },
+
    logout: () => {
       Cookies.remove('token');
       set({ user: null, isAuthenticated: false });
