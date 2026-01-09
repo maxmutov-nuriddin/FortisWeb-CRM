@@ -226,7 +226,20 @@ export const useUserStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await usersApi.moveUser(id, teamId);
-         set({ isLoading: false });
+         const updatedUser = response.data.data?.user || response.data;
+         set((state) => {
+            const currentList = state.users?.data?.users || (Array.isArray(state.users) ? state.users : []);
+            return {
+               users: {
+                  ...state.users,
+                  data: {
+                     ...state.users?.data,
+                     users: currentList.map((u) => (u._id === id ? { ...u, ...updatedUser, team: teamId } : u))
+                  }
+               },
+               isLoading: false
+            };
+         });
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to move user', isLoading: false });

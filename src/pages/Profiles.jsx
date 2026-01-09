@@ -20,7 +20,7 @@ const Profiles = () => {
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
 
    const { users, isLoading: usersLoading, getUsersByCompany, getAllUsers, createUser, updateUser, deleteUser, updateUserStatus } = useUserStore();
-   const { companies, selectedCompany, isLoading: companiesLoading, getCompanies, getCompanyById, addTeam, addTeamMemberDirect, deleteTeam: deleteTeamAction } = useCompanyStore();
+   const { companies, selectedCompany, isLoading: companiesLoading, getCompanies, getCompanyById, addTeam, addTeamMemberDirect, removeTeamMember, deleteTeam: deleteTeamAction } = useCompanyStore();
    const { tasks, getTasksByProjects, isLoading: tasksLoading } = useTaskStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading } = useProjectStore();
    const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading } = usePaymentStore();
@@ -719,6 +719,64 @@ const Profiles = () => {
       }
    };
 
+   const handleRemoveTeamMember = async (companyId, teamId, userId) => {
+      const workerRoles = ['employee', 'frontend', 'backend', 'designer', 'marketer'];
+      const company = (companies?.data?.companies || companies || []).find(c => String(c._id) === String(companyId));
+      const userToRemove = (company?.employees || rawUserList).find(e => String(e._id) === String(userId));
+
+      if (!userToRemove) {
+         toast.error('User not found');
+         return;
+      }
+
+      if (!workerRoles.includes(userToRemove.role)) {
+         toast.warning('Only worker roles can be kicked from team organization.');
+         // We still allow it if admin insists, but usually kick is for workers.
+         // For now let's just proceed as requested.
+      }
+
+      const ToastContent = ({ closeToast }) => (
+         <div>
+            <p>Are you sure you want to kick <strong>{userToRemove.name}</strong> from this team?</p>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+               <button
+                  onClick={async () => {
+                     closeToast();
+                     setIsSubmitting(true);
+                     try {
+                        await removeTeamMember(companyId, teamId, userId);
+                        toast.success('Member removed from team', {
+                           position: 'top-right',
+                           autoClose: 5000,
+                           theme: 'dark',
+                        });
+                     } catch (error) {
+                        toast.error(error.response?.data?.message || 'Failed to remove member');
+                     } finally {
+                        setIsSubmitting(false);
+                     }
+                  }}
+                  style={{
+                     padding: '5px 15px', background: '#ef4444', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '14px'
+                  }}
+               >
+                  Kick
+               </button>
+               <button onClick={closeToast} style={{ padding: '5px 15px', background: '#6b7280', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', fontSize: '14px' }}>
+                  Cancel
+               </button>
+            </div>
+         </div>
+      );
+
+      toast.info(<ToastContent />, {
+         position: 'top-right',
+         autoClose: false,
+         closeOnClick: false,
+         theme: 'dark',
+      });
+   };
+
    if (isLoading && userList?.length === 0) return <PageLoader />;
 
    if (!isLoading && userList.length === 0 && !users?.partialFailure && !isSuperAdmin) {
@@ -1027,11 +1085,22 @@ const Profiles = () => {
                               const name = empFound?.name || m.name || m.user?.name || 'Unknown Member';
 
                               return (
-                                 <div key={idx} className="flex items-center space-x-2 bg-gray-50 dark:bg-dark-tertiary p-2 rounded-lg border border-gray-100 dark:border-gray-700">
-                                    <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-gray-700 dark:text-white">
-                                       {name.charAt(0).toUpperCase() || '?'}
+                                 <div key={idx} className="flex items-center justify-between bg-gray-50 dark:bg-dark-tertiary p-2 rounded-lg border border-gray-100 dark:border-gray-700 group">
+                                    <div className="flex items-center space-x-2 truncate">
+                                       <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] text-gray-700 dark:text-white">
+                                          {name.charAt(0).toUpperCase() || '?'}
+                                       </div>
+                                       <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{name}</span>
                                     </div>
-                                    <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{name}</span>
+                                    {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+                                       <button
+                                          onClick={() => handleRemoveTeamMember(team.companyId, team._id, uId)}
+                                          className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                          title="Kick from team"
+                                       >
+                                          <i className="fa-solid fa-user-minus text-xs"></i>
+                                       </button>
+                                    )}
                                  </div>
                               );
                            })}

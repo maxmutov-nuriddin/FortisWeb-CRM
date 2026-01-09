@@ -10,6 +10,7 @@ export const companiesApi = {
    addTeam: (id, data) => api.post(`/api/companies/${id}/teams`, data),
    addTeamMember: (id, data) => api.post(`/api/companies/${id}/teams/members`, data),
    addTeamMemberDirect: (id, data) => api.post(`/api/companies/${id}/teams/members`, data),
+   removeTeamMember: (id, teamId, userId) => api.delete(`/api/companies/${id}/teams/${teamId}/members/${userId}`),
    deleteTeam: (id, teamId) => api.delete(`/api/companies/${id}/teams/${teamId}`),
    updateSubscription: (id, type) => api.post(`/api/companies/${id}/subscription`, { type }),
    updateDistributionRates: (id, data) => api.put(`/api/companies/${id}/distribution-rates`, data)

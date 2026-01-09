@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { companiesApi } from '../api/companies.api';
+import { usersApi } from '../api/users.api';
 
 export const useCompanyStore = create((set) => ({
    companies: [],
@@ -186,6 +187,71 @@ export const useCompanyStore = create((set) => ({
          return response.data;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to add team member', isLoading: false });
+         throw error;
+      }
+   },
+   removeTeamMember: async (companyId, teamId, userId) => {
+      set({ isLoading: true, error: null });
+      try {
+         await companiesApi.removeTeamMember(companyId, teamId, userId);
+
+         set((state) => {
+            const currentCompanies = state.companies?.data?.companies || (Array.isArray(state.companies) ? state.companies : []);
+
+            const updatedCompanies = currentCompanies.map(c => {
+               if (c._id === companyId) {
+                  return {
+                     ...c,
+                     teams: (c.teams || []).map(t => {
+                        if (t._id === teamId) {
+                           return {
+                              ...t,
+                              members: (t.members || []).filter(m => {
+                                 const mId = String(m?._id || m.user?._id || m.user || m || '');
+                                 return mId !== userId;
+                              })
+                           };
+                        }
+                        return t;
+                     })
+                  };
+               }
+               return c;
+            });
+
+            const newState = {
+               isLoading: false,
+               companies: {
+                  ...state.companies,
+                  data: {
+                     ...state.companies?.data,
+                     companies: updatedCompanies
+                  }
+               }
+            };
+
+            if (state.selectedCompany?._id === companyId) {
+               newState.selectedCompany = {
+                  ...state.selectedCompany,
+                  teams: (state.selectedCompany.teams || []).map(t => {
+                     if (t._id === teamId) {
+                        return {
+                           ...t,
+                           members: (t.members || []).filter(m => {
+                              const mId = String(m?._id || m.user?._id || m.user || m || '');
+                              return mId !== userId;
+                           })
+                        };
+                     }
+                     return t;
+                  })
+               };
+            }
+
+            return newState;
+         });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to remove team member', isLoading: false });
          throw error;
       }
    },
