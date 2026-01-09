@@ -23,7 +23,21 @@ const Header = ({ toggleSidebar }) => {
 
    const newOrdersCount =
       projects?.data?.projects?.filter(
-         (project) => project.status === 'pending'
+         (project) => {
+            const isPending = project.status === 'pending';
+            if (!isPending) return false;
+
+            // Role-based filtering
+            const role = userData?.role;
+            if (role === 'super_admin' || role === 'company_admin') return true;
+
+            if (role === 'team_lead') {
+               return String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
+            }
+
+            // Worker
+            return project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
+         }
       ).length || 0;
 
    // ===================== AUTH =====================

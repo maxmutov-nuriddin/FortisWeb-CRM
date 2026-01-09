@@ -35,6 +35,7 @@ const Tasks = () => {
    const [searchQuery, setSearchQuery] = useState('');
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
    const [currentTask, setCurrentTask] = useState(null);
    const [formData, setFormData] = useState({
       title: '',
@@ -164,11 +165,38 @@ const Tasks = () => {
    const handleStatusChange = async (taskId, newStatus) => {
       const id = taskId?._id || taskId?.id || taskId;
       try {
-         await updateTaskStatus(id, newStatus);
+         await updateTaskStatus(id, { status: newStatus });
          toast.success(t('status_updated_to', { status: newStatus.replace('_', ' ') }));
       } catch (error) {
          toast.error('Failed to update status');
       }
+   };
+
+   // DND Handlers
+   const onDragStart = (e, task) => {
+      e.dataTransfer.setData('taskId', task._id || task.id);
+      e.target.style.opacity = '0.5';
+   };
+
+   const onDragEnd = (e) => {
+      e.target.style.opacity = '1';
+   };
+
+   const onDragOver = (e) => {
+      e.preventDefault();
+   };
+
+   const onDrop = async (e, newStatus) => {
+      e.preventDefault();
+      const taskId = e.dataTransfer.getData('taskId');
+      if (taskId) {
+         await handleStatusChange(taskId, newStatus);
+      }
+   };
+
+   const handleTaskClick = (task) => {
+      setCurrentTask(task);
+      setIsViewModalOpen(true);
    };
 
    const handleDeleteTask = async (taskOrId) => {
@@ -292,7 +320,11 @@ const Tasks = () => {
    const renderColumn = (title, status, colorClass) => {
       const columnTasks = filteredTasks.filter(t => t.status === status);
       return (
-         <div className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[340px]">
+         <div
+            className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[340px]"
+            onDragOver={onDragOver}
+            onDrop={(e) => onDrop(e, status)}
+         >
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-gray-50 dark:bg-dark-secondary pb-2 z-10 transition-colors duration-300">
                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${colorClass}`}></div><span>{t(status)}</span>
@@ -301,7 +333,14 @@ const Tasks = () => {
             </div>
             <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
                {columnTasks.map(task => (
-                  <div key={task._id} className="bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-dark-accent dark:hover:border-dark-accent transition cursor-pointer relative group">
+                  <div
+                     key={task._id}
+                     draggable
+                     onDragStart={(e) => onDragStart(e, task)}
+                     onDragEnd={onDragEnd}
+                     onClick={() => handleTaskClick(task)}
+                     className="bg-white dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-dark-accent dark:hover:border-dark-accent transition cursor-pointer relative group"
+                  >
                      <div className="flex items-start justify-between mb-2 gap-2">
                         <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{task.title}</h4>
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${task.priority === 'urgent' ? 'bg-red-500 text-white' :
@@ -339,17 +378,17 @@ const Tasks = () => {
                      {/* Action Overlay */}
                      <div className="absolute inset-0 bg-white dark:bg-dark-tertiary bg-opacity-95 dark:bg-opacity-95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center p-4">
                         <div className="flex flex-wrap gap-2 justify-center mb-4">
-                           {status !== 'todo' && <button onClick={() => handleStatusChange(task._id, 'todo')} className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
-                           {status !== 'in_progress' && <button onClick={() => handleStatusChange(task._id, 'in_progress')} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
-                           {status !== 'review' && <button onClick={() => handleStatusChange(task._id, 'review')} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
-                           {status !== 'completed' && <button onClick={() => handleStatusChange(task._id, 'completed')} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
+                           {status !== 'todo' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'todo'); }} className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
+                           {status !== 'in_progress' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'in_progress'); }} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
+                           {status !== 'review' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'review'); }} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
+                           {status !== 'completed' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'completed'); }} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
                         </div>
                         {canManageTasks && (
                            <div className="flex border-t border-gray-200 dark:border-gray-700 pt-3 gap-3 justify-center">
-                              <button onClick={() => handleOpenEdit(task)} className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs flex items-center space-x-1">
+                              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(task); }} className="text-blue-500 hover:text-blue-600 dark:hover:text-blue-400 text-xs flex items-center space-x-1">
                                  <i className="fa-solid fa-edit"></i><span>{t('edit')}</span>
                               </button>
-                              <button onClick={() => handleDeleteTask(task._id)} className="text-red-500 hover:text-red-600 dark:hover:text-red-400 text-xs flex items-center space-x-1">
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteTask(task._id); }} className="text-red-500 hover:text-red-600 dark:hover:text-red-400 text-xs flex items-center space-x-1">
                                  <i className="fa-solid fa-trash"></i><span>{t('delete')}</span>
                               </button>
                            </div>
@@ -445,6 +484,121 @@ const Tasks = () => {
          </div>
 
          {/* Modal Overlay */}
+         {/* View Task Modal */}
+         {isViewModalOpen && currentTask && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsViewModalOpen(false)}></div>
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-2xl p-8 relative z-10 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+                  <header className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100 dark:border-gray-800">
+                     <div>
+                        <div className="flex items-center gap-3 mb-1">
+                           <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${currentTask.priority === 'urgent' ? 'bg-red-500 text-white' :
+                              currentTask.priority === 'high' ? 'bg-orange-500 text-white' :
+                                 currentTask.priority === 'medium' ? 'bg-yellow-500 text-black' :
+                                    'bg-blue-500 text-white'
+                              }`}>{t(currentTask.priority)}</span>
+                           <span className="text-xs text-gray-400">#{currentTask._id?.slice(-6).toUpperCase()}</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{currentTask.title}</h2>
+                     </div>
+                     <button onClick={() => setIsViewModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-dark-tertiary text-gray-500 transition">
+                        <i className="fa-solid fa-times text-lg"></i>
+                     </button>
+                  </header>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                     <div className="md:col-span-2 space-y-6">
+                        <section>
+                           <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 tracking-wider">{t('description')}</h3>
+                           <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{currentTask.description || t('no_description')}</p>
+                        </section>
+
+                        <section className="bg-gray-50 dark:bg-dark-tertiary rounded-xl p-5 border border-gray-100 dark:border-gray-800">
+                           <h3 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">{t('project_info')}</h3>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                 <div className="text-[10px] text-gray-500 uppercase">{t('project_name')}</div>
+                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.project?.title || currentTask.project?.name || t('unknown')}</div>
+                              </div>
+                              <div>
+                                 <div className="text-[10px] text-gray-500 uppercase">{t('budget')}</div>
+                                 <div className="text-sm font-medium text-green-600 dark:text-green-400">${currentTask.project?.budget || 0}</div>
+                              </div>
+                              <div className="col-span-2">
+                                 <div className="text-[10px] text-gray-500 uppercase">{t('client')}</div>
+                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.project?.client || t('unknown')}</div>
+                              </div>
+                           </div>
+                        </section>
+                     </div>
+
+                     <div className="space-y-6">
+                        <div className="space-y-4 shadow-sm bg-white dark:bg-dark-tertiary border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+                           <div>
+                              <div className="text-[10px] text-gray-500 uppercase mb-1">{t('status')}</div>
+                              <div className="flex items-center gap-2">
+                                 <div className={`w-2 h-2 rounded-full ${currentTask.status === 'completed' ? 'bg-green-500' :
+                                    currentTask.status === 'in_progress' ? 'bg-yellow-500' :
+                                       currentTask.status === 'review' ? 'bg-purple-500' : 'bg-gray-500'
+                                    }`}></div>
+                                 <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">{t(currentTask.status)}</span>
+                              </div>
+                           </div>
+
+                           <div>
+                              <div className="text-[10px] text-gray-500 uppercase mb-2">{t('assignee')}</div>
+                              <div className="flex items-center gap-3">
+                                 <img
+                                    src={currentTask.assignedTo?.avatar || `https://ui-avatars.com/api/?name=${currentTask.assignedTo?.name || 'U'}`}
+                                    className="w-8 h-8 rounded-full border border-dark-accent"
+                                    alt=""
+                                 />
+                                 <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.assignedTo?.name || t('unassigned')}</div>
+                                    <div className="text-[10px] text-gray-500">{currentTask.assignedTo?.position || currentTask.assignedTo?.role}</div>
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                 <div className="text-[10px] text-gray-500 uppercase mb-1">{t('deadline')}</div>
+                                 <div className={`text-sm font-medium ${new Date(currentTask.deadline) < new Date() && currentTask.status !== 'completed' ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                                    {currentTask.deadline ? new Date(currentTask.deadline).toLocaleDateString() : t('none')}
+                                 </div>
+                              </div>
+                              <div>
+                                 <div className="text-[10px] text-gray-500 uppercase mb-1">{t('weight')}</div>
+                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.weight || 1}</div>
+                              </div>
+                           </div>
+                        </div>
+
+                        {canManageTasks && (
+                           <div className="flex flex-col gap-2">
+                              <button
+                                 onClick={() => { setIsViewModalOpen(false); handleOpenEdit(currentTask); }}
+                                 className="w-full py-2.5 bg-dark-accent/10 hover:bg-dark-accent/20 text-dark-accent rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                              >
+                                 <i className="fa-solid fa-edit"></i>
+                                 <span>{t('edit_task')}</span>
+                              </button>
+                              <button
+                                 onClick={() => { setIsViewModalOpen(false); handleDeleteTask(currentTask); }}
+                                 className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                              >
+                                 <i className="fa-solid fa-trash"></i>
+                                 <span>{t('delete_task')}</span>
+                              </button>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+               </div>
+            </div>
+         )}
+
+         {/* Edit/Create Modal */}
          {(isCreateModalOpen || isEditModalOpen) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
