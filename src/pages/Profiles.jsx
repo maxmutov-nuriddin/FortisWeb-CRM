@@ -918,26 +918,45 @@ const Profiles = () => {
                                        <p className="text-gray-900 dark:text-white font-semibold">${calculateUserEarnings(item)}</p>
                                     </div>
                                     <div>
-                                       <p className="text-gray-500 dark:text-gray-400 mb-1">{item.role === 'super_admin' ? t('company') : t('team')}</p>
-                                       <p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">
-                                          {(() => {
-                                             const cId = String(item.company?._id || item.company || '');
-                                             const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-                                             const found = companyList.find(c => String(c._id) === cId) || (selectedCompany?.company || selectedCompany?.data?.company || selectedCompany);
+                                       {(() => {
+                                          // 1. Role Normalization
+                                          const rawRole = String(item.role || '').toLowerCase().trim();
+                                          const isOwnerAdmin = rawRole.includes('super_admin') || rawRole.includes('company_admin');
+                                          const userId = String(item._id || item.id || '').trim();
 
-                                             // Lookup team for anyone who isn't a Super Admin
-                                             if (item.role !== 'super_admin') {
-                                                const userId = String(item._id || item.id || '');
-                                                const userTeam = allTeams.find(t =>
-                                                   (t.members && t.members.some(m => String(m?._id || m.user?._id || m.user || m) === userId)) ||
-                                                   String(t.teamLead?._id || t.teamLead || '') === userId
-                                                );
-                                                if (userTeam) return userTeam.name;
-                                             }
+                                          // 2. Label Selection
+                                          // viewer isSuperAdmin is defined at the component level
+                                          const label = (isSuperAdmin || isOwnerAdmin) ? t('company') : t('team');
 
-                                             return found?.name || item.company?.name || 'N/A';
-                                          })()}
-                                       </p>
+                                          // 3. Value Calculation
+                                          const cId = String(item.company?._id || item.company || '').trim();
+                                          const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+                                          const compObj = companyList.find(c => String(c._id || c.id || '').trim() === cId) || (selectedCompany?.company || selectedCompany?.data?.company || selectedCompany);
+
+                                          let displayValue = compObj?.name || item.company?.name || 'N/A';
+
+                                          // 4. Team Lookup: Only if we decided to show the "Team" label
+                                          if (label === t('team') && userId) {
+                                             const foundTeam = allTeams.find(t => {
+                                                const isLead = String(t.teamLead?._id || t.teamLead || '').trim() === userId;
+                                                const isMem = t.members && t.members.some(m => {
+                                                   const mId = String(m?._id || m.user?._id || m.user || m || '').trim();
+                                                   return mId === userId;
+                                                });
+                                                return isLead || isMem;
+                                             });
+                                             if (foundTeam) displayValue = foundTeam.name;
+                                          }
+
+                                          return (
+                                             <>
+                                                <p className="text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+                                                <p className="text-gray-900 dark:text-white font-semibold truncate max-w-[80px]">
+                                                   {displayValue}
+                                                </p>
+                                             </>
+                                          );
+                                       })()}
                                     </div>
                                  </>
                               ) : null}
