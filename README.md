@@ -23,14 +23,17 @@ Backend в текущем виде считается источником ис�
 
 Ниже будут перечислены запросы (API), которые уже реализованы в backend и должны использоваться без создания новых.
 
+#### ✅ controllers/authController.js & routes/auth.js
 
-| Маршрут              | Метод  | Функция          | Обязательные поля (Body)         | Опциональные поля / Примечания                                      |
-| :------------------- | :----- | :--------------- | :------------------------------- | :------------------------------------------------------------------ |
-| `/api/auth/register` | `POST` | `register`       | `name`, `email`, `password`      | `role`, `company`. Создает super_admin если система пуста.          |
-| `/api/auth/login`    | `POST` | `login`          | `email`, `password`              | Возвращает JWT токен и данные пользователя.                         |
-| `/api/auth/me`       | `GET`  | `getCurrentUser` | -                                | Требует `Authorization: Bearer <token>`. Возвращает текущего юзера. |
-| `/api/auth/profile`  | `PUT`  | `updateProfile`  | -                                | `name`, `phone`, `avatar`.                                          |
-| `/api/auth/password` | `PUT`  | `changePassword` | `currentPassword`, `newPassword` | Смена пароля текущего пользователя.                                 |
+| Маршрут                          | Метод  | Функция              | Обязательные поля (Body)         | Опциональные поля / Примечания                                      |
+| :------------------------------- | :----- | :------------------- | :------------------------------- | :------------------------------------------------------------------ |
+| `/api/auth/register`             | `POST` | `register`           | `name`, `email`, `password`      | `role`, `company`. Создает super_admin если система пуста.          |
+| `/api/auth/login`                | `POST` | `login`              | `email`, `password`              | Возвращает JWT токен и данные пользователя.                         |
+| `/api/auth/me`                   | `GET`  | `getCurrentUser`     | -                                | Требует `Authorization: Bearer <token>`. Возвращает текущего юзера. |
+| `/api/auth/profile`              | `PUT`  | `updateProfile`      | -                                | `name`, `phone`, `avatar`.                                          |
+| `/api/auth/password`             | `PUT`  | `changePassword`     | `currentPassword`, `newPassword` | Смена пароля текущего пользователя.                                 |
+| `/api/auth/change-temp-password` | `PUT`  | `changeTempPassword` | `newPassword`                    | Для первого входа (passwordChanged: false).                         |
+|                                  |
 
 #### ✅ controllers/userController.js & routes/users.js
 
@@ -45,12 +48,13 @@ Backend в текущем виде считается источником ис�
 | `/api/users/employee/:id`       | `DELETE` | `deleteUser`       | `id` (params)                  | Удаление пользователя.                                                |
 | `/api/users/employee/:id/move`  | `PUT`    | `moveUser`         | `id` (params), `teamId` (body) | Перемещение сотрудника в другую команду.                              |
 | `/api/users/:id/stats`          | `GET`    | `getUserStats`     | `id` (params)                  | Статистика задач и проектов пользователя.                             |
+|                                 |
 
 #### ✅ controllers/companyController.js & routes/companies.js
 
 | Маршрут                                 | Метод    | Функция                   | Обязательные поля                                                          | Опциональные поля / IDs                                                                              |
 | :-------------------------------------- | :------- | :------------------------ | :------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------- |
-| `/api/companies`                        | `POST`   | `createCompany`           | `name`                                                                     | `email`, `description`, `phone`, `address`, `companyAdminData` {name, email, password}.              |
+| `/api/companies`                        | `POST`   | `createCompany`           | `name`                                                                     | `email`, `description`, `phone`, `address`. Авто-создание админа.                                    |
 | `/api/companies`                        | `GET`    | `getAllCompanies`         | -                                                                          | Получение списка всех компаний (только super_admin).                                                 |
 | `/api/companies/:id`                    | `GET`    | `getCompany`              | `id` (params)                                                              | Детальная информация о компании, включая команды и сотрудников.                                      |
 | `/api/companies/:id`                    | `PUT`    | `updateCompany`           | `id` (params)                                                              | `name`, `description`, `email`, `phone`, `address`, `logo`, `settings` {customCommissionRate, etc.}. |
@@ -64,34 +68,40 @@ Backend в текущем виде считается источником ис�
 
 #### ✅ controllers/projectController.js & routes/projects.js
 
-| Маршрут                             | Метод    | Функция                    | Обязательные поля                                             | Опциональные поля / IDs                                                 |
-| :---------------------------------- | :------- | :------------------------- | :------------------------------------------------------------ | :---------------------------------------------------------------------- |
-| `/api/projects`                     | `POST`   | `createProject`            | `title` OR `name`                                             | `description`, `client`, `budget`, `deadline`, `priority`, `companyId`. |
-| `/api/projects/company/:companyId`  | `GET`    | `getCompanyProjects`       | `companyId` (params)                                          | Фильтры (query): `status`, `priority`, `teamLead`.                      |
-| `/api/projects/:id`                 | `GET`    | `getProject`               | `id` (params)                                                 | Детальная информация о проекте и оплате.                                |
-| `/api/projects/:id`                 | `PUT`    | `updateProject`            | `id` (params)                                                 | `title`, `description`, `budget`, `status`, `priority`, `client`.       |
-| `/api/projects/:id/assign`          | `PUT`    | `assignTeam`               | `id` (params)                                                 | `teamLeadId`, `memberIds`[] OR `assignedMembers`[], `assignedTeamId`.   |
-| `/api/projects/:id/work-percentage` | `PUT`    | `updateWorkPercentage`     | `id` (params), `membersWork`[]                                | `membersWork`: [{userId, percentage}].                                  |
-| `/api/projects/:id/results`         | `POST`   | `uploadResults`            | `id` (params), `url`                                          | `name`, `description`. Переводит статус в `review`.                     |
-| `/api/projects/:id/revision`        | `POST`   | `requestRevision`          | `id` (params), `message`                                      | Запрос доработок. Статус -> `revision`.                                 |
-| `/api/projects/:id/complete`        | `PUT`    | `completeProject`          | `id` (params)                                                 | Завершение проекта. Статус -> `completed`.                              |
-| `/api/projects/:id/accept`          | `POST`   | `acceptProject`            | `id` (params), `clientFullName`, `clientPhone`, `clientEmail` | `clientAddress`. Принятие проекта в работу.                             |
-| `/api/projects/:id/status-flags`    | `PUT`    | `updateProjectStatusFlags` | `id` (params)                                                 | `isProjectAccepted`, `isPaymentAccepted` (boolean).                     |
-| `/api/projects/history/all`         | `GET`    | `getOrderHistory`          | -                                                             | История заказов компании.                                               |
-| `/api/projects/:id`                 | `DELETE` | `deleteProject`            | `id` (params)                                                 | Удаление проекта (super_admin).                                         |
+| Маршрут                                | Метод    | Функция                    | Обязательные поля                                             | Опциональные поля / IDs                                                 |
+| :------------------------------------- | :------- | :------------------------- | :------------------------------------------------------------ | :---------------------------------------------------------------------- |
+| `/api/projects`                        | `POST`   | `createProject`            | `title` OR `name`                                             | `description`, `client`, `budget`, `deadline`, `priority`, `companyId`. |
+| `/api/projects/company/:companyId`     | `GET`    | `getCompanyProjects`       | `companyId` (params)                                          | Фильтры (query): `status`, `priority`, `teamLead`.                      |
+| `/api/projects/:id`                    | `GET`    | `getProject`               | `id` (params)                                                 | Детальная информация о проекте и оплате.                                |
+| `/api/projects/:id`                    | `PUT`    | `updateProject`            | `id` (params)                                                 | `title`, `description`, `budget`, `status`, `priority`, `client`.       |
+| `/api/projects/:id/assign`             | `PUT`    | `assignTeam`               | `id` (params)                                                 | `teamLeadId`, `memberIds`[] OR `assignedMembers`[], `assignedTeamId`.   |
+| `/api/projects/:id/work-percentage`    | `PUT`    | `updateWorkPercentage`     | `id` (params), `membersWork`[]                                | `membersWork`: [{userId, percentage}].                                  |
+| `/api/projects/:id/results`            | `POST`   | `addResult`                | `id`, `type`, `value` OR `file`                               | `comment`. Поддержка ZIP/RAR и ссылок. ✅                               |
+| `/api/projects/:id/repository`         | `POST`   | `addRepository`            | `url`, `accessToken`                                          | Интеграция с Git (GitHub, GitLab, Bitbucket). ✅                        |
+| `/api/projects/:id/repository/commits` | `GET`    | `getRepoCommits`           | `id` (params)                                                 | Получение последних коммитов из репозитория. ✅                         |
+| `/api/projects/:id/revision`           | `POST`   | `requestRevision`          | `id` (params), `message`                                      | Запрос доработок. Статус -> `revision`.                                 |
+| `/api/projects/:id/complete`           | `PUT`    | `completeProject`          | `id` (params)                                                 | Завершение проекта. Статус -> `completed`.                              |
+| `/api/projects/:id/accept`             | `POST`   | `acceptProject`            | `id` (params), `clientFullName`, `clientPhone`, `clientEmail` | `clientAddress`. Принятие проекта в работу.                             |
+| `/api/projects/:id/status-flags`       | `PUT`    | `updateProjectStatusFlags` | `id` (params)                                                 | `isProjectAccepted`, `isPaymentAccepted` (boolean).                     |
+| `/api/projects/history/all`            | `GET`    | `getOrderHistory`          | -                                                             | История заказов компании.                                               |
+| `/api/projects/:id`                    | `DELETE` | `deleteProject`            | `id` (params)                                                 | Удаление проекта (super_admin).                                         |
 
 #### ✅ controllers/taskController.js & routes/tasks.js
 
-| Маршрут                         | Метод    | Функция            | Обязательные поля       | Опциональные поля / IDs                                                                   |
-| :------------------------------ | :------- | :----------------- | :---------------------- | :---------------------------------------------------------------------------------------- |
-| `/api/tasks`                    | `POST`   | `createTask`       | `title`, `projectId`    | `description`, `assignedTo`, `deadline`, `priority`, `estimatedHours`.                    |
-| `/api/tasks/project/:projectId` | `GET`    | `getProjectTasks`  | `projectId` (params)    | Все задачи конкретного проекта.                                                           |
-| `/api/tasks/user/:userId?`      | `GET`    | `getUserTasks`     | -                       | `userId` (params, опционально). Фильтр (query): `status`.                                 |
-| `/api/tasks/:id/status`         | `PUT`    | `updateTaskStatus` | `id` (params), `status` | `actualHours`. Авто-расчет выплаты при `completed`.                                       |
-| `/api/tasks/:id/comments`       | `POST`   | `addComment`       | `id` (params), `text`   | Добавление комментария к задаче.                                                          |
-| `/api/tasks/:id/weight`         | `PUT`    | `updateTaskWeight` | `id` (params), `weight` | Вес от 1 до 10 (для расчета зарплаты).                                                    |
-| `/api/tasks/:id`                | `PUT`    | `updateTask`       | `id` (params)           | `title`, `description`, `assignedTo`, `deadline`, `priority`, `estimatedHours`, `weight`. |
-| `/api/tasks/:id`                | `DELETE` | `deleteTask`       | `id` (params)           | Удаление задачи.                                                                          |
+| Маршрут                         | Метод    | Функция            | Обязательные поля                 | Опциональные поля / IDs                                                                   |
+| :------------------------------ | :------- | :----------------- | :-------------------------------- | :---------------------------------------------------------------------------------------- |
+| `/api/tasks`                    | `POST`   | `createTask`       | `title`, `projectId`              | `description`, `assignedTo`, `deadline`, `priority`, `estimatedHours`.                    |
+| `/api/tasks/project/:projectId` | `GET`    | `getProjectTasks`  | `projectId` (params)              | Все задачи конкретного проекта.                                                           |
+| `/api/tasks/user/:userId?`      | `GET`    | `getUserTasks`     | -                                 | `userId` (params, опционально). Фильтр (query): `status`.                                 |
+| `/api/tasks/:id/status`         | `PUT`    | `updateTaskStatus` | `id` (params), `status`           | `actualHours`. Авто-расчет выплаты при `completed`.                                       |
+| `/api/tasks/reorder`            | `PUT`    | `reorderTasks`     | `taskId`, `newOrder`, `newStatus` | Drag & Drop на Kanban доске. ✅                                                           |
+| `/api/tasks/:id/subtasks`       | `POST`   | `addSubtask`       | `title`                           | Добавление подзадачи. ✅                                                                  |
+| `/api/tasks/:id/attachments`    | `POST`   | `addAttachment`    | `file`                            | Загрузка файлов к конкретной задаче. ✅                                                   |
+| `/api/tasks/:id/dependencies`   | `POST`   | `addDependency`    | `dependencyId`                    | Установка связи между задачами. ✅                                                        |
+| `/api/tasks/:id/comments`       | `POST`   | `addComment`       | `id` (params), `text`             | Добавление комментария к задаче.                                                          |
+| `/api/tasks/:id/weight`         | `PUT`    | `updateTaskWeight` | `id` (params), `weight`           | Вес от 1 до 10 (для расчета зарплаты).                                                    |
+| `/api/tasks/:id`                | `PUT`    | `updateTask`       | `id` (params)                     | `title`, `description`, `assignedTo`, `deadline`, `priority`, `estimatedHours`, `weight`. |
+| `/api/tasks/:id`                | `DELETE` | `deleteTask`       | `id` (params)                     | Удаление задачи.                                                                          |
 
 #### ✅ controllers/paymentController.js & routes/payments.js
 
@@ -115,3 +125,17 @@ Backend в текущем виде считается источником ис�
 | `/api/chat/:id/messages` | `GET`  | `getChatMessages` | `id` (params)         | Query: `limit`, `skip`.                   |
 | `/api/chat/:id/messages` | `POST` | `sendMessage`     | `id` (params), `text` | `files`[] (массив ссылок).                |
 | `/api/chat/:id/read`     | `PUT`  | `markAsRead`      | `id` (params)         | Пометить все сообщения чата прочитанными. |
+
+---
+
+#### ✅ controllers/projectUploadController.js & routes/projectUploads.js
+
+| Маршрут                     | Метод    | Функция        | Обязательные поля | Опциональные поля / Примечания     |
+| :-------------------------- | :------- | :------------- | :---------------- | :--------------------------------- |
+| `/api/uploads`              | `POST`   | `uploadFile`   | `file`            | `companyId`, `orderId`, `taskId`.  |
+| `/api/uploads/:id`          | `PUT`    | `editFile`     | `id` (params)     | `filename`, `orderId`, `taskId`.   |
+| `/api/uploads/:id`          | `DELETE` | `deleteFile`   | `id` (params)     | Удаление файла.                    |
+| `/api/uploads/:id/download` | `GET`    | `downloadFile` | `id` (params)     | Скачивание файла с проверкой прав. |
+| `/api/uploads`              | `GET`    | `getFiles`     | -                 | `orderId`, `taskId`, `companyId`.  |
+
+---
