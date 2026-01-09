@@ -1390,7 +1390,7 @@ const Profiles = () => {
                                        .filter(u => {
                                           const uCompId = String(u.company?._id || u.company || '');
                                           const selectedId = String(selectedTeamCompanyId || '');
-                                          return uCompId === selectedId;
+                                          return uCompId === selectedId && u.role !== 'company_admin' && u.role !== 'super_admin';
                                        })
                                        .map(u => (
                                           <option key={u._id} value={u._id}>{u.name} ({u.role?.replace('_', ' ')})</option>
