@@ -160,19 +160,11 @@ const Profiles = () => {
 
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
-      const currentUserId = String(userData?._id || userData?.id || '');
+      // Filter out super_admin for everyone else
+      let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
 
-      // 1. Initial filter: Hide super_admin from others, AND always hide self
-      let filtered = all.filter(u => {
-         const uId = String(u._id || u.id || '');
-         if (uId === currentUserId) return false;
-         if (!isSuperAdmin && u.role === 'super_admin') return false;
-         return true;
-      });
-
-      // 2. Role-specific subsetting for non-admins
       if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         // Show only members of their teams
+         // Show only members of their teams (team_lead, backend, frontend, marketer, designer, employee)
          const myTeams = allTeams;
          const memberIds = new Set();
          myTeams.forEach(t => {
@@ -185,6 +177,9 @@ const Profiles = () => {
             const leadId = String(t.teamLead?._id || t.teamLead || '');
             if (leadId) memberIds.add(leadId);
          });
+
+         const currentUserId = String(userData?._id || userData?.id || '');
+         if (currentUserId) memberIds.add(currentUserId); // Always include self
 
          filtered = filtered.filter(u => {
             const uId = String(u._id || u.id || '');
@@ -199,7 +194,7 @@ const Profiles = () => {
       if (filter === 'All Members' || filter === t('all_members')) return list;
       return list.filter(u => {
          if (filter === 'Admins' || filter === t('admins')) return u.role === 'company_admin' || u.role === 'super_admin';
-         if (filter === 'Team Leads' || filter === t('team_lead')) return u.role === 'team_lead';
+         if (filter === 'Team Leads' || filter === t('team_leads')) return u.role === 'team_lead';
          if (filter === 'Backend' || filter === t('backend')) return u.role === 'backend';
          if (filter === 'Frontend' || filter === t('frontend')) return u.role === 'frontend';
          if (filter === 'Marketing' || filter === t('marketing')) return u.role === 'marketing' || u.role === 'marketer';
@@ -221,7 +216,7 @@ const Profiles = () => {
    const roleData = useMemo(() => {
       const all = rawUserList;
       const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
-      const labels = [t('backend'), t('frontend'), t('team_lead'), t('admins'), t('marketing')];
+      const labels = [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')];
       const values = roles.map(r => all.filter(u => u.role === r).length);
 
       return [{
@@ -251,7 +246,7 @@ const Profiles = () => {
       const allUsers = rawUserList;
 
       const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
-      const labels = [t('backend'), t('frontend'), t('team_lead'), t('admins'), t('marketing')];
+      const labels = [t('backend'), t('frontend'), t('team_leads'), t('admins'), t('marketing')];
 
       const values = roles.map(role => {
          const roleUsers = allUsers.filter(u => u.role === role);
@@ -780,7 +775,7 @@ const Profiles = () => {
                      <i className="fa-solid fa-user-tie text-purple-500 text-xl"></i>
                   </div>
                </div>
-               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('team_lead')}</h3>
+               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('team_leads')}</h3>
                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.leads}</p>
             </div>
             <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 hover:border-dark-accent transition shadow-sm dark:shadow-none">
@@ -821,7 +816,7 @@ const Profiles = () => {
          {activeTab === 'members' ? (
             <>
                <div id="profiles-role-tabs-section" className="bg-gray-100 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-2 flex flex-wrap gap-2">
-                  {[t('all_members'), t('admins'), t('team_lead'), t('backend'), t('frontend'), t('marketing')].map(t_label => (
+                  {[t('all_members'), t('admins'), t('team_leads'), t('backend'), t('frontend'), t('marketing')].map(t_label => (
                      <button
                         key={t_label}
                         onClick={() => setFilter(t_label)}
@@ -926,13 +921,12 @@ const Profiles = () => {
                                        {(() => {
                                           // 1. Role Normalization
                                           const rawRole = String(item.role || '').toLowerCase().trim();
-                                          const IS_SUPER = rawRole.includes('super_admin') || rawRole.includes('company_admin');
+                                          const isOwnerAdmin = rawRole.includes('super_admin') || rawRole.includes('company_admin');
                                           const userId = String(item._id || item.id || '').trim();
 
                                           // 2. Label Selection
-                                          const label = IS_SUPER ? t('company') : t('team');
-                                          console.log(item);
-
+                                          // viewer isSuperAdmin is defined at the component level
+                                          const label = (isSuperAdmin || isOwnerAdmin) ? t('company') : t('team');
 
                                           // 3. Value Calculation
                                           const cId = String(item.company?._id || item.company || '').trim();
@@ -941,8 +935,8 @@ const Profiles = () => {
 
                                           let displayValue = compObj?.name || item.company?.name || 'N/A';
 
-                                          // If not super admin, search all teams for this user
-                                          if (!IS_SUPER && userId) {
+                                          // 4. Team Lookup: Only if we decided to show the "Team" label
+                                          if (label === t('team') && userId) {
                                              const foundTeam = allTeams.find(t => {
                                                 const isLead = String(t.teamLead?._id || t.teamLead || '').trim() === userId;
                                                 const isMem = t.members && t.members.some(m => {
