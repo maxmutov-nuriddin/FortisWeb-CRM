@@ -433,5 +433,10 @@
    "fixed_management_share": "Lead Reward",
    "execution_pool_share_desc": "Execution Pool",
    "my_tasks_progress": "My Tasks Progress",
-   "personal_earnings_breakdown": "Personal earnings breakdown"
+   "personal_earnings_breakdown": "Personal earnings breakdown",
+   "technical_specification": "Technical Specification (TZ)",
+   "upload_tz": "Upload TZ",
+   "download_tz": "Download TZ",
+   "no_tz_uploaded": "No TZ uploaded for this order",
+   "failed_download_file": "Failed to download file"
 }

@@ -12,6 +12,8 @@ import { useAuthStore } from '../store/auth.store';
 import PageLoader from '../components/loader/PageLoader';
 import { useUserStore } from '../store/user.store';
 import { useSettingsStore } from '../store/settings.store';
+import { useProjectUploadStore } from '../store/project-upload.store';
+import { projectUploadsApi } from '../api/project-uploads.api';
 
 const Orders = () => {
    const { t } = useTranslation();
@@ -29,6 +31,7 @@ const Orders = () => {
       paymentMethod: 'bank_transfer',
       status: 'pending'
    });
+   const [tzFile, setTzFile] = useState(null);
 
    const [formData, setFormData] = useState({
       title: '',
@@ -63,6 +66,7 @@ const Orders = () => {
    const { getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment, updatePayment } = usePaymentStore();
+   const { uploadFile, getFiles, uploads, deleteFile } = useProjectUploadStore();
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
@@ -434,6 +438,21 @@ const Orders = () => {
             const result = await createProject(createData);
             const newProjectId = result?.data?.project?._id || result?._id;
 
+            // TZ file upload
+            if (newProjectId && tzFile) {
+               try {
+                  const uploadFormData = new FormData();
+                  uploadFormData.append('file', tzFile);
+                  uploadFormData.append('orderId', newProjectId);
+                  uploadFormData.append('companyId', createData.company || activeCompanyId || '');
+                  uploadFormData.append('description', 'Technical Specification (TZ)');
+                  await uploadFile(uploadFormData);
+               } catch (uploadErr) {
+                  console.warn('TZ upload failed:', uploadErr);
+                  toast.error('Failed to upload TZ file, but order was created');
+               }
+            }
+
             // Пытаемся автоматически создать платеж для нового проекта
             if (newProjectId) {
                try {
@@ -620,6 +639,8 @@ const Orders = () => {
          } else {
             setFormData(prev => ({ ...prev, [name]: value }));
          }
+      } else if (type === 'file') {
+         setTzFile(e.target.files[0]);
       } else {
          setFormData(prev => ({
             ...prev,
@@ -650,6 +671,7 @@ const Orders = () => {
          paymentMethod: 'bank_transfer',
          status: 'pending'
       });
+      setTzFile(null);
    };
 
    const handleCreateOrder = () => {
@@ -760,6 +782,8 @@ const Orders = () => {
       }
 
       setIsModalOpen(true);
+      // Fetch files for this order
+      getFiles({ orderId: order._id });
    };
 
    const closeModal = () => {
@@ -1301,6 +1325,29 @@ const Orders = () => {
                               ></textarea>
                            </div>
 
+                           {isCreateMode && (
+                              <div>
+                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                                    Technical Specification (TZ)
+                                 </label>
+                                 <div className="flex items-center justify-center w-full">
+                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 dark:border-gray-700 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-dark-tertiary hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                          <i className="fa-solid fa-file-pdf text-2xl text-gray-400 mb-2"></i>
+                                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                                             {tzFile ? tzFile.name : 'Click to upload TZ file'}
+                                          </p>
+                                       </div>
+                                       <input
+                                          type="file"
+                                          className="hidden"
+                                          onChange={handleInputChange}
+                                       />
+                                    </label>
+                                 </div>
+                              </div>
+                           )}
+
                            <div>
                               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
                                  {t('status')}
@@ -1660,6 +1707,60 @@ const Orders = () => {
                                     </div>
                                  </div>
                               </div>
+                           </div>
+
+                           <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
+                              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                                 <i className="fa-solid fa-file-lines mr-2 text-dark-accent"></i>
+                                 {t('technical_specification')}
+                              </h3>
+                              {(() => {
+                                 const tzUpload = (uploads || []).find(u => (u.order?._id || u.order) === selectedOrder._id);
+                                 if (!tzUpload) {
+                                    return <p className="text-sm text-gray-500 italic">{t('no_tz_uploaded')}</p>;
+                                 }
+
+                                 return (
+                                    <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 flex items-center justify-between border border-gray-200 dark:border-gray-700">
+                                       <div className="flex items-center space-x-3">
+                                          <div className="w-10 h-10 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                             <i className="fa-solid fa-file-pdf text-red-500"></i>
+                                          </div>
+                                          <div>
+                                             <p className="text-gray-900 dark:text-white font-medium text-sm truncate max-w-[200px]">
+                                                {tzUpload.originalName || tzUpload.name || 'tz_file'}
+                                             </p>
+                                             <p className="text-xs text-gray-500">
+                                                {tzUpload.size ? (tzUpload.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'}
+                                             </p>
+                                          </div>
+                                       </div>
+                                       <button
+                                          type="button"
+                                          onClick={async () => {
+                                             try {
+                                                const resp = await projectUploadsApi.download(tzUpload._id);
+                                                const blob = new Blob([resp.data], { type: resp.headers['content-type'] });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const link = document.createElement('a');
+                                                link.href = url;
+                                                link.setAttribute('download', tzUpload.originalName || tzUpload.name || 'download');
+                                                document.body.appendChild(link);
+                                                link.click();
+                                                link.remove();
+                                                window.URL.revokeObjectURL(url);
+                                             } catch (err) {
+                                                toast.error('Failed to download file');
+                                             }
+                                          }}
+                                          className="flex items-center space-x-2 text-dark-accent hover:text-red-600 transition text-sm font-medium"
+                                       >
+                                          <i className="fa-solid fa-download"></i>
+                                          <span>{t('download_tz')}</span>
+                                       </button>
+                                    </div>
+                                 );
+                              })()}
                            </div>
 
                            {(isSuperAdmin || isCompanyAdmin) && (

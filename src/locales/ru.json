@@ -433,5 +433,10 @@
   "fixed_management_share": "Доля лида",
   "execution_pool_share_desc": "Пул исполнения",
   "my_tasks_progress": "Прогресс моих задач",
-  "personal_earnings_breakdown": "Персональный расчет заработка"
+  "personal_earnings_breakdown": "Персональный расчет заработка",
+  "technical_specification": "Техническое задание (ТЗ)",
+  "upload_tz": "Загрузить ТЗ",
+  "download_tz": "Скачать ТЗ",
+  "no_tz_uploaded": "ТЗ для этого заказа не загружено",
+  "failed_download_file": "Не удалось скачать файл"
 }

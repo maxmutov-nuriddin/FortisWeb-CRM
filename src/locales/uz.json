@@ -433,5 +433,10 @@
   "fixed_management_share": "Lead ulushi",
   "execution_pool_share_desc": "Bajarish puli",
   "my_tasks_progress": "Mening vazifalarim natijasi",
-  "personal_earnings_breakdown": "Shaxsiy daromad hisobi"
+  "personal_earnings_breakdown": "Shaxsiy daromad hisobi",
+  "technical_specification": "Texnik topshiriq (TT)",
+  "upload_tz": "TT yuklash",
+  "download_tz": "TT yuklab olish",
+  "no_tz_uploaded": "Ushbu buyurtma uchun TT yuklanmagan",
+  "failed_download_file": "Faylni yuklab bo'lmadi"
 }
