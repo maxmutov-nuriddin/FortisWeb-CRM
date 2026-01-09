@@ -1065,14 +1065,14 @@ const Profiles = () => {
                               className={styles.input}
                               value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
                            >
-                              <option value="employee">{t('employee_role')}</option>
-                              <option value="team_lead">{t('team_lead')}</option>
                               <option value="company_admin">{t('company_admin')}</option>
-                              {currentUser?.data?.user.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
-                              <option value="backend">{t('backend')}</option>
+                              <option value="team_lead">{t('team_lead')}</option>
+                              {currentUser?.data?.user?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
                               <option value="frontend">{t('frontend')}</option>
-                              <option value="marketer">{t('marketing')}</option>
+                              <option value="backend">{t('backend')}</option>
                               <option value="designer">{t('designer')}</option>
+                              <option value="marketer">{t('marketing')}</option>
+                              <option value="employee">{t('employee_role')}</option>
                            </select>
                         </div>
                         {(currentUser?.data?.user.role === 'super_admin' || currentUser?.role === 'super_admin') && (

@@ -17,7 +17,7 @@ const SignUp = () => {
       name: '',
       email: '',
       password: '',
-      role: 'view'
+      role: 'super_admin'
    });
    const [isLoading, setIsLoading] = useState(false);
    const [showPassword, setShowPassword] = useState(false);
@@ -141,8 +141,8 @@ const SignUp = () => {
                   </button>
                </div>
 
-               <div className="flex items-center justify-between mb-6">
-                  <div className="w-full mr-2">
+               <div className="flex items-center justify-end mb-6">
+                  {/* <div className="w-full mr-2">
                      <select
                         name="role"
                         id="chooseRole"
@@ -160,7 +160,7 @@ const SignUp = () => {
                         <option value="marketer">Marketer</option>
                         <option value="employee">Employee</option>
                      </select>
-                  </div>
+                  </div> */}
                   <Link to="/forgot-password" className="text-red-600 dark:text-dark-accent text-sm hover:underline whitespace-nowrap">
                      Forgot Password
                   </Link>
