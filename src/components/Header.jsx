@@ -30,6 +30,13 @@ const Header = ({ toggleSidebar }) => {
          return !readBy.includes(currentUserId);
       }).length || 0;
 
+   // Calculate new tasks count (status === 'todo')
+   const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
+   const newTasksCount = allTasks.filter(t =>
+      String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId) &&
+      t.status === 'todo'
+   ).length;
+
    const newOrdersCount =
       projects?.data?.projects?.filter(
          (project) => {
@@ -48,7 +55,6 @@ const Header = ({ toggleSidebar }) => {
             const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
 
             if (isAssigned) {
-               const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
                // Ensure we only check tasks assigned to THIS user (handling stale store data)
                const userTasks = allTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId));
 
@@ -116,8 +122,8 @@ const Header = ({ toggleSidebar }) => {
                <div className="flex items-center space-x-3 md:space-x-6">
                   <Link title={t('orders')} to="/orders" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                      <i className="fa-solid fa-bell text-xl"></i>
-                     {newOrdersCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount}</span>
+                     {newOrdersCount || newTasksCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount + newTasksCount   }</span>
                      )}
                   </Link>
                   <Link title={t('team_chats')} to="/team-chats" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">

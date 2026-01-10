@@ -44,6 +44,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          return !readBy.includes(currentUserId);
       }).length || 0;
 
+   // Calculate new tasks count (status === 'todo')
+   const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
+   const newTasksCount = allTasks.filter(t =>
+      String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId) &&
+      t.status === 'todo'
+   ).length;
+
    const newOrdersCount =
       projects?.data?.projects?.filter(
          (project) => {
@@ -233,6 +240,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   <Link to="/tasks" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/tasks')}`}>
                      <i className="fa-solid fa-tasks w-5"></i>
                      <span className="font-medium">{t('tasks')}</span>
+                     {newTasksCount > 0 && (
+                       <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">{newTasksCount}</span>
+                     )}
                   </Link>
                   <Link to="/team-chats" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/team')}`}>
                      <i className="fa-solid fa-comments w-5"></i>
