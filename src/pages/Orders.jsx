@@ -10,6 +10,7 @@ import { useUserStore } from '../store/user.store';
 import { useSettingsStore } from '../store/settings.store';
 import { useProjectUploadStore } from '../store/project-upload.store';
 import { useTaskStore } from '../store/task.store';
+import Cookies from 'js-cookie';
 
 const Orders = () => {
    const { t } = useTranslation();
@@ -23,6 +24,7 @@ const Orders = () => {
    const [isViewMode, setIsViewMode] = useState(false);
    const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
    const [isSubmitting, setIsSubmitting] = useState(false);
+   const [isAddingRepo, setIsAddingRepo] = useState(false);
    const [uploadedFile, setUploadedFile] = useState(null);
    const [selectedTeams, setSelectedTeams] = useState([]);
 
@@ -384,24 +386,50 @@ const Orders = () => {
          return;
       }
 
+      setIsAddingRepo(true);
+      console.log('Adding repository:', { orderId: selectedOrder._id, ...repoData });
+
       try {
-         await addRepository(selectedOrder._id, {
+         const response = await addRepository(selectedOrder._id, {
             url: repoData.url,
             accessToken: repoData.accessToken,
             provider: repoData.provider
          });
+         console.log('Repository added response:', response);
          toast.success('Repository added successfully');
          setIsRepoModalOpen(false);
          setRepoData({ provider: 'github', url: '', accessToken: '' });
 
-         // Refresh order data
-         const updatedProjects = projects?.data?.projects || [];
-         const updated = updatedProjects.find(p => p._id === selectedOrder._id);
-         if (updated) {
-            setSelectedOrder(updated);
+         // Refresh order data by fetching updated project
+         if (isSuperAdmin && viewCompanyId === 'all') {
+            const res = await getCompanies();
+            const list = res?.data?.companies || res || [];
+            const ids = list.map(c => c._id);
+            if (ids.length) {
+               await getAllProjects(ids);
+            }
+         } else if (activeCompanyId && activeCompanyId !== 'all') {
+            await getProjectsByCompany(activeCompanyId);
+         }
+
+         // Update selected order with new repository data
+         const updatedProject = response?.data?.project || response?.data?.data?.project || response?.data;
+         console.log('Updated project:', updatedProject);
+         if (updatedProject && updatedProject.repository) {
+            setSelectedOrder(updatedProject);
+         } else {
+            // If response doesn't include full project, fetch it
+            const projects = await getProjectsByCompany(activeCompanyId);
+            const refreshedProject = projects?.data?.projects?.find(p => p._id === selectedOrder._id);
+            if (refreshedProject) {
+               setSelectedOrder(refreshedProject);
+            }
          }
       } catch (err) {
+         console.error('Repository error:', err);
          toast.error(err.response?.data?.message || 'Failed to add repository');
+      } finally {
+         setIsAddingRepo(false);
       }
    };
 
@@ -410,13 +438,34 @@ const Orders = () => {
       toast.success('Copied to clipboard');
    };
 
-   const downloadFile = (fileId, filename) => {
-      // Create download link
-      const link = document.createElement('a');
-      link.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/uploads/${fileId}/download`;
-      link.download = filename;
-      link.click();
-      toast.success('Download started');
+   const downloadFile = async (fileId, filename) => {
+      try {
+         const token = Cookies.get('token');
+         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/uploads/${fileId}/download`, {
+            method: 'GET',
+            headers: {
+               'Authorization': `Bearer ${token}`
+            }
+         });
+
+         if (!response.ok) {
+            throw new Error('Download failed');
+         }
+
+         const blob = await response.blob();
+         const url = window.URL.createObjectURL(blob);
+         const link = document.createElement('a');
+         link.href = url;
+         link.download = filename || 'download';
+         document.body.appendChild(link);
+         link.click();
+         document.body.removeChild(link);
+         window.URL.revokeObjectURL(url);
+         toast.success('Download started');
+      } catch (error) {
+         console.error('Download error:', error);
+         toast.error('Failed to download file');
+      }
    };
 
    if ((projectsLoading || usersLoading) && projectsList.length === 0) return <PageLoader />;
@@ -742,32 +791,10 @@ const Orders = () => {
                      )}
                   </div>
 
-                  <div className="mt-8 flex justify-between gap-3">
-                     <div className="flex gap-3">
-                        {isSuperAdmin && (
-                           <button
-                              onClick={(e) => handleDelete(e, selectedOrder._id)}
-                              className="px-6 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition"
-                           >
-                              <i className="fa-solid fa-trash mr-2"></i>
-                              Delete
-                           </button>
-                        )}
-                     </div>
-                     <div className="flex gap-3">
-                        {isAdmin && (
-                           <button
-                              onClick={(e) => handleEdit(e, selectedOrder)}
-                              className="px-6 py-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition"
-                           >
-                              <i className="fa-solid fa-edit mr-2"></i>
-                              Edit
-                           </button>
-                        )}
-                        <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">
-                           Close
-                        </button>
-                     </div>
+                  <div className="mt-8 flex justify-end gap-3">
+                     <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">
+                        Close
+                     </button>
                   </div>
                </div>
             </div>
@@ -1092,10 +1119,20 @@ const Orders = () => {
                         </button>
                         <button
                            type="submit"
-                           className="px-6 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/20 transition"
+                           disabled={isAddingRepo}
+                           className="px-6 py-3 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                           <i className="fa-solid fa-plus mr-2"></i>
-                           Add Repository
+                           {isAddingRepo ? (
+                              <>
+                                 <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+                                 Adding...
+                              </>
+                           ) : (
+                              <>
+                                 <i className="fa-solid fa-plus mr-2"></i>
+                                 Add Repository
+                              </>
+                           )}
                         </button>
                      </div>
                   </form>
