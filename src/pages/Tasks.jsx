@@ -214,6 +214,13 @@ const Tasks = () => {
       }
 
       try {
+         // Requirement: 'cancelled' status MUST have a reason.
+         // If attempting to set to 'cancelled' via drag/drop or generic button, redirect to modal.
+         if (newStatus === 'cancelled') {
+            handleOpenCancel(task);
+            return;
+         }
+
          await updateTaskStatus(id, { status: newStatus });
          toast.success(t('status_updated_to', { status: newStatus.replace('_', ' ') }));
       } catch (error) {
