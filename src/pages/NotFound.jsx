@@ -18,7 +18,7 @@ const NotFound = () => {
                <h1 className="text-[150px] md:text-[200px] font-black leading-none text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-300 dark:from-zinc-800 dark:to-zinc-900 select-none">
                   404
                </h1>
-               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900/80 backdrop-blur-xl px-8 py-4 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl">
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
                   <div className="text-4xl md:text-5xl text-red-500 dark:text-red-500 animate-bounce">
                      <i className="fa-solid fa-triangle-exclamation"></i>
                   </div>
