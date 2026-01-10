@@ -14,6 +14,7 @@ import { useUserStore } from '../store/user.store';
 import { useSettingsStore } from '../store/settings.store';
 import { useProjectUploadStore } from '../store/project-upload.store';
 import { projectUploadsApi } from '../api/project-uploads.api';
+import { useTaskStore } from '../store/task.store';
 
 const Orders = () => {
    const { t } = useTranslation();
@@ -85,6 +86,7 @@ const Orders = () => {
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment, updatePayment } = usePaymentStore();
    const { uploadFile, getFiles, uploads, deleteFile } = useProjectUploadStore();
+   const { tasks, getTasksByUser } = useTaskStore();
 
    const activeCompanyId = useMemo(() => {
       if (isSuperAdmin) return viewCompanyId;
@@ -136,6 +138,13 @@ const Orders = () => {
    useEffect(() => {
       fetchData();
    }, [activeCompanyId, viewCompanyId, isSuperAdmin, allCompanies.length]);
+
+   useEffect(() => {
+      // Fetch user's tasks if worker to filter orders
+      if (userData?._id && (userData?.role === 'worker' || (!isSuperAdmin && !isCompanyAdmin && !isTeamLead))) {
+         getTasksByUser(userData._id);
+      }
+   }, [userData, getTasksByUser, isSuperAdmin, isCompanyAdmin, isTeamLead]);
 
    const allUsers = useMemo(() => {
       let aggregated = [];
@@ -234,12 +243,25 @@ const Orders = () => {
 
    const projectsList = useMemo(() => {
       const allProjects = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+
+      // Filter for Team Lead
       if (userData?.role === 'team_lead') {
          const currentUserId = String(userData?._id || '');
          return allProjects.filter(p => String(p.teamLead?._id || p.teamLead || '') === currentUserId);
       }
+
+      // Worker role filter: Only show projects where the worker has been assigned at least one task
+      if (userData?.role === 'worker' || (!isSuperAdmin && !isCompanyAdmin && !isTeamLead)) {
+         const currentUserId = String(userData?._id || '');
+         // Get project IDs from user's tasks
+         const userTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
+         const assignedProjectIds = new Set(userTasks.map(t => String(t.project?._id || t.project || '')));
+
+         return allProjects.filter(p => assignedProjectIds.has(String(p._id)));
+      }
+
       return allProjects;
-   }, [projects, userData]);
+   }, [projects, userData, tasks, isSuperAdmin, isCompanyAdmin, isTeamLead]);
    const paymentsList = useMemo(() => payments?.data?.payments || payments?.payments || (Array.isArray(payments) ? payments : []), [payments]);
 
    const statusData = useMemo(() => {
