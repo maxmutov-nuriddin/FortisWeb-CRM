@@ -125,11 +125,7 @@ const SignIn = () => {
                   </div>
                </div>
 
-               <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center">
-                     <input type="checkbox" id="remember" className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 bg-white dark:bg-black/50" />
-                     <label htmlFor="remember" className="ml-2 text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer select-none">Remember me</label>
-                  </div>
+               <div className="flex items-center justify-end pt-2">
                   <Link to="/forgot-password" className="text-sm font-bold text-red-600 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors">
                      Forgot Password?
                   </Link>
