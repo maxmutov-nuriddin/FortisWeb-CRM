@@ -33,7 +33,7 @@ const Company = () => {
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, updateDistributionRates, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
-   const { users, getUsersByCompany } = useUserStore();
+   const { users, getUsersByCompany, createUser, updateUser } = useUserStore();
 
    const [isRatesEditing, setIsRatesEditing] = useState(false);
    const [ratesData, setRatesData] = useState({
@@ -229,8 +229,48 @@ const Company = () => {
             await updateCompany(editingCompanyId, updateData);
             toast.success(finalData.name + " Company updated successfully");
          } else {
-            await createCompany(finalData);
+            const response = await createCompany(finalData);
             toast.success(finalData.name + " Company created successfully");
+
+            // Auto-create Company Admin
+            try {
+               const newCompany = response.data?.company || response.data || response;
+               const newCompanyId = newCompany._id || newCompany.id;
+
+               if (newCompanyId) {
+                  // Backend creates the admin automatically. We need to find it and ensure the password is set correctly.
+                  const usersResponse = await getUsersByCompany(newCompanyId);
+                  const companyUsers = usersResponse?.data?.users || usersResponse?.data || [];
+
+                  // The backend likely creates the user with the company email.
+                  const autoAdmin = companyUsers.find(u => u.email === finalData.email);
+
+                  if (autoAdmin) {
+                     // Update the existing admin to ensure password matches form and account is active
+                     await updateUser(autoAdmin._id, {
+                        password: finalData.password,
+                        isActive: true,
+                        role: 'company_admin'
+                     });
+                     toast.success("Company Admin configured successfully");
+                  } else {
+                     console.warn('Admin user not found in new company list during auto-config.');
+                     toast.warning("Company created, but could not automatically configure Admin password. Please check Profiles.");
+                  }
+               } else {
+                  console.warn('Could not extract new company ID for admin configuration');
+               }
+            } catch (userError) {
+               console.error('Failed to auto-create admin:', userError);
+
+               let errMsg = userError.response?.data?.message || userError.message || "Unknown error";
+
+               if (errMsg.includes('exists') || errMsg.includes('существует')) {
+                  toast.warning(`Admin creation skipped: User with email ${finalData.email} already exists.`);
+               } else {
+                  toast.warning(`Company created, but User Admin creation failed: ${errMsg}`);
+               }
+            }
          }
          closeCreateModal();
          await getCompanies();
