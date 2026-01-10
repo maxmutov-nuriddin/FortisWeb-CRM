@@ -33,7 +33,8 @@ const Company = () => {
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, updateDistributionRates, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
-   const { users, getUsersByCompany, createUser, updateUser } = useUserStore();
+   // eslint-disable-next-line no-unused-vars
+   const { users, getUsersByCompany, createUser, updateUser, deleteUser } = useUserStore();
 
    const [isRatesEditing, setIsRatesEditing] = useState(false);
    const [ratesData, setRatesData] = useState({
@@ -232,29 +233,58 @@ const Company = () => {
             const response = await createCompany(finalData);
             toast.success(finalData.name + " Company created successfully");
 
-            // Auto-create Company Admin
+            // Auto-create Company Admin with Retry Logic
             try {
                const newCompany = response.data?.company || response.data || response;
                const newCompanyId = newCompany._id || newCompany.id;
 
                if (newCompanyId) {
-                  // Backend creates the admin automatically. We need to find it and ensure the password is set correctly.
-                  const usersResponse = await getUsersByCompany(newCompanyId);
-                  const companyUsers = usersResponse?.data?.users || usersResponse?.data || [];
+                  // Helper function to retry finding the user
+                  const findAdminUserWithRetry = async (companyId, email, retries = 5, delay = 1000) => {
+                     const targetEmail = email?.toLowerCase();
+                     for (let i = 0; i < retries; i++) {
+                        const usersResponse = await getUsersByCompany(companyId);
+                        const companyUsers = usersResponse?.data?.users || usersResponse?.data || [];
+                        const autoAdmin = companyUsers.find(u => u.email?.toLowerCase() === targetEmail);
 
-                  // The backend likely creates the user with the company email.
-                  const autoAdmin = companyUsers.find(u => u.email === finalData.email);
+                        if (autoAdmin) return autoAdmin;
+
+                        // Wait before next attempt
+                        if (i < retries - 1) {
+                           await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                     }
+                     return null;
+                  };
+
+                  const autoAdmin = await findAdminUserWithRetry(newCompanyId, finalData.email);
 
                   if (autoAdmin) {
-                     // Update the existing admin to ensure password matches form and account is active
-                     await updateUser(autoAdmin._id, {
+                     // SAFER REPLACEMENT STRATEGY:
+                     // 1. Rename the old user's email to free up the address (avoids unique index conflicts if delete is soft/slow)
+                     const tempEmail = `${autoAdmin.email}_old_${Date.now()}`;
+                     await updateUser(autoAdmin._id, { email: tempEmail });
+
+                     // 2. Create the new user explicitly with the correct password
+                     await createUser({
+                        name: finalData.name,
+                        email: finalData.email, // The original intended email
                         password: finalData.password,
-                        isActive: true,
-                        role: 'company_admin'
+                        role: 'company_admin',
+                        companyId: newCompanyId,
+                        isActive: true
                      });
+
+                     // 3. Clean up the old user
+                     try {
+                        await deleteUser(autoAdmin._id);
+                     } catch (delErr) {
+                        console.warn("Could not delete temp renamed user", delErr);
+                     }
+
                      toast.success("Company Admin configured successfully");
                   } else {
-                     console.warn('Admin user not found in new company list during auto-config.');
+                     console.warn('Admin user not found in new company list after retries.');
                      toast.warning("Company created, but could not automatically configure Admin password. Please check Profiles.");
                   }
                } else {
