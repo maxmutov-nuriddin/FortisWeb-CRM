@@ -122,8 +122,8 @@ const Header = ({ toggleSidebar }) => {
                <div className="flex items-center space-x-3 md:space-x-6">
                   <Link title={t('orders')} to="/orders" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                      <i className="fa-solid fa-bell text-xl"></i>
-                     {newOrdersCount || newTasksCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount + newTasksCount   }</span>
+                     {(newOrdersCount || newTasksCount) > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount + newTasksCount}</span>
                      )}
                   </Link>
                   <Link title={t('team_chats')} to="/team-chats" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
