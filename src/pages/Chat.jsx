@@ -181,13 +181,7 @@ const Chat = () => {
       e.preventDefault();
       if (!messageInput.trim()) return;
       if (!selectedChat) {
-         toast.error("No chat selected.", {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error("No chat selected.", { position: 'top-right', theme: 'dark' });
          return;
       }
       try {
@@ -196,13 +190,7 @@ const Chat = () => {
          setShowEmojiPicker(false);
       } catch (error) {
          console.error(error);
-         toast.error(error.response?.data?.message || 'Failed to send message', {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error(error.response?.data?.message || 'Failed to send message');
       }
    };
 
@@ -210,20 +198,10 @@ const Chat = () => {
       const file = e.target.files[0];
       if (!file) return;
       if (!selectedChat) {
-         toast.error("No chat selected.", {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
-         });
+         toast.error("No chat selected.");
          return;
       }
-
-      // Since the current API might not support file uploads, we mock it or use text for now
-      // Typically we would use a formData upload here
       toast.info(`Uploading: ${file.name}`);
-      // await sendMessage(selectedChat._id, { text: `[File: ${file.name}]`, file });
    };
 
    const insertEmoji = (emoji) => {
@@ -231,7 +209,6 @@ const Chat = () => {
       setShowEmojiPicker(false);
    };
 
-   // eslint-disable-next-line no-unused-vars
    const handleEditStart = (msg) => {
       setEditingMessageId(msg._id);
       setEditInput(msg.text);
@@ -276,117 +253,109 @@ const Chat = () => {
    const showRestrictedAccess = activeTab === 'support' && !IsSuperAdmin && !IsCompanyAdmin;
 
    return (
-      <div className="flex h-[calc(100vh-80px)] overflow-hidden p-6 gap-6 bg-gray-100 dark:bg-dark-primary">
+      <div className="flex h-[calc(100vh-80px)] overflow-hidden p-6 gap-6 bg-gray-50/50 dark:bg-black font-sans">
          {/* Sidebar */}
-         <div className="w-1/4 bg-white dark:bg-dark-secondary backdrop-blur-xl border border-gray-200 dark:border-gray-800 rounded-3xl flex flex-col shadow-xl dark:shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-dark-tertiary">
-               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1 tracking-tight">{t('messages_sidebar_title')}</h2>
-               <p className="text-xs text-gray-500 dark:text-gray-400 font-medium opacity-60 uppercase tracking-widest">{t('team_collaboration_desc')}</p>
-            </div>
+         <div className="w-80 shrink-0 flex flex-col gap-6">
+            <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl flex flex-col shadow-sm overflow-hidden h-full">
+               <div className="p-6 border-b border-gray-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">{t('messages_sidebar_title')}</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">{t('team_collaboration_desc')}</p>
+               </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-               {!IsSuperAdmin && (
-                  <>
-                     <button
-                        onClick={() => setActiveTab('global')}
-                        className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'global' ? 'bg-red-50 dark:bg-dark-accent/10 border-red-200 dark:border-dark-accent/30 text-red-700 dark:text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-gray-100 dark:hover:bg-dark-tertiary/40 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-                     >
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'global' ? 'bg-red-500 dark:bg-dark-accent shadow-lg shadow-red-900/40 text-white dark:text-black' : 'bg-gray-200 dark:bg-dark-tertiary group-hover:bg-red-100 dark:group-hover:bg-dark-accent/20 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-dark-accent'}`}>
-                           <i className="fa-solid fa-globe text-lg"></i>
-                        </div>
-                        <div className="flex-1">
-                           <p className="font-bold text-sm tracking-tight">{t('company_global')}</p>
-                           <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'global' ? 'text-red-500 dark:text-dark-accent/80' : 'text-gray-400 dark:text-gray-500'}`}>{t('public_channel_desc')}</p>
-                        </div>
-                     </button>
+               <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                  {!IsSuperAdmin && (
+                     <>
+                        <button
+                           onClick={() => setActiveTab('global')}
+                           className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 border ${activeTab === 'global' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-zinc-800'}`}
+                        >
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeTab === 'global' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400'}`}>
+                              <i className="fa-solid fa-globe text-sm"></i>
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm truncate">{t('company_global')}</p>
+                              <p className="text-[10px] font-medium opacity-70 truncate">{t('public_channel_desc')}</p>
+                           </div>
+                        </button>
 
-                     <button
-                        onClick={() => setActiveTab('team')}
-                        className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'team' ? 'bg-red-50 dark:bg-dark-accent/10 border-red-200 dark:border-dark-accent/30 text-red-700 dark:text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-gray-100 dark:hover:bg-dark-tertiary/40 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-                     >
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'team' ? 'bg-red-500 dark:bg-dark-accent shadow-lg shadow-red-900/40 text-white dark:text-black' : 'bg-gray-200 dark:bg-dark-tertiary group-hover:bg-red-100 dark:group-hover:bg-dark-accent/20 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-dark-accent'}`}>
-                           <i className="fa-solid fa-users text-lg"></i>
-                        </div>
-                        <div className="flex-1">
-                           <p className="font-bold text-sm tracking-tight">{t('department_team')}</p>
-                           <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'team' ? 'text-red-500 dark:text-dark-accent/80' : 'text-gray-400 dark:text-gray-500'}`}>{t('private_updates_desc')}</p>
-                        </div>
-                     </button>
-                  </>
-               )}
+                        <button
+                           onClick={() => setActiveTab('team')}
+                           className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 border ${activeTab === 'team' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-zinc-800'}`}
+                        >
+                           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeTab === 'team' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400'}`}>
+                              <i className="fa-solid fa-users text-sm"></i>
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <p className="font-bold text-sm truncate">{t('department_team')}</p>
+                              <p className="text-[10px] font-medium opacity-70 truncate">{t('private_updates_desc')}</p>
+                           </div>
+                        </button>
+                     </>
+                  )}
 
-               <button
-                  onClick={() => setActiveTab('support')}
-                  className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 group border ${activeTab === 'support' ? 'bg-red-50 dark:bg-dark-accent/10 border-red-200 dark:border-dark-accent/30 text-red-700 dark:text-white shadow-lg shadow-red-900/10' : 'border-transparent hover:bg-gray-100 dark:hover:bg-dark-tertiary/40 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
-               >
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${activeTab === 'support' ? 'bg-red-500 dark:bg-dark-accent shadow-lg shadow-red-900/40 text-white dark:text-black' : 'bg-gray-200 dark:bg-dark-tertiary group-hover:bg-red-100 dark:group-hover:bg-dark-accent/20 text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-dark-accent'}`}>
-                     <i className="fa-solid fa-headset text-lg"></i>
-                  </div>
-                  <div className="flex-1">
-                     <p className="font-bold text-sm tracking-tight">{t('help_desk')}</p>
-                     <p className={`text-[10px] font-medium uppercase tracking-wider ${activeTab === 'support' ? 'text-red-500 dark:text-dark-accent/80' : 'text-gray-400 dark:text-gray-500'}`}>{t('contact_support_desc')}</p>
-                  </div>
-               </button>
+                  <button
+                     onClick={() => setActiveTab('support')}
+                     className={`w-full text-left p-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 border ${activeTab === 'support' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-transparent border-transparent text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-zinc-800'}`}
+                  >
+                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeTab === 'support' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400'}`}>
+                        <i className="fa-solid fa-headset text-sm"></i>
+                     </div>
+                     <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">{t('help_desk')}</p>
+                        <p className="text-[10px] font-medium opacity-70 truncate">{t('contact_support_desc')}</p>
+                     </div>
+                  </button>
 
-               {IsSuperAdmin && activeTab === 'support' && (
-                  <div className="mt-8 border-t border-gray-200 dark:border-gray-800/50 pt-6 px-2">
-                     <p className="text-[10px] font-bold text-gray-500 uppercase px-2 mb-4 tracking-widest">{t('active_tickets')}</p>
-                     {supportChats.length > 0 ? (
-                        supportChats.map(chat => (
-                           <button
-                              key={chat._id || chat.id}
-                              onClick={() => selectChat(chat)}
-                              className={`w-full text-left p-3.5 rounded-xl transition-all duration-300 text-xs mb-2 flex items-center border ${selectedChat?._id === chat._id ? 'bg-red-50 dark:bg-dark-accent/10 text-red-600 dark:text-dark-accent border-red-200 dark:border-dark-accent/30 shadow-md' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-tertiary/50 border-transparent'}`}
-                           >
-                              <span className="w-2.5 h-2.5 rounded-full bg-red-500 dark:bg-dark-accent mr-3 animate-pulse shadow-[0_0_8px_rgba(255,0,0,0.5)]"></span>
-                              <span className="truncate font-bold tracking-tight">{chat.name.replace('Support - ', '')}</span>
-                           </button>
-                        ))
-                     ) : (
-                        <div className="text-center py-6 text-gray-500 dark:text-gray-600 text-xs italic font-medium">{t('no_active_tickets')}</div>
-                     )}
-                  </div>
-               )}
+                  {IsSuperAdmin && activeTab === 'support' && (
+                     <div className="mt-6 pt-6 border-t border-gray-100 dark:border-zinc-800">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2 mb-3">{t('active_tickets')}</p>
+                        <div className="space-y-1">
+                           {supportChats.length > 0 ? (
+                              supportChats.map(chat => (
+                                 <button
+                                    key={chat._id || chat.id}
+                                    onClick={() => selectChat(chat)}
+                                    className={`w-full text-left p-3 rounded-xl transition-all text-xs font-bold flex items-center border ${selectedChat?._id === chat._id ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100' : 'border-transparent text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-zinc-800'}`}
+                                 >
+                                    <span className="w-2 h-2 rounded-full bg-indigo-500 mr-3 animate-pulse"></span>
+                                    <span className="truncate">{chat.name.replace('Support - ', '')}</span>
+                                 </button>
+                              ))
+                           ) : (
+                              <div className="text-center py-4 text-gray-400 text-xs font-medium italic">{t('no_active_tickets')}</div>
+                           )}
+                        </div>
+                     </div>
+                  )}
+               </div>
             </div>
          </div>
 
          {/* Chat Area */}
-         <div className="flex-1 bg-white dark:bg-dark-secondary/40 backdrop-blur-xl border border-gray-200 dark:border-gray-800/50 rounded-3xl flex flex-col relative overflow-hidden shadow-xl dark:shadow-2xl">
-
+         <div className="flex-1 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl flex flex-col overflow-hidden shadow-sm relative">
             {showRestrictedAccess ? (
-               <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-gray-50 dark:bg-dark-secondary/20">
-                  <div className="w-24 h-24 bg-red-50 dark:bg-dark-accent/10 border border-red-100 dark:border-dark-accent/20 rounded-3xl flex items-center justify-center mb-10 transition-transform duration-500 shadow-2xl">
-                     <i className="fa-solid fa-user-shield text-4xl text-red-500 dark:text-dark-accent shadow-xl"></i>
+               <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
+                  <div className="w-24 h-24 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center mb-6">
+                     <i className="fa-solid fa-lock text-3xl text-red-500"></i>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">{t('restricted_access')}</h3>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-10 leading-relaxed font-medium">
-                     {t('support_restricted_desc')}
-                  </p>
-                  <div className="flex items-center space-x-3 text-red-600 dark:text-dark-accent text-xs font-bold bg-red-50 dark:bg-dark-accent/10 px-6 py-3 rounded-2xl border border-red-100 dark:border-dark-accent/20 uppercase tracking-widest">
-                     <i className="fa-solid fa-circle-info"></i>
-                     <span>{t('policy_applied_for')} {formatRole(userData.role)}</span>
-                  </div>
+                  <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-2">{t('restricted_access')}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-sm">{t('support_restricted_desc')}</p>
                </div>
             ) : (
                <>
-                  {/* Header */}
-                  <div className="p-6 border-b border-gray-200 dark:border-gray-800/50 flex justify-between items-center bg-white/80 dark:bg-dark-tertiary/20 backdrop-blur-3xl">
-                     <div className="flex items-center space-x-5">
-                        <div className="relative">
-                           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl dark:shadow-2xl bg-gradient-to-br from-red-500 to-red-700 dark:from-dark-accent dark:to-red-800">
-                              <i className={`fa-solid ${activeTab === 'global' ? 'fa-globe' :
-                                 activeTab === 'team' ? 'fa-users' : 'fa-headset'
-                                 } text-white dark:text-black text-2xl`}></i>
-                           </div>
-                           <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-dark-secondary rounded-full shadow-lg"></span>
+                  {/* Chat Header */}
+                  <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md z-10 sticky top-0">
+                     <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                           <i className={`fa-solid ${activeTab === 'global' ? 'fa-globe' : activeTab === 'team' ? 'fa-users' : 'fa-headset'}`}></i>
                         </div>
                         <div>
-                           <h3 className="text-gray-900 dark:text-white font-bold text-xl tracking-tight">
-                              {selectedChat?.name || (activeTab === 'global' ? t('company_global') :
-                                 activeTab === 'team' ? t('department_team') : t('help_desk'))}
+                           <h3 className="text-lg font-black text-gray-900 dark:text-white tracking-tight">
+                              {selectedChat?.name || (activeTab === 'global' ? t('company_global') : activeTab === 'team' ? t('department_team') : t('help_desk'))}
                            </h3>
-                           <div className="flex items-center space-x-2 mt-0.5">
-                              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">
+                           <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                  {Array.from(userMap.values()).length} {t('active_members')}
                               </p>
                            </div>
@@ -396,17 +365,16 @@ const Chat = () => {
                      {IsCompanyAdmin && (
                         <button
                            onClick={handleClearChat}
-                           className="text-gray-400 hover:text-red-600 dark:hover:text-dark-accent transition-all duration-300 text-[10px] font-bold uppercase tracking-widest flex items-center space-x-2 px-4 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-dark-accent/10 border border-transparent hover:border-red-100 dark:hover:border-dark-accent/20"
-                           title="Clear entire chat history"
+                           className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-800 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition-all"
+                           title="Clear history"
                         >
                            <i className="fa-solid fa-trash-can"></i>
-                           <span>{t('clear_history')}</span>
                         </button>
                      )}
                   </div>
 
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth custom-scrollbar bg-gray-50/50 dark:bg-transparent" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(100, 100, 100, 0.05) 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-dots-pattern">
                      {messages.length > 0 ? (
                         messages.map((msg, idx) => {
                            const isMe = msg.sender?._id === userData?._id;
@@ -414,130 +382,125 @@ const Chat = () => {
                            const roleLabel = formatRole(senderInfo.role);
 
                            return (
-                              <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}>
+                              <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group items-end gap-3`}>
                                  {!isMe && (
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-dark-tertiary dark:to-gray-800 flex items-center justify-center mr-4 mt-1 shadow-lg border border-gray-200 dark:border-gray-700/50 text-sm font-bold text-gray-700 dark:text-gray-200 uppercase">
+                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 mb-1">
                                        {senderInfo.name?.charAt(0) || '?'}
                                     </div>
                                  )}
 
-                                 <div className={`flex flex-col max-w-[75%] ${isMe ? 'items-end' : 'items-start'}`}>
+                                 <div className={`flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
                                     {!isMe && (
-                                       <div className="flex items-center space-x-2 mb-2 ml-1">
-                                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-tight">{senderInfo.name || 'Unknown'}</span>
-                                          <span className={`text-[9px] px-2 py-0.5 rounded-lg border font-bold uppercase tracking-wider ${senderInfo.role === 'super_admin' ? 'bg-red-50 dark:bg-dark-accent/10 text-red-600 dark:text-dark-accent border-red-200 dark:border-dark-accent/20' :
-                                             senderInfo.role === 'company_admin' ? 'bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600/50' :
-                                                'bg-gray-200 dark:bg-gray-800/30 text-gray-600 dark:text-gray-500 border-gray-300 dark:border-gray-700/30'
-                                             }`}>
+                                       <div className="flex items-center gap-2 mb-1 ml-1">
+                                          <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{senderInfo.name}</span>
+                                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${senderInfo.role === 'super_admin' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
                                              {roleLabel}
                                           </span>
                                        </div>
                                     )}
 
-                                    <div className={`relative px-6 py-4 rounded-3xl text-sm shadow-md dark:shadow-xl border transition-all duration-300 ${isMe
-                                       ? 'bg-red-600 dark:bg-dark-accent text-white dark:text-black rounded-tr-none border-red-600 dark:border-dark-accent shadow-red-900/10'
-                                       : 'bg-white dark:bg-dark-tertiary/40 backdrop-blur-md text-gray-800 dark:text-gray-200 rounded-tl-none border-gray-200 dark:border-gray-700/30'
+                                    <div className={`relative px-5 py-3 rounded-2xl text-sm font-medium shadow-sm border transition-all ${isMe
+                                          ? 'bg-blue-600 text-white border-blue-600 rounded-br-none'
+                                          : 'bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-zinc-700 rounded-bl-none'
                                        }`}>
                                        {editingMessageId === msg._id ? (
-                                          <div className="flex flex-col space-y-3 min-w-[280px]">
+                                          <div className="flex flex-col gap-2 min-w-[200px]">
                                              <input
                                                 value={editInput}
                                                 onChange={e => setEditInput(e.target.value)}
-                                                className={`bg-black/10 dark:bg-black/30 border rounded-xl px-4 py-3 text-sm focus:outline-none transition-all ${isMe ? 'border-white/20 text-white dark:text-black' : 'border-gray-300 dark:border-white/20 text-gray-800 dark:text-white'}`}
+                                                className="bg-black/10 dark:bg-black/30 rounded-lg px-3 py-2 text-sm focus:outline-none w-full"
                                                 autoFocus
                                              />
-                                             <div className="flex justify-end space-x-4 text-xs font-bold uppercase tracking-widest pt-1">
-                                                <button onClick={() => setEditingMessageId(null)} className={`${isMe ? 'text-white/80 hover:text-white dark:text-black/60 dark:hover:text-black' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'} transition`}>Cancel</button>
-                                                <button onClick={() => handleEditSave(msg._id)} className={`${isMe ? 'text-white dark:text-black' : 'text-red-600 dark:text-dark-accent'} transition`}>Save</button>
+                                             <div className="flex justify-end gap-2 text-[10px] font-bold uppercase">
+                                                <button onClick={() => setEditingMessageId(null)} className="opacity-70 hover:opacity-100">Cancel</button>
+                                                <button onClick={() => handleEditSave(msg._id)} className="opacity-100 hover:underline">Save</button>
                                              </div>
                                           </div>
                                        ) : (
-                                          <>
-                                             <p className="whitespace-pre-wrap leading-relaxed font-medium">{msg.text}</p>
-                                             {msg.isEdited && <div className="flex justify-end mt-2"><i className="fa-solid fa-pen text-[9px] opacity-40" title="Edited"></i></div>}
-                                          </>
+                                          <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                                        )}
+                                    </div>
 
+                                    <div className="flex items-center gap-2 mt-1">
+                                       <span className="text-[9px] font-bold text-gray-300 dark:text-gray-600 uppercase tracking-wider">
+                                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                       </span>
                                        {isMe && !editingMessageId && (
-                                          <div className="absolute top-0 right-full mr-3 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center space-x-2 pt-1 translate-x-4 group-hover:translate-x-0">
-                                             <button onClick={() => { setEditingMessageId(msg._id); setEditInput(msg.text); }} className="w-8 h-8 rounded-xl bg-white dark:bg-dark-tertiary/80 backdrop-blur-md text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-xs shadow-lg dark:shadow-2xl transition"><i className="fa-solid fa-pen"></i></button>
-                                             <button onClick={() => handleDelete(msg._id)} className="w-8 h-8 rounded-xl bg-white dark:bg-dark-tertiary/80 backdrop-blur-md text-gray-400 hover:text-red-600 dark:hover:text-dark-accent hover:bg-red-50 dark:hover:bg-dark-accent/10 flex items-center justify-center text-xs shadow-lg dark:shadow-2xl transition"><i className="fa-solid fa-trash"></i></button>
+                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                             <button onClick={() => { setEditingMessageId(msg._id); setEditInput(msg.text); }} className="text-gray-400 hover:text-blue-500"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                                             <button onClick={() => handleDelete(msg._id)} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-trash text-[10px]"></i></button>
                                           </div>
                                        )}
                                     </div>
-                                    <span className="text-[9px] text-gray-400 dark:text-gray-600 mt-2 mx-2 font-bold uppercase tracking-tighter opacity-70 dark:opacity-60">
-                                       {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
                                  </div>
                               </div>
                            );
                         })
                      ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
-                           <div className="w-24 h-24 bg-gray-100 dark:bg-dark-tertiary/20 rounded-full flex items-center justify-center mb-6 shadow-inner border border-gray-200 dark:border-gray-800/30">
-                              <i className="fa-regular fa-comments text-5xl opacity-20"></i>
-                           </div>
-                           <p className="text-sm font-bold uppercase tracking-widest opacity-40">{t('no_messages_yet')}</p>
-                           <p className="text-[10px] font-medium uppercase tracking-tighter opacity-30 mt-1">{t('start_conversation_desc')}</p>
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 opacity-50">
+                           <i className="fa-regular fa-comments text-4xl mb-2"></i>
+                           <p className="text-xs font-bold uppercase tracking-widest">{t('no_messages_yet')}</p>
                         </div>
                      )}
                      <div ref={messagesEndRef} />
                   </div>
 
                   {/* Input Area */}
-                  <div className="p-6 bg-white/90 dark:bg-dark-tertiary/30 backdrop-blur-3xl border-t border-gray-200 dark:border-gray-800/50">
-                     <form onSubmit={handleSendMessage} className="flex items-center space-x-4">
+                  <div className="p-4 bg-white dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800">
+                     <form onSubmit={handleSendMessage} className="flex items-center gap-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50">
+                        <button
+                           type="button"
+                           onClick={() => fileInputRef.current?.click()}
+                           className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-zinc-800 transition-colors"
+                        >
+                           <i className="fa-solid fa-paperclip"></i>
+                        </button>
                         <input
                            type="file"
                            ref={fileInputRef}
                            style={{ display: 'none' }}
-                           accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
                            onChange={handleFileUpload}
                         />
-                        <button
-                           type="button"
-                           onClick={() => fileInputRef.current?.click()}
-                           className="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all duration-300 p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-white/10"
-                        >
-                           <i className="fa-solid fa-paperclip text-lg"></i>
-                        </button>
-                        <div className="flex-1 relative group">
+
+                        <div className="flex-1 relative">
                            <input
                               type="text"
                               value={messageInput}
                               onChange={(e) => setMessageInput(e.target.value)}
                               placeholder={t('type_message_placeholder')}
-                              className="w-full bg-gray-100 dark:bg-dark-secondary/60 border border-gray-200 dark:border-gray-700/50 rounded-2xl pl-6 pr-14 py-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-600 font-medium focus:outline-none focus:border-red-500 dark:focus:border-dark-accent/50 focus:ring-4 focus:ring-red-500/10 dark:focus:ring-dark-accent/5 transition-all duration-300 shadow-inner"
+                              className="w-full bg-transparent border-none focus:outline-none text-gray-900 dark:text-white font-medium placeholder-gray-400"
                            />
-                           <button
-                              type="button"
-                              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                              className={`absolute right-4 top-1/2 transform -translate-y-1/2 transition-all duration-300 ${showEmojiPicker ? 'text-red-500 dark:text-dark-accent' : 'text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-dark-accent'}`}
-                           >
-                              <i className="fa-regular fa-face-smile text-xl"></i>
-                           </button>
-
-                           {showEmojiPicker && (
-                              <div className="absolute bottom-full right-0 mb-4 p-4 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-3xl shadow-xl dark:shadow-2xl flex flex-wrap gap-2 w-64 z-50">
-                                 {['😀', '😂', '😍', '👍', '🔥', '🚀', '💯', '✨', '✔️', '❌', '📁', '📄', '💻', '🤝', '🎉'].map(emoji => (
-                                    <button
-                                       key={emoji}
-                                       type="button"
-                                       onClick={() => insertEmoji(emoji)}
-                                       className="text-2xl hover:scale-125 transition transform"
-                                    >
-                                       {emoji}
-                                    </button>
-                                 ))}
-                              </div>
-                           )}
                         </div>
+
+                        <button
+                           type="button"
+                           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                           className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${showEmojiPicker ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-zinc-800'}`}
+                        >
+                           <i className="fa-regular fa-face-smile"></i>
+                        </button>
+
+                        {showEmojiPicker && (
+                           <div className="absolute bottom-20 right-20 p-4 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl shadow-xl flex flex-wrap gap-2 w-64 z-50">
+                              {['😀', '😂', '😍', '👍', '🔥', '🚀', '💯', '✨', '✔️', '❌', '📁', '📄', '💻', '🤝', '🎉'].map(emoji => (
+                                 <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => insertEmoji(emoji)}
+                                    className="text-xl hover:scale-125 transition transform p-1"
+                                 >
+                                    {emoji}
+                                 </button>
+                              ))}
+                           </div>
+                        )}
+
                         <button
                            type="submit"
                            disabled={!messageInput.trim()}
-                           className="bg-red-600 dark:bg-dark-accent border border-red-700 dark:border-dark-accent/20 hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white dark:text-black w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xl dark:shadow-2xl shadow-red-900/20 dark:shadow-red-900/40 group active:scale-90"
+                           className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30"
                         >
-                           <i className="fa-solid fa-paper-plane text-xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                           <i className="fa-solid fa-paper-plane text-sm"></i>
                         </button>
                      </form>
                   </div>
