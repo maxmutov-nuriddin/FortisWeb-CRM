@@ -9,4 +9,6 @@ export const paymentsApi = {
    getHistory: (params) => api.get('/api/payments/history/list', { params }),
    exportHistory: () => api.get('/api/payments/history/export', { responseType: 'blob' }),
    deleteHistory: (id) => api.delete(`/api/payments/history/${id}`),
+   delete: (id) => api.delete(`/api/payments/${id}`),
+   update: (id, data) => api.put(`/api/payments/${id}`, data),
 };

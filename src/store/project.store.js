@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { projectsApi } from '../api/projects.api';
 import { usePaymentStore } from './payment.store';
 
-export const useProjectStore = create((set) => ({
+export const useProjectStore = create((set, get) => ({
    projects: [],
    selectedProject: null,
    isLoading: false,
@@ -117,8 +117,13 @@ export const useProjectStore = create((set) => ({
       try {
          // Attempt to delete associated payments first
          try {
+            // Find project to get companyId for payment fetching
+            const projects = get().projects?.data?.projects || (Array.isArray(get().projects) ? get().projects : []);
+            const project = projects.find(p => p._id === id || p.id === id);
+            const companyId = project?.company?._id || project?.company;
+
             const { deletePaymentsByProject } = usePaymentStore.getState();
-            await deletePaymentsByProject(id);
+            await deletePaymentsByProject(id, companyId);
          } catch (payError) {
             console.warn('Payment cleanup failed, proceeding with project deletion:', payError);
          }

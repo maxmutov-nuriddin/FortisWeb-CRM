@@ -258,9 +258,19 @@ export const usePaymentStore = create((set, get) => ({
       }
    },
 
-   deletePaymentsByProject: async (projectId) => {
+   deletePaymentsByProject: async (projectId, companyId) => {
       set({ isLoading: true, error: null });
       try {
+         // If companyId provided, fetch latest payments to ensure we have them all
+         if (companyId) {
+            try {
+               // We use getPaymentsByCompany from the store to update state
+               await get().getPaymentsByCompany(companyId);
+            } catch (fetchErr) {
+               console.warn('Failed to fetch company payments before deletion:', fetchErr);
+            }
+         }
+
          const currentList = get().payments?.data?.payments || (Array.isArray(get().payments) ? get().payments : []);
          const projectPayments = currentList.filter(p => {
             const pId = p.project?._id || p.project?.id || p.project || p.projectId || p.orderId || p.order?._id || p.order || p.order_id || p.project_id;
@@ -287,6 +297,7 @@ export const usePaymentStore = create((set, get) => ({
                };
             });
          } else {
+            console.log('No payments found for project:', projectId);
             set({ isLoading: false });
          }
       } catch (error) {

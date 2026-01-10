@@ -10,6 +10,7 @@ import { useUserStore } from '../store/user.store';
 import { useSettingsStore } from '../store/settings.store';
 import { useProjectUploadStore } from '../store/project-upload.store';
 import { useTaskStore } from '../store/task.store';
+import { usePaymentStore } from '../store/payment.store';
 import Cookies from 'js-cookie';
 
 const Orders = () => {
@@ -65,6 +66,7 @@ const Orders = () => {
    const { getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { tasks, getTasksByUser } = useTaskStore();
    const { uploadFile, getFiles, uploads } = useProjectUploadStore();
+   const { createPayment, deletePayment, getPaymentsByCompany, payments } = usePaymentStore();
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
@@ -175,8 +177,8 @@ const Orders = () => {
 
    const handleDelete = async (e, id) => {
       e.stopPropagation();
-      if (!isSuperAdmin) {
-         toast.error('Only super admin can delete orders');
+      if (!isAdmin) {
+         toast.error('Only admins can delete orders');
          return;
       }
       if (window.confirm('Delete this order? This action cannot be undone.')) {
@@ -313,7 +315,8 @@ const Orders = () => {
                email: formData.clientEmail,
                phone: formData.clientPhone,
                company: formData.clientCompany
-            }
+            },
+            paymentStatus: 'pending'
          };
 
          let result;
@@ -345,6 +348,21 @@ const Orders = () => {
             }
          }
 
+         // Create initial pending payment
+         if (result?.data?.project?._id || result?._id) {
+            const pId = result.data?.project?._id || result.data?._id || result._id;
+            try {
+               await createPayment({
+                  projectId: pId,
+                  totalAmount: parseFloat(formData.budget) || 0,
+                  paymentMethod: formData.paymentMethod || 'bank_transfer'
+               });
+            } catch (payErr) {
+               console.error('Failed to create initial payment:', payErr);
+               toast.warning('Order created but failed to initialize payment status');
+            }
+         }
+
          setIsModalOpen(false);
          setIsSubmitting(false);
          setUploadedFile(null);
@@ -360,7 +378,9 @@ const Orders = () => {
             clientPhone: '',
             clientCompany: '',
             selectedCompanyId: '',
-            assignedTeamId: ''
+            assignedTeamId: '',
+            paymentMethod: 'bank_transfer',
+            paymentStatus: 'pending'
          });
       } catch (err) {
          console.error('Submit error:', err);
@@ -449,30 +469,37 @@ const Orders = () => {
 
    const handleConfirmPayment = async () => {
       if (!selectedOrder) return;
+      setIsSubmitting(true);
 
       try {
-         // Create payment with selected method
-         const paymentResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments`, {
-            method: 'POST',
-            headers: {
-               'Content-Type': 'application/json',
-               'Authorization': `Bearer ${Cookies.get('token')}`
-            },
-            body: JSON.stringify({
-               projectId: selectedOrder._id,
-               totalAmount: selectedOrder.budget || 0,
-               paymentMethod: selectedPaymentMethod
-            })
+         // Check for existing payments for this order and delete them (to replace with new method)
+         const allPayments = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+         const existingPayments = allPayments.filter(p =>
+            String(p.project?._id || p.project || '') === String(selectedOrder._id)
+         );
+
+         if (existingPayments.length > 0) {
+            await Promise.all(existingPayments.map(p => deletePayment(p._id)));
+         }
+
+         // Create new payment with selected method
+         const payment = await createPayment({
+            projectId: selectedOrder._id,
+            totalAmount: selectedOrder.budget || 0,
+            paymentMethod: selectedPaymentMethod
          });
 
-         const paymentData = await paymentResponse.json();
-         const paymentId = paymentData.data?.payment?._id || paymentData.data?._id;
+         const paymentId = payment._id || payment.id;
 
          // Confirm payment
-         await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/${paymentId}/confirm`, {
+         const confirmResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/${paymentId}/confirm`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${Cookies.get('token')}` }
          });
+
+         if (!confirmResponse.ok) {
+            throw new Error('Failed to confirm payment');
+         }
 
          // Update order status
          await updateProject(selectedOrder._id, { status: 'in_progress' });
@@ -482,7 +509,9 @@ const Orders = () => {
          setIsModalOpen(false);
       } catch (error) {
          console.error('Payment error:', error);
-         toast.error('Failed to confirm payment');
+         toast.error(error.message || 'Failed to confirm payment');
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -631,7 +660,7 @@ const Orders = () => {
                                              <i className="fa-solid fa-pen text-xs"></i>
                                           </button>
                                        )}
-                                       {isSuperAdmin && (
+                                       {isAdmin && (
                                           <button
                                              onClick={(e) => handleDelete(e, order._id)}
                                              className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
@@ -1321,10 +1350,29 @@ const Orders = () => {
                         </div>
                      </div>
                      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
-                        <button onClick={() => setIsPaymentModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">Cancel</button>
-                        <button onClick={handleConfirmPayment} className="px-6 py-3 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/20 transition">
-                           <i className="fa-solid fa-check-circle mr-2"></i>
-                           Confirm Payment
+                        <button
+                           onClick={() => setIsPaymentModalOpen(false)}
+                           disabled={isSubmitting}
+                           className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition disabled:opacity-50"
+                        >
+                           Cancel
+                        </button>
+                        <button
+                           onClick={handleConfirmPayment}
+                           disabled={isSubmitting}
+                           className="px-6 py-3 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/20 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        >
+                           {isSubmitting ? (
+                              <>
+                                 <i className="fa-solid fa-spinner fa-spin mr-2"></i>
+                                 Processing...
+                              </>
+                           ) : (
+                              <>
+                                 <i className="fa-solid fa-check-circle mr-2"></i>
+                                 Confirm Payment
+                              </>
+                           )}
                         </button>
                      </div>
                   </div>
