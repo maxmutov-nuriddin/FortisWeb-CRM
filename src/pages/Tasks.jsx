@@ -23,6 +23,7 @@ const Tasks = () => {
       updateTask,
       deleteTask,
       updateTaskStatus,
+      addTaskComment, // Add this
       getTasksByProjects,
       isLoading
    } = useTaskStore();
@@ -36,6 +37,9 @@ const Tasks = () => {
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false); // New
+   const [cancellationReason, setCancellationReason] = useState(''); // New
+   const [taskToCancel, setTaskToCancel] = useState(null); // New
    const [currentTask, setCurrentTask] = useState(null);
    const [formData, setFormData] = useState({
       title: '',
@@ -52,12 +56,32 @@ const Tasks = () => {
    const role = user?.role;
    const userId = user?._id;
    const companyId = user?.company?._id || user?.company;
+   const canManageTasks = ['super_admin', 'company_admin', 'team_lead'].includes(role);
 
    useEffect(() => {
       if (userId) {
          loadPageData();
       }
    }, [userId, role]);
+
+   // Auto-transition to Overdue
+   useEffect(() => {
+      if (tasks && tasks.length > 0) {
+         const now = new Date();
+         tasks.forEach(task => {
+            const isOverdue = new Date(task.deadline) < now;
+            const isNotCompleted = task.status !== 'completed' && task.status !== 'cancelled' && task.status !== 'overdue';
+
+            if (isOverdue && isNotCompleted) {
+               // Prevent rapid firing if already updating? Store handles it, but let's be safe.
+               // We only update if status is NOT 'overdue' in the local state.
+               updateTaskStatus(task._id || task.id, { status: 'overdue' })
+                  .then(() => console.log('Auto-marked task as overdue:', task.title))
+                  .catch(err => console.error('Failed to auto-mark overdue', err));
+            }
+         });
+      }
+   }, [tasks, updateTaskStatus]);
 
    const loadPageData = async () => {
       try {
@@ -156,14 +180,31 @@ const Tasks = () => {
       const total = taskList.length;
       const inProgress = taskList.filter(t => t.status === 'in_progress').length;
       const completed = taskList.filter(t => t.status === 'completed').length;
-      const overdue = taskList.filter(t => new Date(t.deadline) < new Date() && t.status !== 'completed').length;
+
+      // Overdue is now a status, but we can also count tasks that ARE overdue (status=overdue)
+      // OR technically overdue but not yet updated? Better to just count status='overdue' + those past deadline not done?
+      // Simplified: Count status === 'overdue'
+      const overdue = taskList.filter(t => t.status === 'overdue').length;
+      const cancelled = taskList.filter(t => t.status === 'cancelled').length;
       const avgCompletion = taskList.length > 0 ? (completed / total * 100).toFixed(1) + '%' : '0%';
 
-      return { total, inProgress, completed, overdue, avgCompletion };
+      return { total, inProgress, completed, overdue, cancelled, avgCompletion };
    }, [taskList]);
 
    const handleStatusChange = async (taskId, newStatus) => {
       const id = taskId?._id || taskId?.id || taskId;
+      const task = taskList.find(t => (t._id === id || t.id === id));
+
+      // Restriction: Cannot move FROM overdue or cancelled
+      // EXCEPTION: Admins & Team Leads can move tasks FROM 'overdue' OR 'cancelled'
+      if (task) {
+         const isRestricted = task.status === 'overdue' || task.status === 'cancelled';
+         if (isRestricted && !canManageTasks) {
+            toast.error(t('cannot_change_status_from_' + task.status));
+            return;
+         }
+      }
+
       try {
          await updateTaskStatus(id, { status: newStatus });
          toast.success(t('status_updated_to', { status: newStatus.replace('_', ' ') }));
@@ -209,6 +250,32 @@ const Tasks = () => {
             toast.error(t('failed_delete_task'));
          }
       }
+   }
+
+
+   const handleOpenCancel = (task) => {
+      setTaskToCancel(task);
+      setCancellationReason('');
+      setIsCancelModalOpen(true);
+   };
+
+   const handleConfirmCancel = async (e) => {
+      e.preventDefault();
+      if (!taskToCancel || !cancellationReason.trim()) return;
+
+      try {
+         const id = taskToCancel._id || taskToCancel.id;
+         // 1. Add comment
+         await addTaskComment(id, { text: `${t('task_cancelled_reason')}: ${cancellationReason}` });
+         // 2. Update status
+         await updateTaskStatus(id, { status: 'cancelled' });
+
+         toast.success(t('task_cancelled_success'));
+         setIsCancelModalOpen(false);
+         setTaskToCancel(null);
+      } catch (error) {
+         toast.error(t('failed_cancel_task'));
+      }
    };
 
    const handleOpenCreate = () => {
@@ -242,7 +309,7 @@ const Tasks = () => {
 
 
 
-   const canManageTasks = ['super_admin', 'company_admin', 'team_lead'].includes(role);
+
 
    const projectOptions = useMemo(() => {
       let list = Array.isArray(projects) ? projects : projects?.data?.projects || [];
@@ -378,10 +445,26 @@ const Tasks = () => {
                      {/* Action Overlay */}
                      <div className="absolute inset-0 bg-white dark:bg-dark-tertiary bg-opacity-95 dark:bg-opacity-95 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center p-4">
                         <div className="flex flex-wrap gap-2 justify-center mb-4">
-                           {status !== 'todo' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'todo'); }} className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
-                           {status !== 'in_progress' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'in_progress'); }} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
-                           {status !== 'review' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'review'); }} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
-                           {status !== 'completed' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'completed'); }} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
+                           {/* Logic: Show buttons if status is standard OR if status is (overdue OR cancelled) AND user can manage */}
+                           {(() => {
+                              const isOverdue = status === 'overdue';
+                              const isCancelled = status === 'cancelled';
+                              const showActions = (!isOverdue && !isCancelled) || canManageTasks;
+
+                              if (!showActions) return null;
+
+                              return (
+                                 <>
+                                    {status !== 'todo' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'todo'); }} className="w-8 h-8 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-white text-xs flex items-center justify-center" title={t('move_to_todo')}><i className="fa-solid fa-arrow-left"></i></button>}
+                                    {status !== 'in_progress' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'in_progress'); }} className="w-8 h-8 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-xs flex items-center justify-center" title={t('start_process')}><i className="fa-solid fa-play"></i></button>}
+                                    {status !== 'review' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'review'); }} className="w-8 h-8 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs flex items-center justify-center" title={t('send_to_review')}><i className="fa-solid fa-eye"></i></button>}
+                                    {status !== 'completed' && <button onClick={(e) => { e.stopPropagation(); handleStatusChange(task._id, 'completed'); }} className="w-8 h-8 rounded bg-green-600 hover:bg-green-500 text-white text-xs flex items-center justify-center" title={t('complete')}><i className="fa-solid fa-check"></i></button>}
+                                    {status !== 'cancelled' && status !== 'completed' && (
+                                       <button onClick={(e) => { e.stopPropagation(); handleOpenCancel(task); }} className="w-8 h-8 rounded bg-red-500 hover:bg-red-400 text-white text-xs flex items-center justify-center" title={t('cancel_task')}><i className="fa-solid fa-ban"></i></button>
+                                    )}
+                                 </>
+                              );
+                           })()}
                         </div>
                         {canManageTasks && (
                            <div className="flex border-t border-gray-200 dark:border-gray-700 pt-3 gap-3 justify-center">
@@ -446,7 +529,9 @@ const Tasks = () => {
                { icon: 'fa-tasks', color: 'bg-blue-500', label: 'total', value: stats.total, sub: 'all_statuses_stat' },
                { icon: 'fa-spinner', color: 'bg-yellow-500', label: 'in_progress', value: stats.inProgress, sub: 'active_now' },
                { icon: 'fa-check-circle', color: 'bg-green-500', label: 'completed', value: stats.completed, sub: 'successful' },
-               { icon: 'fa-calendar-xmark', color: 'bg-red-500', label: 'overdue', value: stats.overdue, sub: 'needs_attention' },
+               { icon: 'fa-check-circle', color: 'bg-green-500', label: 'completed', value: stats.completed, sub: 'successful' },
+               { icon: 'fa-clock', color: 'bg-red-500', label: 'overdue', value: stats.overdue, sub: 'late' },
+               { icon: 'fa-ban', color: 'bg-gray-500', label: 'cancelled', value: stats.cancelled, sub: 'stopped' }, // New stat
                { icon: 'fa-chart-line', color: 'bg-purple-500', label: 'success_rate', value: stats.avgCompletion, sub: 'efficiency' },
             ].map((stat, i) => (
                <div key={i} className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-700 transition group shadow-sm dark:shadow-none">
@@ -463,8 +548,8 @@ const Tasks = () => {
          </div>
 
          {/* Filter Tabs */}
-         <div className="flex items-center gap-2 bg-gray-100 dark:bg-dark-secondary p-1 rounded-xl w-fit border border-gray-200 dark:border-gray-800">
-            {['all', 'todo', 'in_progress', 'review', 'completed'].map(f => (
+         <div className="flex items-center gap-2 bg-gray-100 dark:bg-dark-secondary p-1 rounded-xl w-fit border border-gray-200 dark:border-gray-800 overflow-x-auto">
+            {['all', 'todo', 'in_progress', 'review', 'completed', 'overdue', 'cancelled'].map(f => (
                <button
                   key={f}
                   onClick={() => setFilter(f)}
@@ -481,6 +566,8 @@ const Tasks = () => {
             {renderColumn(t('in_progress'), 'in_progress', 'bg-yellow-500')}
             {renderColumn(t('review'), 'review', 'bg-purple-500')}
             {renderColumn(t('completed'), 'completed', 'bg-green-500')}
+            {renderColumn(t('overdue'), 'overdue', 'bg-red-500')}
+            {renderColumn(t('cancelled'), 'cancelled', 'bg-gray-500')}
          </div>
 
          {/* Modal Overlay */}
@@ -539,7 +626,9 @@ const Tasks = () => {
                               <div className="flex items-center gap-2">
                                  <div className={`w-2 h-2 rounded-full ${currentTask.status === 'completed' ? 'bg-green-500' :
                                     currentTask.status === 'in_progress' ? 'bg-yellow-500' :
-                                       currentTask.status === 'review' ? 'bg-purple-500' : 'bg-gray-500'
+                                       currentTask.status === 'review' ? 'bg-purple-500' :
+                                          currentTask.status === 'overdue' ? 'bg-red-500' :
+                                             currentTask.status === 'cancelled' ? 'bg-gray-500' : 'bg-gray-500'
                                     }`}></div>
                                  <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">{t(currentTask.status)}</span>
                               </div>
@@ -572,6 +661,28 @@ const Tasks = () => {
                                  <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.weight || 1}</div>
                               </div>
                            </div>
+
+                           {/* Comments Section for Admin/Leads */}
+                           {['super_admin', 'company_admin', 'team_lead'].includes(role) && (
+                              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">{t('comments')} / {t('history')}</h4>
+                                 <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
+                                    {currentTask.comments && currentTask.comments.length > 0 ? (
+                                       currentTask.comments.map((comment, idx) => (
+                                          <div key={idx} className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg text-xs">
+                                             <div className="flex justify-between items-center mb-1">
+                                                <span className="font-bold text-gray-800 dark:text-gray-200">{comment.user?.name || t('user')}</span>
+                                                <span className="text-gray-400 text-[10px]">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                             </div>
+                                             <p className="text-gray-600 dark:text-gray-400">{comment.text}</p>
+                                          </div>
+                                       ))
+                                    ) : (
+                                       <p className="text-xs text-gray-400 italic">{t('no_comments')}</p>
+                                    )}
+                                 </div>
+                              </div>
+                           )}
                         </div>
 
                         {canManageTasks && (
@@ -722,6 +833,43 @@ const Tasks = () => {
                            className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20"
                         >
                            {isEditModalOpen ? t('update_task') : t('create_task')}
+                        </button>
+                     </div>
+                  </form>
+               </div>
+            </div>
+         )}
+
+         {/* Cancel Modal */}
+         {isCancelModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-2xl">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('cancel_task')}</h3>
+                  <form onSubmit={handleConfirmCancel}>
+                     <div className="mb-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('reason_for_cancellation')}</label>
+                        <textarea
+                           required
+                           className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none h-24"
+                           placeholder={t('enter_reason')}
+                           value={cancellationReason}
+                           onChange={(e) => setCancellationReason(e.target.value)}
+                        ></textarea>
+                     </div>
+                     <div className="flex gap-3">
+                        <button
+                           type="button"
+                           onClick={() => setIsCancelModalOpen(false)}
+                           className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-bold py-2 rounded-lg transition"
+                        >
+                           {t('back')}
+                        </button>
+                        <button
+                           type="submit"
+                           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition"
+                        >
+                           {t('confirm_cancel')}
                         </button>
                      </div>
                   </form>
