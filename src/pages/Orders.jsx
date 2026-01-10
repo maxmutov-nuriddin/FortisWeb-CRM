@@ -379,7 +379,12 @@ const Orders = () => {
 
    const handleAddRepository = async (e) => {
       e.preventDefault();
-      if (!selectedOrder) return;
+      console.log('handleAddRepository called!', { selectedOrder, repoData });
+
+      if (!selectedOrder) {
+         console.log('No selected order!');
+         return;
+      }
 
       if (!repoData.url.trim()) {
          toast.error('Repository URL is required');
@@ -746,12 +751,14 @@ const Orders = () => {
                      )}
 
                      {/* Repository Information */}
-                     {selectedOrder.repository ? (
-                        <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
-                           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                              <i className="fa-brands fa-git-alt text-red-500"></i>
-                              Repository
-                           </h3>
+                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                           <i className="fa-brands fa-git-alt text-red-500"></i>
+                           Repository
+                        </h3>
+
+
+                        {(selectedOrder.repository?.url || selectedOrder.repositoryUrl) ? (
                            <div className="space-y-3">
                               <div className="flex items-center gap-2">
                                  <span className="px-3 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg text-xs font-bold">
@@ -773,22 +780,27 @@ const Orders = () => {
                                  </button>
                               </div>
                            </div>
-                        </div>
-                     ) : (
-                        (isAdmin || isTeamLead) && (
-                           <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6 text-center">
+                        ) : (
+                           <div className="text-center">
                               <i className="fa-brands fa-git-alt text-4xl text-gray-400 mb-3"></i>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No repository connected</p>
-                              <button
-                                 onClick={() => setIsRepoModalOpen(true)}
-                                 className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition"
-                              >
-                                 <i className="fa-solid fa-plus mr-2"></i>
-                                 Add Repository
-                              </button>
+                              {(isAdmin || isTeamLead) ? (
+                                 <button
+                                    onClick={() => {
+                                       console.log('Add Repository clicked! User role:', userData?.role, 'isAdmin:', isAdmin, 'isTeamLead:', isTeamLead);
+                                       setIsRepoModalOpen(true);
+                                    }}
+                                    className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition"
+                                 >
+                                    <i className="fa-solid fa-plus mr-2"></i>
+                                    Add Repository
+                                 </button>
+                              ) : (
+                                 <p className="text-xs text-gray-400">Only admins and team leads can add repositories</p>
+                              )}
                            </div>
-                        )
-                     )}
+                        )}
+                     </div>
                   </div>
 
                   <div className="mt-8 flex justify-end gap-3">
@@ -1078,6 +1090,71 @@ const Orders = () => {
                               <i className="fa-brands fa-bitbucket text-2xl mb-2"></i>
                               <p className="text-sm font-bold">Bitbucket</p>
                            </button>
+                        </div>
+
+                        {/* Provider Instructions */}
+                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                           <div className="flex items-start gap-2">
+                              <i className="fa-solid fa-info-circle text-blue-500 mt-1"></i>
+                              <div className="text-xs text-gray-700 dark:text-gray-300">
+                                 {repoData.provider === 'github' && (
+                                    <>
+                                       <p className="font-bold mb-2">GitHub Instructions:</p>
+                                       <p className="mb-1"><strong>How to get Repository URL:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1 mb-3">
+                                          <li>Go to your repository on GitHub.com</li>
+                                          <li>Click the green <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Code</code> button</li>
+                                          <li>Copy the HTTPS URL (e.g., https://github.com/username/repository)</li>
+                                       </ol>
+                                       <p className="mb-1"><strong>How to get Access Token:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1">
+                                          <li>Go to GitHub Settings → Developer settings → Personal access tokens</li>
+                                          <li>Click "Generate new token (classic)"</li>
+                                          <li>Select scopes: ☑️<code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">repo</code> (for private repos)</li>
+                                          <li>Copy the generated token</li>
+                                       </ol>
+                                    </>
+                                 )}
+                                 {repoData.provider === 'gitlab' && (
+                                    <>
+                                       <p className="font-bold mb-2">GitLab Instructions:</p>
+                                       <p className="mb-1"><strong>How to get Repository URL:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1 mb-3">
+                                          <li>Go to your project on GitLab.com</li>
+                                          <li>Click the <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Clone</code> button</li>
+                                          <li>Copy the HTTPS URL (e.g., https://gitlab.com/username/repository)</li>
+                                       </ol>
+                                       <p className="mb-1"><strong>How to get Access Token:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1">
+                                          <li>Go to GitLab Settings → Access Tokens</li>
+                                          <li>Enter token name and expiration date</li>
+                                          <li>Select scopes: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">read_repository</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">write_repository</code></li>
+                                          <li>Click "Create personal access token"</li>
+                                          <li>Copy the generated token</li>
+                                       </ol>
+                                    </>
+                                 )}
+                                 {repoData.provider === 'bitbucket' && (
+                                    <>
+                                       <p className="font-bold mb-2">Bitbucket Instructions:</p>
+                                       <p className="mb-1"><strong>How to get Repository URL:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1 mb-3">
+                                          <li>Go to your repository on Bitbucket.org</li>
+                                          <li>Click the <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Clone</code> button in top right</li>
+                                          <li>Copy the HTTPS URL (e.g., https://bitbucket.org/username/repository)</li>
+                                       </ol>
+                                       <p className="mb-1"><strong>How to get App Password:</strong></p>
+                                       <ol className="list-decimal ml-4 space-y-1">
+                                          <li>Go to Bitbucket Settings → Personal Bitbucket settings → App passwords</li>
+                                          <li>Click "Create app password"</li>
+                                          <li>Enter label and select permissions: <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Repositories: Read</code>, <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">Write</code></li>
+                                          <li>Click "Create"</li>
+                                          <li>Copy the generated password</li>
+                                       </ol>
+                                    </>
+                                 )}
+                              </div>
+                           </div>
                         </div>
                      </div>
 
