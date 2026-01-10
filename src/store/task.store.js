@@ -256,6 +256,7 @@ export const useTaskStore = create((set) => ({
             allTasks = [...allTasks, ...data];
          });
          set({ tasks: allTasks, isLoading: false });
+      // eslint-disable-next-line no-unused-vars
       } catch (error) {
          set({ error: 'Failed to fetch tasks for projects', isLoading: false });
       }

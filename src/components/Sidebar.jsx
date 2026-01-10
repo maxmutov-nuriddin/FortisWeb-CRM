@@ -9,6 +9,7 @@ import { useChatStore } from '../store/chat.store';
 import { useProjectStore } from '../store/project.store';
 import { useTranslation } from 'react-i18next';
 import { useCompanyStore } from '../store/company.store';
+import { useTaskStore } from '../store/task.store';
 
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
@@ -22,6 +23,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
    const { companies, getCompanies } = useCompanyStore();
    const { chats, error: chatsError } = useChatStore();
    const { updateUserStatus } = useUserStore();
+   const { tasks, getTasksByUser } = useTaskStore();
+
+   useEffect(() => {
+      const userData = user?.data?.user || user?.user || user;
+      if (userData?._id && (userData.role === 'worker' || userData.role === 'team_lead')) {
+         getTasksByUser(userData._id);
+      }
+   }, [user?.data?.user?._id, user?.user?._id, user?._id, user?.data?.user?.role, user?.user?.role, user?.role]);
+
 
    const userData = user?.data?.user || user?.user || user;
    const currentUserId = userData?._id;
@@ -49,7 +59,27 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             }
 
             // Worker
-            return project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
+            const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
+
+            if (isAssigned) {
+               const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
+               // Ensure we only check tasks assigned to THIS user (handling stale store data)
+               const userTasks = allTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId));
+
+               // Filter tasks for this specific project
+               const projectTasks = userTasks.filter(t => String(t.project?._id || t.project || '') === String(project._id));
+
+               // 1. If no tasks assigned yet -> Hide notification
+               if (projectTasks.length === 0) return false;
+
+               // 2. If has completed task -> Hide notification
+               const hasCompletedTask = projectTasks.some(t => t.status === 'completed');
+               if (hasCompletedTask) return false;
+
+               // 3. Has active tasks -> Show notification
+               return true;
+            }
+            return false;
          }
       ).length || 0;
 
