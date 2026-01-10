@@ -25,6 +25,8 @@ const Orders = () => {
    const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [isAddingRepo, setIsAddingRepo] = useState(false);
+   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('bank_transfer');
    const [uploadedFile, setUploadedFile] = useState(null);
    const [selectedTeams, setSelectedTeams] = useState([]);
 
@@ -40,7 +42,9 @@ const Orders = () => {
       clientPhone: '',
       clientCompany: '',
       selectedCompanyId: '',
-      assignedTeamId: ''
+      assignedTeamId: '',
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'pending'
    });
 
    const [repoData, setRepoData] = useState({
@@ -447,17 +451,37 @@ const Orders = () => {
       if (!selectedOrder) return;
 
       try {
-         // Update order status to in_progress
+         // Create payment with selected method
+         const paymentResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments`, {
+            method: 'POST',
+            headers: {
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${Cookies.get('token')}`
+            },
+            body: JSON.stringify({
+               projectId: selectedOrder._id,
+               totalAmount: selectedOrder.budget || 0,
+               paymentMethod: selectedPaymentMethod
+            })
+         });
+
+         const paymentData = await paymentResponse.json();
+         const paymentId = paymentData.data?.payment?._id || paymentData.data?._id;
+
+         // Confirm payment
+         await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/${paymentId}/confirm`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${Cookies.get('token')}` }
+         });
+
+         // Update order status
          await updateProject(selectedOrder._id, { status: 'in_progress' });
-         toast.success('Payment confirmed! Order status changed to In Progress');
-
-         // Update selected order
+         toast.success(`Payment confirmed! Order started.`);
          setSelectedOrder({ ...selectedOrder, status: 'in_progress' });
-
-         // Close modal
+         setIsPaymentModalOpen(false);
          setIsModalOpen(false);
       } catch (error) {
-         console.error('Payment confirmation error:', error);
+         console.error('Payment error:', error);
          toast.error('Failed to confirm payment');
       }
    };
@@ -682,7 +706,7 @@ const Orders = () => {
                                  {/* Payment Confirmation Button - Only for admins when status is pending */}
                                  {isAdmin && selectedOrder.status === 'pending' && (
                                     <button
-                                       onClick={handleConfirmPayment}
+                                       onClick={() => setIsPaymentModalOpen(true)}
                                        className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5"
                                        title="Confirm payment and start order"
                                     >
@@ -1243,6 +1267,67 @@ const Orders = () => {
                         </button>
                      </div>
                   </form>
+               </div>
+            </div>
+         )}
+         {/* Payment Confirmation Modal */}
+         {isPaymentModalOpen && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+               <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md" onClick={() => setIsPaymentModalOpen(false)}></div>
+               <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800">
+                  <div className="flex justify-between items-center mb-6">
+                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">Confirm Payment</h2>
+                     <button onClick={() => setIsPaymentModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
+                        <i className="fa-solid fa-times"></i>
+                     </button>
+                  </div>
+                  <div className="space-y-6">
+                     <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Select Payment Method</label>
+                        <div className="grid grid-cols-2 gap-3">
+                           <button type="button" onClick={() => setSelectedPaymentMethod('bank_transfer')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'bank_transfer' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-solid fa-building-columns text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">Bank Transfer</p>
+                           </button>
+                           <button type="button" onClick={() => setSelectedPaymentMethod('card')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'card' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-solid fa-credit-card text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">Card</p>
+                           </button>
+                           <button type="button" onClick={() => setSelectedPaymentMethod('cash')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'cash' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-solid fa-money-bill text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">Cash</p>
+                           </button>
+                           <button type="button" onClick={() => setSelectedPaymentMethod('paypal')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'paypal' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-brands fa-paypal text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">PayPal</p>
+                           </button>
+                           <button type="button" onClick={() => setSelectedPaymentMethod('crypto')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'crypto' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-brands fa-bitcoin text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">Crypto</p>
+                           </button>
+                           <button type="button" onClick={() => setSelectedPaymentMethod('other')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'other' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
+                              <i className="fa-solid fa-ellipsis text-2xl mb-2"></i>
+                              <p className="text-sm font-bold">Other</p>
+                           </button>
+                        </div>
+                     </div>
+                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                        <div className="flex items-start gap-2">
+                           <i className="fa-solid fa-info-circle text-blue-500 mt-0.5"></i>
+                           <div className="text-xs text-gray-700 dark:text-gray-300">
+                              <p className="font-bold mb-1">Amount: ${selectedOrder?.budget?.toLocaleString() || 0}</p>
+                              <p>After confirmation, order status changes to "In Progress".</p>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
+                        <button onClick={() => setIsPaymentModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">Cancel</button>
+                        <button onClick={handleConfirmPayment} className="px-6 py-3 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-500/20 transition">
+                           <i className="fa-solid fa-check-circle mr-2"></i>
+                           Confirm Payment
+                        </button>
+                     </div>
+                  </div>
                </div>
             </div>
          )}
