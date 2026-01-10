@@ -598,7 +598,7 @@ const Tasks = () => {
          {isViewModalOpen && currentTask && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsViewModalOpen(false)}></div>
-               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-2xl p-8 relative z-10 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-4xl p-8 relative z-10 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <header className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100 dark:border-gray-800">
                      <div>
                         <div className="flex items-center gap-3 mb-1">
@@ -616,37 +616,41 @@ const Tasks = () => {
                      </button>
                   </header>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                     <div className="md:col-span-2 space-y-6">
+                  <div className="space-y-8">
+                     <div className="space-y-6">
                         <section>
                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 tracking-wider">{t('description')}</h3>
                            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{currentTask.description || t('no_description')}</p>
                         </section>
 
-                        <section className="bg-gray-50 dark:bg-dark-tertiary rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-                           <h3 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">{t('project_info')}</h3>
+                        <section className="bg-white dark:bg-dark-tertiary rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                              <i className="fa-solid fa-briefcase text-6xl text-dark-accent"></i>
+                           </div>
+                           <h3 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider flex items-center gap-2">
+                              <i className="fa-solid fa-layer-group"></i> {t('project_info')}
+                           </h3>
                            {(() => {
-                              // Lookup full project details in case currentTask.project is just an ID or partial
                               const projectId = currentTask.project?._id || currentTask.project?.id || currentTask.project;
                               const fullProject = projectOptions.find(p => (p._id || p.id) === projectId) || currentTask.project || {};
 
                               return (
-                                 <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                       <div className="text-[10px] text-gray-500 uppercase">{t('project_name')}</div>
-                                       <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={fullProject.title || fullProject.name}>
+                                 <div className="grid grid-cols-2 gap-y-6 gap-x-4 relative z-10">
+                                    <div className="col-span-2">
+                                       <div className="text-[10px] text-gray-500 uppercase mb-1 flex items-center gap-1.5"><i className="fa-solid fa-folder-open text-dark-accent/70"></i> {t('project_name')}</div>
+                                       <div className="text-base font-bold text-gray-900 dark:text-white truncate" title={fullProject.title || fullProject.name}>
                                           {fullProject.title || fullProject.name || t('unknown')}
                                        </div>
                                     </div>
                                     <div>
-                                       <div className="text-[10px] text-gray-500 uppercase">{t('budget')}</div>
-                                       <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                                       <div className="text-[10px] text-gray-500 uppercase mb-1 flex items-center gap-1.5"><i className="fa-solid fa-wallet text-green-500/70"></i> {t('budget')}</div>
+                                       <div className="text-sm font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-1 rounded-md inline-block">
                                           {fullProject.budget ? `$${fullProject.budget.toLocaleString()}` : '$0'}
                                        </div>
                                     </div>
-                                    <div className="col-span-2">
-                                       <div className="text-[10px] text-gray-500 uppercase">{t('client')}</div>
-                                       <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                    <div>
+                                       <div className="text-[10px] text-gray-500 uppercase mb-1 flex items-center gap-1.5"><i className="fa-solid fa-user-tie text-blue-500/70"></i> {t('client')}</div>
+                                       <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                           {fullProject.client?.name || fullProject.client?.username || fullProject.client || fullProject.clientName || t('unknown_client')}
                                        </div>
                                     </div>
@@ -656,281 +660,290 @@ const Tasks = () => {
                         </section>
                      </div>
 
-                     <div className="space-y-6">
-                        <div className="space-y-4 shadow-sm bg-white dark:bg-dark-tertiary border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+                     <div className="bg-white dark:bg-dark-tertiary border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                           {/* Sidebar Item: Status */}
                            <div>
-                              <div className="text-[10px] text-gray-500 uppercase mb-1">{t('status')}</div>
-                              <div className="flex items-center gap-2">
-                                 <div className={`w-2 h-2 rounded-full ${currentTask.status === 'completed' ? 'bg-green-500' :
+                              <div className="text-[10px] text-gray-500 uppercase mb-2 flex items-center gap-1.5"><i className="fa-solid fa-list-check"></i> {t('status')}</div>
+                              <div className="flex items-center gap-2 bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg h-full">
+                                 <div className={`w-3 h-3 rounded-full shadow-sm ${currentTask.status === 'completed' ? 'bg-green-500' :
                                     currentTask.status === 'in_progress' ? 'bg-yellow-500' :
                                        currentTask.status === 'review' ? 'bg-purple-500' :
                                           currentTask.status === 'overdue' ? 'bg-red-500' :
                                              currentTask.status === 'cancelled' ? 'bg-gray-500' : 'bg-gray-500'
                                     }`}></div>
-                                 <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">{t(currentTask.status)}</span>
+                                 <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{t(currentTask.status)}</span>
                               </div>
                            </div>
 
+                           {/* Sidebar Item: Assignee */}
                            <div>
-                              <div className="text-[10px] text-gray-500 uppercase mb-2">{t('assignee')}</div>
-                              <div className="flex items-center gap-3">
+                              <div className="text-[10px] text-gray-500 uppercase mb-2 flex items-center gap-1.5"><i className="fa-solid fa-user-circle"></i> {t('assignee')}</div>
+                              <div className="flex items-center gap-3 bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg h-full">
                                  <img
                                     src={currentTask.assignedTo?.avatar || `https://ui-avatars.com/api/?name=${currentTask.assignedTo?.name || 'U'}`}
-                                    className="w-8 h-8 rounded-full border border-dark-accent"
+                                    className="w-10 h-10 rounded-full border-2 border-white dark:border-dark-tertiary shadow-sm"
                                     alt=""
                                  />
-                                 <div>
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.assignedTo?.name || t('unassigned')}</div>
-                                    <div className="text-[10px] text-gray-500">{currentTask.assignedTo?.position || currentTask.assignedTo?.role}</div>
+                                 <div className="overflow-hidden">
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={currentTask.assignedTo?.name}>{currentTask.assignedTo?.name || t('unassigned')}</div>
+                                    <div className="text-[10px] text-gray-500 truncate">{currentTask.assignedTo?.position || currentTask.assignedTo?.role || t('no_role')}</div>
                                  </div>
                               </div>
                            </div>
 
-                           <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                 <div className="text-[10px] text-gray-500 uppercase mb-1">{t('deadline')}</div>
-                                 <div className={`text-sm font-medium ${new Date(currentTask.deadline) < new Date() && currentTask.status !== 'completed' ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                           {/* Sidebar Grid: Deadline & Weight */}
+                           <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg h-full">
+                                 <div className="text-[10px] text-gray-500 uppercase mb-1 flex items-center gap-1.5"><i className="fa-regular fa-calendar"></i> {t('deadline')}</div>
+                                 <div className={`text-sm font-bold ${new Date(currentTask.deadline) < new Date() && currentTask.status !== 'completed' ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
                                     {currentTask.deadline ? new Date(currentTask.deadline).toLocaleDateString() : t('none')}
                                  </div>
                               </div>
-                              <div>
-                                 <div className="text-[10px] text-gray-500 uppercase mb-1">{t('weight')}</div>
-                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.weight || 1}</div>
+                              <div className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg h-full">
+                                 <div className="text-[10px] text-gray-500 uppercase mb-1 flex items-center gap-1.5"><i className="fa-solid fa-scale-balanced"></i> {t('weight')}</div>
+                                 <div className="text-sm font-bold text-gray-900 dark:text-white">{currentTask.weight || 1}</div>
                               </div>
                            </div>
-
-                           {/* Comments Section for Admin/Leads */}
-                           {['super_admin', 'company_admin', 'team_lead'].includes(role) && (
-                              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
-                                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">{t('comments')} / {t('history')}</h4>
-                                 <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
-                                    {currentTask.comments && currentTask.comments.length > 0 ? (
-                                       currentTask.comments.map((comment, idx) => (
-                                          <div key={idx} className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg text-xs">
-                                             <div className="flex justify-between items-center mb-1">
-                                                <span className="font-bold text-gray-800 dark:text-gray-200">{comment.user?.name || t('user')}</span>
-                                                <span className="text-gray-400 text-[10px]">{new Date(comment.createdAt).toLocaleString('ru-RU', {
-                                                   year: 'numeric',
-                                                   month: '2-digit',
-                                                   day: '2-digit',
-                                                   hour: '2-digit',
-                                                   minute: '2-digit',
-                                                   second: '2-digit',
-                                                })}</span>
-                                             </div>
-                                             <p className="text-gray-600 dark:text-gray-400">{comment.text}</p>
-                                          </div>
-                                       ))
-                                    ) : (
-                                       <p className="text-xs text-gray-400 italic">{t('no_comments')}</p>
-                                    )}
-                                 </div>
-                              </div>
-                           )}
                         </div>
 
-                        {canManageTasks && (
-                           <div className="flex flex-col gap-2">
-                              <button
-                                 onClick={() => { setIsViewModalOpen(false); handleOpenEdit(currentTask); }}
-                                 className="w-full py-2.5 bg-dark-accent/10 hover:bg-dark-accent/20 text-dark-accent rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
-                              >
-                                 <i className="fa-solid fa-edit"></i>
-                                 <span>{t('edit_task')}</span>
-                              </button>
-                              <button
-                                 onClick={() => { setIsViewModalOpen(false); handleDeleteTask(currentTask); }}
-                                 className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
-                              >
-                                 <i className="fa-solid fa-trash"></i>
-                                 <span>{t('delete_task')}</span>
-                              </button>
+                        {/* Comments Section for Admin/Leads */}
+                        {['super_admin', 'company_admin', 'team_lead'].includes(role) && (
+                           <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
+                              <h4 className="text-xs font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                                 <i className="fa-solid fa-clock-rotate-left"></i> {t('comments')} / {t('history')}
+                              </h4>
+                              <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
+                                 {currentTask.comments && currentTask.comments.length > 0 ? (
+                                    currentTask.comments.map((comment, idx) => (
+                                       <div key={idx} className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg text-xs">
+                                          <div className="flex justify-between items-center mb-1">
+                                             <span className="font-bold text-gray-800 dark:text-gray-200">{comment.user?.name || t('user')}</span>
+                                             <span className="text-gray-400 text-[10px]">{new Date(comment.createdAt).toLocaleString('ru-RU', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                second: '2-digit',
+                                             })}</span>
+                                          </div>
+                                          <p className="text-gray-600 dark:text-gray-400">{comment.text}</p>
+                                       </div>
+                                    ))
+                                 ) : (
+                                    <p className="text-xs text-gray-400 italic">{t('no_comments')}</p>
+                                 )}
+                              </div>
                            </div>
                         )}
                      </div>
+
+                     {canManageTasks && (
+                        <div className="flex flex-col gap-2">
+                           <button
+                              onClick={() => { setIsViewModalOpen(false); handleOpenEdit(currentTask); }}
+                              className="w-full py-2.5 bg-dark-accent/10 hover:bg-dark-accent/20 text-dark-accent rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                           >
+                              <i className="fa-solid fa-edit"></i>
+                              <span>{t('edit_task')}</span>
+                           </button>
+                           <button
+                              onClick={() => { setIsViewModalOpen(false); handleDeleteTask(currentTask); }}
+                              className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                           >
+                              <i className="fa-solid fa-trash"></i>
+                              <span>{t('delete_task')}</span>
+                           </button>
+                        </div>
+                     )}
                   </div>
                </div>
             </div>
          )}
 
          {/* Edit/Create Modal */}
-         {(isCreateModalOpen || isEditModalOpen) && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
-               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl">
-                  <header className="flex items-center justify-between mb-6">
-                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
-                     <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-times"></i></button>
-                  </header>
+         {
+            (isCreateModalOpen || isEditModalOpen) && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}></div>
+                  <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-xl p-8 relative z-10 shadow-2xl">
+                     <header className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{isEditModalOpen ? t('edit_task') : t('create_new_task')}</h2>
+                        <button onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition"><i className="fa-solid fa-times"></i></button>
+                     </header>
 
-                  <form onSubmit={async (e) => {
-                     e.preventDefault();
-                     if (isSubmitting) return;
+                     <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (isSubmitting) return;
 
-                     setIsSubmitting(true);
-                     try {
-                        const finalData = { ...formData };
-                        // Automatically set a deadline if it's missing (backend often requires it)
-                        if (!finalData.deadline) {
-                           const d = new Date();
-                           d.setDate(d.getDate() + 14); // Default 14 days
-                           finalData.deadline = d.toISOString().split('T')[0];
+                        setIsSubmitting(true);
+                        try {
+                           const finalData = { ...formData };
+                           // Automatically set a deadline if it's missing (backend often requires it)
+                           if (!finalData.deadline) {
+                              const d = new Date();
+                              d.setDate(d.getDate() + 14); // Default 14 days
+                              finalData.deadline = d.toISOString().split('T')[0];
+                           }
+
+                           if (isEditModalOpen) {
+                              const id = currentTask?._id || currentTask?.id;
+                              await updateTask(id, finalData);
+                              toast.success(t('task_updated'));
+                           } else {
+                              await createTask(finalData);
+                              toast.success(t('task_created'));
+                           }
+                           setIsCreateModalOpen(false);
+                           setIsEditModalOpen(false);
+                        } catch (error) {
+                           toast.error(error.message || 'Operation failed');
+                        } finally {
+                           setIsSubmitting(false);
                         }
+                     }} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="col-span-2">
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('title_label')}</label>
+                              <input
+                                 type="text" required
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                                 value={formData.title}
+                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                              />
+                           </div>
+                           <div className="col-span-2">
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('description_label')}</label>
+                              <textarea
+                                 rows="3" required
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none"
+                                 value={formData.description}
+                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                              ></textarea>
+                           </div>
+                           <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('project')}</label>
+                              <select
+                                 required
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
+                                 value={formData.project}
+                                 onChange={(e) => setFormData({ ...formData, project: e.target.value, assignedTo: '' })}
+                              >
+                                 <option value="">{t('select_project')}</option>
+                                 {projectOptions.map(p => <option key={p._id || p.id} value={p._id || p.id}>{p.title}</option>)}
+                              </select>
+                           </div>
+                           <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('assignee')}</label>
+                              <select
+                                 required
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
+                                 value={formData.assignedTo}
+                                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                              >
+                                 <option value="">{t('select_member')}</option>
+                                 {userOptions.map(u => <option key={u._id || u.id} value={u._id || u.id}>{u.name} ({u.role})</option>)}
+                              </select>
+                           </div>
+                           <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('priority')}</label>
+                              <select
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
+                                 value={formData.priority}
+                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                              >
+                                 <option value="low">{t('low')}</option>
+                                 <option value="medium">{t('medium')}</option>
+                                 <option value="high">{t('high')}</option>
+                                 <option value="urgent">{t('urgent')}</option>
+                              </select>
+                           </div>
+                           <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('estimated_hours')}</label>
+                              <input
+                                 type="number" min="0"
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                                 value={formData.estimatedHours}
+                                 onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                              />
+                           </div>
+                           <div className="col-span-2">
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('task_weight')}</label>
+                              <input
+                                 type="number" min="1" max="10"
+                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                                 value={formData.weight}
+                                 onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                              />
+                           </div>
+                        </div>
 
-                        if (isEditModalOpen) {
-                           const id = currentTask?._id || currentTask?.id;
-                           await updateTask(id, finalData);
-                           toast.success(t('task_updated'));
-                        } else {
-                           await createTask(finalData);
-                           toast.success(t('task_created'));
-                        }
-                        setIsCreateModalOpen(false);
-                        setIsEditModalOpen(false);
-                     } catch (error) {
-                        toast.error(error.message || 'Operation failed');
-                     } finally {
-                        setIsSubmitting(false);
-                     }
-                  }} className="space-y-6">
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('title_label')}</label>
-                           <input
-                              type="text" required
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
-                              value={formData.title}
-                              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                           />
-                        </div>
-                        <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('description_label')}</label>
-                           <textarea
-                              rows="3" required
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none"
-                              value={formData.description}
-                              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                           ></textarea>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('project')}</label>
-                           <select
-                              required
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
-                              value={formData.project}
-                              onChange={(e) => setFormData({ ...formData, project: e.target.value, assignedTo: '' })}
+                        <div className="flex gap-4 pt-4">
+                           <button
+                              type="button"
+                              onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}
+                              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold py-3 rounded-lg transition"
                            >
-                              <option value="">{t('select_project')}</option>
-                              {projectOptions.map(p => <option key={p._id || p.id} value={p._id || p.id}>{p.title}</option>)}
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('assignee')}</label>
-                           <select
-                              required
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
-                              value={formData.assignedTo}
-                              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                              {t('cancel')}
+                           </button>
+                           <button
+                              type="submit"
+                              className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                              disabled={isSubmitting}
                            >
-                              <option value="">{t('select_member')}</option>
-                              {userOptions.map(u => <option key={u._id || u.id} value={u._id || u.id}>{u.name} ({u.role})</option>)}
-                           </select>
+                              {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
+                              {isEditModalOpen ? t('update_task') : t('create_task')}
+                           </button>
                         </div>
-                        <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('priority')}</label>
-                           <select
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent appearance-none"
-                              value={formData.priority}
-                              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                           >
-                              <option value="low">{t('low')}</option>
-                              <option value="medium">{t('medium')}</option>
-                              <option value="high">{t('high')}</option>
-                              <option value="urgent">{t('urgent')}</option>
-                           </select>
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('estimated_hours')}</label>
-                           <input
-                              type="number" min="0"
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
-                              value={formData.estimatedHours}
-                              onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-                           />
-                        </div>
-                        <div className="col-span-2">
-                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('task_weight')}</label>
-                           <input
-                              type="number" min="1" max="10"
-                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
-                              value={formData.weight}
-                              onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                           />
-                        </div>
-                     </div>
-
-                     <div className="flex gap-4 pt-4">
-                        <button
-                           type="button"
-                           onClick={() => { setIsCreateModalOpen(false); setIsEditModalOpen(false); }}
-                           className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-bold py-3 rounded-lg transition"
-                        >
-                           {t('cancel')}
-                        </button>
-                        <button
-                           type="submit"
-                           className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20 disabled:opacity-50 flex items-center justify-center gap-2"
-                           disabled={isSubmitting}
-                        >
-                           {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
-                           {isEditModalOpen ? t('update_task') : t('create_task')}
-                        </button>
-                     </div>
-                  </form>
+                     </form>
+                  </div>
                </div>
-            </div>
-         )}
+            )
+         }
 
          {/* Cancel Modal */}
-         {isCancelModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
-               <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-2xl">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('cancel_task')}</h3>
-                  <form onSubmit={handleConfirmCancel}>
-                     <div className="mb-4">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('reason_for_cancellation')}</label>
-                        <textarea
-                           required
-                           className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none h-24"
-                           placeholder={t('enter_reason')}
-                           value={cancellationReason}
-                           onChange={(e) => setCancellationReason(e.target.value)}
-                        ></textarea>
-                     </div>
-                     <div className="flex gap-3">
-                        <button
-                           type="button"
-                           onClick={() => setIsCancelModalOpen(false)}
-                           className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-bold py-2 rounded-lg transition"
-                           disabled={isSubmitting}
-                        >
-                           {t('back')}
-                        </button>
-                        <button
-                           type="submit"
-                           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
-                           disabled={isSubmitting}
-                        >
-                           {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
-                           {t('confirm_cancel')}
-                        </button>
-                     </div>
-                  </form>
+         {
+            isCancelModalOpen && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
+                  <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-2xl">
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('cancel_task')}</h3>
+                     <form onSubmit={handleConfirmCancel}>
+                        <div className="mb-4">
+                           <label className="block text-xs font-bold text-gray-500 uppercase mb-2">{t('reason_for_cancellation')}</label>
+                           <textarea
+                              required
+                              className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent resize-none h-24"
+                              placeholder={t('enter_reason')}
+                              value={cancellationReason}
+                              onChange={(e) => setCancellationReason(e.target.value)}
+                           ></textarea>
+                        </div>
+                        <div className="flex gap-3">
+                           <button
+                              type="button"
+                              onClick={() => setIsCancelModalOpen(false)}
+                              className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-bold py-2 rounded-lg transition"
+                              disabled={isSubmitting}
+                           >
+                              {t('back')}
+                           </button>
+                           <button
+                              type="submit"
+                              className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                              disabled={isSubmitting}
+                           >
+                              {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
+                              {t('confirm_cancel')}
+                           </button>
+                        </div>
+                     </form>
+                  </div>
                </div>
-            </div>
-         )}
-      </div>
+            )
+         }
+      </div >
    );
 };
 
