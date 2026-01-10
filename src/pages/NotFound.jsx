@@ -1,26 +1,53 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const NotFound = () => {
+   const { t } = useTranslation();
+
    return (
-      <div className="w-full min-h-screen bg-gray-50 dark:bg-dark-secondary flex items-center justify-center">
-         <div className="text-center p-4">
-            <div className="mb-6">
-               <svg className="w-24 h-24 mx-auto text-red-600 dark:text-dark-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-               </svg>
+      <div className="w-full min-h-screen bg-gray-50/50 dark:bg-black flex items-center justify-center p-6 overflow-hidden relative">
+         {/* Background Elements */}
+         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px]"></div>
+         </div>
+
+         <div className="relative text-center max-w-2xl mx-auto z-10">
+            <div className="mb-8 relative inline-block">
+               <h1 className="text-[150px] md:text-[200px] font-black leading-none text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-300 dark:from-zinc-800 dark:to-zinc-900 select-none">
+                  404
+               </h1>
+               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-zinc-900/80 backdrop-blur-xl px-8 py-4 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-xl">
+                  <div className="text-4xl md:text-5xl text-red-500 dark:text-red-500 animate-bounce">
+                     <i className="fa-solid fa-triangle-exclamation"></i>
+                  </div>
+               </div>
             </div>
-            <h1 className="text-8xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Page Not Found</h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-md mx-auto">
-               We're sorry, the page you have looked for does not exist in our website! Maybe go to our home page or try to use a search?
+
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">
+               Page Not Found
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-lg mb-10 max-w-md mx-auto font-medium leading-relaxed">
+               Oops! The page you are looking for seems to have vanished into the digital void.
             </p>
-            <Link
-               className="bg-red-600 dark:bg-dark-accent hover:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-full py-3 px-8 inline-block transition-colors shadow-lg shadow-red-900/20"
-               to="/"
-            >
-               Go Back To Home
-            </Link>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+               <Link
+                  to="/"
+                  className="w-full sm:w-auto px-8 py-3.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-bold hover:scale-105 transition-all shadow-lg shadow-gray-900/20 dark:shadow-white/20 flex items-center justify-center gap-2"
+               >
+                  <i className="fa-solid fa-house"></i>
+                  <span>Go Home</span>
+               </Link>
+               <button
+                  onClick={() => window.history.back()}
+                  className="w-full sm:w-auto px-8 py-3.5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-800 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
+               >
+                  <i className="fa-solid fa-arrow-left"></i>
+                  <span>Go Back</span>
+               </button>
+            </div>
          </div>
       </div>
    );
