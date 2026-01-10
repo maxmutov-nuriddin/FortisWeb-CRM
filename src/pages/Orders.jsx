@@ -443,6 +443,25 @@ const Orders = () => {
       toast.success('Copied to clipboard');
    };
 
+   const handleConfirmPayment = async () => {
+      if (!selectedOrder) return;
+
+      try {
+         // Update order status to in_progress
+         await updateProject(selectedOrder._id, { status: 'in_progress' });
+         toast.success('Payment confirmed! Order status changed to In Progress');
+
+         // Update selected order
+         setSelectedOrder({ ...selectedOrder, status: 'in_progress' });
+
+         // Close modal
+         setIsModalOpen(false);
+      } catch (error) {
+         console.error('Payment confirmation error:', error);
+         toast.error('Failed to confirm payment');
+      }
+   };
+
    const downloadFile = async (fileId, filename) => {
       try {
          const token = Cookies.get('token');
@@ -660,6 +679,17 @@ const Orders = () => {
                                     <option value="completed">Completed</option>
                                     <option value="cancelled">Cancelled</option>
                                  </select>
+                                 {/* Payment Confirmation Button - Only for admins when status is pending */}
+                                 {isAdmin && selectedOrder.status === 'pending' && (
+                                    <button
+                                       onClick={handleConfirmPayment}
+                                       className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                                       title="Confirm payment and start order"
+                                    >
+                                       <i className="fa-solid fa-check-circle"></i>
+                                       Confirm Payment
+                                    </button>
+                                 )}
                               </div>
                            </div>
                            <div className="col-span-2">
