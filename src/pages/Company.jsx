@@ -383,7 +383,7 @@ const Company = () => {
                               filteredCompanies.map((company) => (
                                  <tr key={company._id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
                                     <td className="px-6 py-4 text-sm font-mono text-gray-500 uppercase">
-                                       #{company._id.slice(-6)}
+                                       #{company._id?.slice(-6) || 'N/A'}
                                     </td>
                                     <td className="px-6 py-4">
                                        <div className="flex items-center gap-3">
