@@ -663,13 +663,12 @@ const Profiles = () => {
                                           const availableMembers = rawUserList.filter(u => {
                                              const userCompanyId = String(u.company?._id || u.company || '');
                                              const isSameCompany = userCompanyId === company._id;
-                                             const isNotLead = u._id !== (team.teamLead?._id || team.teamLead);
                                              const isNotAdmin = u.role !== 'company_admin' && u.role !== 'super_admin';
                                              const isNotMember = !teamMembers.some(m => {
                                                 const memberId = String(m?._id || m.user?._id || m.user || m || '');
                                                 return memberId === u._id;
                                              });
-                                             return isSameCompany && isNotLead && isNotAdmin && isNotMember;
+                                             return isSameCompany && isNotAdmin && isNotMember;
                                           });
 
                                           return (
