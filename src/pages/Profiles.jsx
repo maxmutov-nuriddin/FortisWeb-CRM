@@ -36,6 +36,9 @@ const Profiles = () => {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [searchQuery, setSearchQuery] = useState('');
    const [showPassword, setShowPassword] = useState(false);
+   const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState('');
+   const [expandedTeamId, setExpandedTeamId] = useState(null);
+   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
 
    // Form States
    const [formData, setFormData] = useState({
@@ -79,6 +82,17 @@ const Profiles = () => {
    useEffect(() => {
       fetchData();
    }, [userData, isSuperAdmin]);
+
+   useEffect(() => {
+      // Auto-set company ID for company admins when team modal opens
+      if (isTeamModalOpen && !isSuperAdmin && userData) {
+         const userCompanyId = String(userData.company?._id || userData.company || '');
+         if (userCompanyId && !teamFormData.companyId) {
+            setTeamFormData(prev => ({ ...prev, companyId: userCompanyId }));
+            setSelectedTeamCompanyId(userCompanyId);
+         }
+      }
+   }, [isTeamModalOpen, isSuperAdmin, userData]);
 
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
@@ -203,6 +217,92 @@ const Profiles = () => {
             fetchData();
          } catch (err) {
             toast.error('Failed to delete user');
+         }
+      }
+   };
+
+   const handleCreateTeam = async (e) => {
+      e.preventDefault();
+      setIsCreatingTeam(true);
+      try {
+         const companyId = isSuperAdmin
+            ? teamFormData.companyId
+            : String(userData?.company?._id || userData?.company || '');
+
+         if (!companyId) {
+            toast.error('Please select a company');
+            setIsCreatingTeam(false);
+            return;
+         }
+
+         // Verify team lead belongs to the company
+         const teamLead = rawUserList.find(u => u._id === teamFormData.teamLeadId);
+         const teamLeadCompanyId = String(teamLead?.company?._id || teamLead?.company || '');
+
+         console.log('Debug Team Creation:', {
+            companyId,
+            teamLeadId: teamFormData.teamLeadId,
+            teamLead,
+            teamLeadCompanyId,
+            match: teamLeadCompanyId === companyId
+         });
+
+         if (teamLeadCompanyId !== companyId) {
+            toast.error('Selected team lead does not belong to this company');
+            setIsCreatingTeam(false);
+            return;
+         }
+
+         const teamData = {
+            name: teamFormData.name,
+            teamLeadId: teamFormData.teamLeadId,
+            description: teamFormData.description
+         };
+
+         console.log('Sending team data:', { companyId, teamData });
+
+         await addTeam(companyId, teamData);
+
+         toast.success('Team created successfully');
+         setTeamFormData({ name: '', teamLeadId: '', description: '', companyId: '' });
+         fetchData();
+      } catch (err) {
+         toast.error(err.response?.data?.message || 'Failed to create team');
+      } finally {
+         setIsCreatingTeam(false);
+      }
+   };
+
+   const handleAddTeamMember = async (teamId, userId, companyId) => {
+      try {
+         await addTeamMemberDirect(companyId, { teamId, userId });
+         toast.success('Member added to team');
+         fetchData();
+      } catch (err) {
+         toast.error('Failed to add member');
+      }
+   };
+
+   const handleRemoveTeamMember = async (companyId, teamId, userId) => {
+      if (window.confirm('Remove this member from the team?')) {
+         try {
+            await removeTeamMember(companyId, teamId, userId);
+            toast.success('Member removed');
+            fetchData();
+         } catch (err) {
+            toast.error('Failed to remove member');
+         }
+      }
+   };
+
+   const handleDeleteTeam = async (companyId, teamId) => {
+      if (window.confirm('Delete this team? This action cannot be undone.')) {
+         try {
+            await deleteTeamAction(companyId, teamId);
+            toast.success('Team deleted');
+            fetchData();
+         } catch (err) {
+            toast.error('Failed to delete team');
          }
       }
    };
@@ -435,6 +535,244 @@ const Profiles = () => {
                      </button>
                   </form>
                   <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500">
+                     <i className="fa-solid fa-times"></i>
+                  </button>
+               </div>
+            </div>
+         )}
+
+         {/* Team Management Modal */}
+         {isTeamModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+               <div className="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm" onClick={() => setIsTeamModalOpen(false)}></div>
+               <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800 custom-scrollbar">
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                     <i className="fa-solid fa-users-gear text-red-500"></i>
+                     Manage Teams
+                  </h2>
+
+                  {/* Create Team Form */}
+                  <div className="bg-gray-50 dark:bg-black/40 rounded-2xl p-6 mb-6 border border-gray-200 dark:border-zinc-800">
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Create New Team</h3>
+                     <form onSubmit={handleCreateTeam} className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {isSuperAdmin && (
+                              <select
+                                 value={teamFormData.companyId}
+                                 onChange={e => {
+                                    setTeamFormData({ ...teamFormData, companyId: e.target.value });
+                                    setSelectedTeamCompanyId(e.target.value);
+                                 }}
+                                 className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl"
+                                 required
+                              >
+                                 <option value="">Select Company</option>
+                                 {companies?.data?.companies?.map(company => (
+                                    <option key={company._id} value={company._id}>
+                                       {company.name}
+                                    </option>
+                                 ))}
+                              </select>
+                           )}
+                           <input
+                              value={teamFormData.name}
+                              onChange={e => setTeamFormData({ ...teamFormData, name: e.target.value })}
+                              placeholder="Team Name"
+                              className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl"
+                              required
+                           />
+                           <select
+                              value={teamFormData.teamLeadId}
+                              onChange={e => setTeamFormData({ ...teamFormData, teamLeadId: e.target.value })}
+                              className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl"
+                              required
+                           >
+                              <option value="">Select Team Lead</option>
+                              {rawUserList
+                                 .filter(u => {
+                                    const companyId = isSuperAdmin ? teamFormData.companyId : (userData?.company?._id || userData?.company);
+                                    const userCompanyId = String(u.company?._id || u.company || '');
+                                    return u.role === 'team_lead' && userCompanyId === companyId;
+                                 })
+                                 .map(user => (
+                                    <option key={user._id} value={user._id}>
+                                       {user.name}
+                                    </option>
+                                 ))}
+                           </select>
+                           <input
+                              value={teamFormData.description}
+                              onChange={e => setTeamFormData({ ...teamFormData, description: e.target.value })}
+                              placeholder="Description (optional)"
+                              className="w-full px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl"
+                           />
+                        </div>
+                        <button
+                           type="submit"
+                           disabled={isCreatingTeam}
+                           className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${isCreatingTeam
+                              ? 'bg-gray-400 cursor-not-allowed text-white'
+                              : 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/20'
+                              }`}
+                        >
+                           {isCreatingTeam ? (
+                              <>
+                                 <i className="fa-solid fa-circle-notch animate-spin"></i>
+                                 <span>Creating...</span>
+                              </>
+                           ) : (
+                              <>
+                                 <i className="fa-solid fa-plus"></i>
+                                 <span>Create Team</span>
+                              </>
+                           )}
+                        </button>
+                     </form>
+                  </div>
+
+                  {/* Teams List */}
+                  <div className="space-y-4">
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Existing Teams</h3>
+                     {(() => {
+                        const companyList = companies?.data?.companies || [];
+                        const relevantCompanies = isSuperAdmin ? companyList : companyList.filter(c => c._id === (userData?.company?._id || userData?.company));
+
+                        if (relevantCompanies.length === 0) {
+                           return <p className="text-gray-500 text-center py-8">No companies found</p>;
+                        }
+
+                        return relevantCompanies.map(company => {
+                           const teams = company.teams || [];
+                           if (teams.length === 0 && !isSuperAdmin) return null;
+
+                           return (
+                              <div key={company._id} className="bg-gray-50 dark:bg-black/40 rounded-2xl p-6 border border-gray-200 dark:border-zinc-800">
+                                 <h4 className="text-md font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                    <i className="fa-solid fa-building text-blue-500"></i>
+                                    {company.name}
+                                 </h4>
+
+                                 {teams.length === 0 ? (
+                                    <p className="text-gray-500 text-sm">No teams yet</p>
+                                 ) : (
+                                    <div className="space-y-3">
+                                       {teams.map(team => {
+                                          const isExpanded = expandedTeamId === team._id;
+                                          const teamMembers = team.members || [];
+                                          const teamLead = rawUserList.find(u => u._id === (team.teamLead?._id || team.teamLead));
+                                          const availableMembers = rawUserList.filter(u => {
+                                             const userCompanyId = String(u.company?._id || u.company || '');
+                                             const isSameCompany = userCompanyId === company._id;
+                                             const isNotLead = u._id !== (team.teamLead?._id || team.teamLead);
+                                             const isNotAdmin = u.role !== 'company_admin' && u.role !== 'super_admin';
+                                             const isNotMember = !teamMembers.some(m => {
+                                                const memberId = String(m?._id || m.user?._id || m.user || m || '');
+                                                return memberId === u._id;
+                                             });
+                                             return isSameCompany && isNotLead && isNotAdmin && isNotMember;
+                                          });
+
+                                          return (
+                                             <div key={team._id} className="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-gray-200 dark:border-zinc-800">
+                                                <div className="flex items-center justify-between">
+                                                   <div className="flex-1">
+                                                      <h5 className="font-bold text-gray-900 dark:text-white">{team.name}</h5>
+                                                      {team.description && (
+                                                         <p className="text-sm text-gray-500 mt-1">{team.description}</p>
+                                                      )}
+                                                      <p className="text-xs text-gray-400 mt-1">
+                                                         Lead: {teamLead?.name || 'Unknown'}
+                                                      </p>
+                                                   </div>
+                                                   <div className="flex gap-2">
+                                                      <button
+                                                         onClick={() => setExpandedTeamId(isExpanded ? null : team._id)}
+                                                         className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-blue-500 transition-colors"
+                                                      >
+                                                         <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                                                      </button>
+                                                      <button
+                                                         onClick={() => handleDeleteTeam(company._id, team._id)}
+                                                         className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors"
+                                                      >
+                                                         <i className="fa-solid fa-trash text-xs"></i>
+                                                      </button>
+                                                   </div>
+                                                </div>
+
+                                                {isExpanded && (
+                                                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-800">
+                                                      <div className="flex items-center justify-between mb-3">
+                                                         <h6 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                                            Members ({teamMembers.length})
+                                                         </h6>
+                                                         {availableMembers.length > 0 && (
+                                                            <select
+                                                               onChange={(e) => {
+                                                                  if (e.target.value) {
+                                                                     handleAddTeamMember(team._id, e.target.value, company._id);
+                                                                     e.target.value = '';
+                                                                  }
+                                                               }}
+                                                               className="text-xs px-3 py-1.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-lg"
+                                                            >
+                                                               <option value="">+ Add Member</option>
+                                                               {availableMembers.map(user => (
+                                                                  <option key={user._id} value={user._id}>
+                                                                     {user.name}
+                                                                  </option>
+                                                               ))}
+                                                            </select>
+                                                         )}
+                                                      </div>
+
+                                                      {teamMembers.length === 0 ? (
+                                                         <p className="text-xs text-gray-400">No members yet</p>
+                                                      ) : (
+                                                         <div className="space-y-2">
+                                                            {teamMembers.map(member => {
+                                                               const memberUser = rawUserList.find(u => {
+                                                                  const memberId = String(member?._id || member.user?._id || member.user || member || '');
+                                                                  return u._id === memberId;
+                                                               });
+                                                               if (!memberUser) return null;
+
+                                                               return (
+                                                                  <div key={memberUser._id} className="flex items-center justify-between bg-gray-50 dark:bg-black/40 rounded-lg p-2">
+                                                                     <div className="flex items-center gap-2">
+                                                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-200 to-gray-300 dark:from-zinc-800 dark:to-zinc-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                                                                           {memberUser.name?.[0]?.toUpperCase()}
+                                                                        </div>
+                                                                        <div>
+                                                                           <p className="text-sm font-medium text-gray-900 dark:text-white">{memberUser.name}</p>
+                                                                           <p className="text-xs text-gray-500">{memberUser.role.replace('_', ' ')}</p>
+                                                                        </div>
+                                                                     </div>
+                                                                     <button
+                                                                        onClick={() => handleRemoveTeamMember(company._id, team._id, memberUser._id)}
+                                                                        className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+                                                                     >
+                                                                        <i className="fa-solid fa-times text-xs"></i>
+                                                                     </button>
+                                                                  </div>
+                                                               );
+                                                            })}
+                                                         </div>
+                                                      )}
+                                                   </div>
+                                                )}
+                                             </div>
+                                          );
+                                       })}
+                                    </div>
+                                 )}
+                              </div>
+                           );
+                        });
+                     })()}
+                  </div>
+
+                  <button onClick={() => setIsTeamModalOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500">
                      <i className="fa-solid fa-times"></i>
                   </button>
                </div>
