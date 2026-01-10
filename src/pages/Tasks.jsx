@@ -195,14 +195,22 @@ const Tasks = () => {
       const id = taskId?._id || taskId?.id || taskId;
       const task = taskList.find(t => (t._id === id || t.id === id));
 
-      // Restriction: Cannot move FROM overdue or cancelled
-      // EXCEPTION: Admins & Team Leads can move tasks FROM 'overdue' OR 'cancelled'
       if (task) {
          const isRestricted = task.status === 'overdue' || task.status === 'cancelled';
          if (isRestricted && !canManageTasks) {
             toast.error(t('cannot_change_status_from_' + task.status));
             return;
          }
+      }
+
+      // Restriction: Cannot manually move TO overdue (system only)
+      if (newStatus === 'overdue') {
+         if (task && new Date(task.deadline) > new Date()) {
+            toast.error(t('task_not_yet_overdue'));
+         } else {
+            toast.error(t('cannot_set_overdue_manually'));
+         }
+         return;
       }
 
       try {
@@ -386,11 +394,13 @@ const Tasks = () => {
 
    const renderColumn = (title, status, colorClass) => {
       const columnTasks = filteredTasks.filter(t => t.status === status);
+      const isOverdueCol = status === 'overdue';
+
       return (
          <div
             className="bg-gray-50 dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 flex flex-col h-[calc(100vh-280px)] min-w-[340px]"
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, status)}
+            onDragOver={!isOverdueCol ? onDragOver : undefined}
+            onDrop={!isOverdueCol ? (e) => onDrop(e, status) : undefined}
          >
             <div className="flex items-center justify-between mb-4 sticky top-0 bg-gray-50 dark:bg-dark-secondary pb-2 z-10 transition-colors duration-300">
                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
