@@ -286,8 +286,8 @@ const Profiles = () => {
                            key={f}
                            onClick={() => setFilter(f)}
                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${filter === f
-                                 ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
-                                 : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
+                              ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
                               }`}
                         >
                            {f}
@@ -370,7 +370,7 @@ const Profiles = () => {
                   </h2>
                   <form onSubmit={handleSubmit} className="space-y-4">
                      <input name="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Full Name" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
-                     <input name="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="Email Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
+                     <input name="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} onBlur={e => { const val = e.target.value; if (val && !val.includes('@')) { setFormData({ ...formData, email: val.trim() + '@gmail.com' }); } }} placeholder="Email Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
                      {!isEditMode && (
                         <input name="password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="Password" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
                      )}

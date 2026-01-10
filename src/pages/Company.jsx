@@ -401,8 +401,8 @@ const Company = () => {
                                        <button
                                           onClick={(e) => handleStatusToggle(e, company._id, company.isActive)}
                                           className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border transition-all ${company.isActive
-                                                ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'
-                                                : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30'
+                                             ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'
+                                             : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30'
                                              }`}
                                        >
                                           {company.isActive ? t('active') : t('inactive')}
@@ -505,7 +505,7 @@ const Company = () => {
                      <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <input name="name" value={formData.name} onChange={handleInputChange} placeholder="Company Name" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
-                           <input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Email" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
+                           <input name="email" type="email" value={formData.email} onChange={handleInputChange} onBlur={e => { const val = e.target.value; if (val && !val.includes('@')) { setFormData(prev => ({ ...prev, email: val.trim() + '@gmail.com' })); } }} placeholder="Email" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
                            {!isEditMode && <input name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="Password" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />}
                            <input name="address" value={formData.address} onChange={handleInputChange} placeholder="Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
                         </div>
