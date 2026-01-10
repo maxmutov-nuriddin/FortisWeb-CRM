@@ -438,5 +438,16 @@
   "upload_tz": "Загрузить ТЗ",
   "download_tz": "Скачать ТЗ",
   "no_tz_uploaded": "ТЗ для этого заказа не загружено",
-  "failed_download_file": "Не удалось скачать файл"
+  "failed_download_file": "Не удалось скачать файл",
+  "repository_link": "Ссылка на репозиторий (GitHub/GitLab)",
+  "enter_repo_url": "Введите ссылку на репозиторий...",
+  "repository_updated": "Ссылка на репозиторий успешно обновлена",
+  "failed_update_repository": "Не удалось обновить ссылку на репозиторий",
+  "edit_repository": "Изменить ссылку на репозиторий",
+  "delete_repository": "Удалить ссылку на репозиторий",
+  "confirm_delete_repository": "Вы уверены, что хотите удалить ссылку на репозиторий?",
+  "repository_deleted": "Ссылка на репозиторий удалена",
+  "failed_delete_repository": "Не удалось удалить ссылку на репозиторий",
+  "no_repository_linked": "Ссылка на репозиторий для этого проекта не указана",
+  "save": "Сохранить"
 }

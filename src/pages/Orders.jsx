@@ -32,6 +32,8 @@ const Orders = () => {
       status: 'pending'
    });
    const [tzFile, setTzFile] = useState(null);
+   const [repoUrl, setRepoUrl] = useState('');
+   const [isEditingRepo, setIsEditingRepo] = useState(false);
 
    const [formData, setFormData] = useState({
       title: '',
@@ -55,14 +57,30 @@ const Orders = () => {
    const userData = user?.data?.user || user?.user || user;
    const isSuperAdmin = userData?.role === 'super_admin';
    const isCompanyAdmin = userData?.role === 'company_admin';
+   const isTeamLead = userData?.role === 'team_lead';
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
    const { companies, getCompanies, getCompanyById, selectedCompany, isLoading: companiesLoading } = useCompanyStore();
    const {
-      projects, getProjectsByCompany, getAllProjects, createProject, updateProject,
-      deleteProject, assignProject, isLoading: projectsLoading
+      projects,
+      getProjectsByCompany,
+      getAllProjects,
+      createProject,
+      updateProject,
+      deleteProject,
+      assignProject,
+      acceptProject,
+      addRepository,
+      isLoading
    } = useProjectStore();
+
+   const getRepoUrl = (proj) => {
+      if (!proj) return '';
+      if (typeof proj.repository === 'string') return proj.repository;
+      if (proj.repository?.url) return proj.repository.url;
+      return proj.repositoryUrl || '';
+   };
    const { getUsersByCompany, isLoading: usersLoading, getAllUsers } = useUserStore();
 
    const { payments, getPaymentsByCompany, getAllPayments, confirmPayment, completePayment, createPayment, updatePayment } = usePaymentStore();
@@ -672,6 +690,8 @@ const Orders = () => {
          status: 'pending'
       });
       setTzFile(null);
+      setRepoUrl('');
+      setIsEditingRepo(false);
    };
 
    const handleCreateOrder = () => {
@@ -784,6 +804,9 @@ const Orders = () => {
       setIsModalOpen(true);
       // Fetch files for this order
       getFiles({ orderId: order._id });
+      // Init repo url from order
+      setRepoUrl(getRepoUrl(order));
+      setIsEditingRepo(false);
    };
 
    const closeModal = () => {
@@ -794,7 +817,7 @@ const Orders = () => {
       resetForm();
    };
 
-   if ((usersLoading || companiesLoading || projectsLoading) && projectsList?.length === 0) {
+   if ((usersLoading || companiesLoading || isLoading) && projectsList?.length === 0) {
       return <PageLoader />;
    }
 
@@ -979,7 +1002,7 @@ const Orders = () => {
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-800 relative">
-                     {projectsLoading && projectsList.length > 0 && (
+                     {isLoading && projectsList.length > 0 && (
                         <tr className="absolute top-0 left-0 w-full h-1 z-10">
                            <td colSpan="9" className="p-0">
                               <div className="h-0.5 bg-dark-accent animate-pulse w-full"></div>
@@ -1709,58 +1732,167 @@ const Orders = () => {
                               </div>
                            </div>
 
+                           {(() => {
+                              const tzUpload = (uploads || []).find(u => {
+                                 const uOrderId = String(u.orderId?._id || u.orderId || u.order?._id || u.order || '');
+                                 const sOrderId = String(selectedOrder._id || selectedOrder.id || '');
+                                 return uOrderId === sOrderId && u.description === 'Technical Specification (TZ)';
+                              });
+
+                              // Hide section from workers if no TZ is uploaded
+                              if (!tzUpload && !(isSuperAdmin || isCompanyAdmin || isTeamLead)) {
+                                 return null;
+                              }
+
+                              return (
+                                 <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
+                                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center">
+                                       <i className="fa-solid fa-file-lines mr-2 text-dark-accent"></i>
+                                       {t('technical_specification')}
+                                    </h3>
+                                    {!tzUpload ? (
+                                       <p className="text-sm text-gray-500 italic">{t('no_tz_uploaded')}</p>
+                                    ) : (
+                                       <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 flex items-center justify-between border border-gray-200 dark:border-gray-700">
+                                          <div className="flex items-center space-x-3">
+                                             <div className="w-10 h-10 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                                <i className="fa-solid fa-file-pdf text-red-500"></i>
+                                             </div>
+                                             <div>
+                                                <p className="text-gray-900 dark:text-white font-medium text-sm truncate max-w-[200px]">
+                                                   {tzUpload.originalName || tzUpload.name || 'tz_file'}
+                                                </p>
+                                                <p className="text-xs text-gray-500">
+                                                   {tzUpload.size ? (tzUpload.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'}
+                                                </p>
+                                             </div>
+                                          </div>
+                                          <button
+                                             type="button"
+                                             onClick={async () => {
+                                                try {
+                                                   const resp = await projectUploadsApi.download(tzUpload._id);
+                                                   const blob = new Blob([resp.data], { type: resp.headers['content-type'] });
+                                                   const url = window.URL.createObjectURL(blob);
+                                                   const link = document.createElement('a');
+                                                   link.href = url;
+                                                   link.setAttribute('download', tzUpload.originalName || tzUpload.name || 'download');
+                                                   document.body.appendChild(link);
+                                                   link.click();
+                                                   link.remove();
+                                                   window.URL.revokeObjectURL(url);
+                                                } catch (err) {
+                                                   toast.error('Failed to download file');
+                                                }
+                                             }}
+                                             className="flex items-center space-x-2 text-dark-accent hover:text-red-600 transition text-sm font-medium"
+                                          >
+                                             <i className="fa-solid fa-download"></i>
+                                             <span>{t('download_tz')}</span>
+                                          </button>
+                                       </div>
+                                    )}
+                                 </div>
+                              );
+                           })()}
+
                            <div className="border-t border-gray-200 dark:border-gray-800 pt-6">
                               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                                 <i className="fa-solid fa-file-lines mr-2 text-dark-accent"></i>
-                                 {t('technical_specification')}
+                                 <i className="fa-brands fa-github mr-2 text-dark-accent"></i>
+                                 {t('repository_link')}
                               </h3>
-                              {(() => {
-                                 const tzUpload = (uploads || []).find(u => (u.order?._id || u.order) === selectedOrder._id);
-                                 if (!tzUpload) {
-                                    return <p className="text-sm text-gray-500 italic">{t('no_tz_uploaded')}</p>;
-                                 }
-
-                                 return (
-                                    <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 flex items-center justify-between border border-gray-200 dark:border-gray-700">
-                                       <div className="flex items-center space-x-3">
-                                          <div className="w-10 h-10 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                             <i className="fa-solid fa-file-pdf text-red-500"></i>
-                                          </div>
-                                          <div>
-                                             <p className="text-gray-900 dark:text-white font-medium text-sm truncate max-w-[200px]">
-                                                {tzUpload.originalName || tzUpload.name || 'tz_file'}
-                                             </p>
-                                             <p className="text-xs text-gray-500">
-                                                {tzUpload.size ? (tzUpload.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'}
-                                             </p>
-                                          </div>
+                              <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                 {isEditingRepo || (!getRepoUrl(selectedOrder) && (isTeamLead || isSuperAdmin || isCompanyAdmin)) ? (
+                                    <div className="flex flex-col space-y-3">
+                                       <input
+                                          type="text"
+                                          value={repoUrl}
+                                          onChange={(e) => setRepoUrl(e.target.value)}
+                                          placeholder={t('enter_repo_url')}
+                                          className="w-full bg-white dark:bg-dark-secondary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                                       />
+                                       <div className="flex justify-end space-x-2">
+                                          {getRepoUrl(selectedOrder) && (
+                                             <button
+                                                onClick={() => {
+                                                   setIsEditingRepo(false);
+                                                   setRepoUrl(getRepoUrl(selectedOrder) || '');
+                                                }}
+                                                className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+                                             >
+                                                {t('cancel')}
+                                             </button>
+                                          )}
+                                          <button
+                                             onClick={async () => {
+                                                try {
+                                                   await addRepository(selectedOrder._id, { repository: repoUrl });
+                                                   toast.success(t('repository_updated'));
+                                                   setIsEditingRepo(false);
+                                                   // Update selected order locally
+                                                   setSelectedOrder(prev => ({ ...prev, repository: repoUrl }));
+                                                } catch (err) {
+                                                   toast.error(t('failed_update_repository'));
+                                                }
+                                             }}
+                                             className="px-4 py-1.5 text-xs font-medium text-white bg-dark-accent hover:bg-opacity-90 rounded-lg transition"
+                                          >
+                                             {t('save')}
+                                          </button>
                                        </div>
-                                       <button
-                                          type="button"
-                                          onClick={async () => {
-                                             try {
-                                                const resp = await projectUploadsApi.download(tzUpload._id);
-                                                const blob = new Blob([resp.data], { type: resp.headers['content-type'] });
-                                                const url = window.URL.createObjectURL(blob);
-                                                const link = document.createElement('a');
-                                                link.href = url;
-                                                link.setAttribute('download', tzUpload.originalName || tzUpload.name || 'download');
-                                                document.body.appendChild(link);
-                                                link.click();
-                                                link.remove();
-                                                window.URL.revokeObjectURL(url);
-                                             } catch (err) {
-                                                toast.error('Failed to download file');
-                                             }
-                                          }}
-                                          className="flex items-center space-x-2 text-dark-accent hover:text-red-600 transition text-sm font-medium"
-                                       >
-                                          <i className="fa-solid fa-download"></i>
-                                          <span>{t('download_tz')}</span>
-                                       </button>
                                     </div>
-                                 );
-                              })()}
+                                 ) : (
+                                    <div className="flex items-center justify-between">
+                                       {(() => {
+                                          const repoDisplayUrl = getRepoUrl(selectedOrder);
+                                          return repoDisplayUrl ? (
+                                             <>
+                                                <a
+                                                   href={repoDisplayUrl}
+                                                   target="_blank"
+                                                   rel="noopener noreferrer"
+                                                   className="text-dark-accent hover:underline text-sm font-medium flex items-center"
+                                                >
+                                                   <i className="fa-solid fa-link mr-2 text-xs"></i>
+                                                   {repoDisplayUrl}
+                                                </a>
+                                                {(isTeamLead || isSuperAdmin || isCompanyAdmin) && (
+                                                   <div className="flex items-center space-x-2">
+                                                      <button
+                                                         onClick={() => setIsEditingRepo(true)}
+                                                         className="p-1.5 text-gray-400 hover:text-dark-accent transition"
+                                                         title={t('edit_repository')}
+                                                      >
+                                                         <i className="fa-solid fa-pen-to-square text-sm"></i>
+                                                      </button>
+                                                      <button
+                                                         onClick={async () => {
+                                                            if (window.confirm(t('confirm_delete_repository'))) {
+                                                               try {
+                                                                  await addRepository(selectedOrder._id, { repository: '' });
+                                                                  toast.success(t('repository_deleted'));
+                                                                  setRepoUrl('');
+                                                                  setSelectedOrder(prev => ({ ...prev, repository: '', repositoryUrl: '' }));
+                                                               } catch (err) {
+                                                                  toast.error(t('failed_delete_repository'));
+                                                               }
+                                                            }
+                                                         }}
+                                                         className="p-1.5 text-gray-400 hover:text-red-500 transition"
+                                                         title={t('delete_repository')}
+                                                      >
+                                                         <i className="fa-solid fa-trash-can text-sm"></i>
+                                                      </button>
+                                                   </div>
+                                                )}
+                                             </>
+                                          ) : (
+                                             <p className="text-sm text-gray-500 italic">{t('no_repository_linked')}</p>
+                                          );
+                                       })()}
+                                    </div>
+                                 )}
+                              </div>
                            </div>
 
                            {(isSuperAdmin || isCompanyAdmin) && (

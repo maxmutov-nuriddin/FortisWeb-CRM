@@ -438,5 +438,16 @@
   "upload_tz": "TT yuklash",
   "download_tz": "TT yuklab olish",
   "no_tz_uploaded": "Ushbu buyurtma uchun TT yuklanmagan",
-  "failed_download_file": "Faylni yuklab bo'lmadi"
+  "failed_download_file": "Faylni yuklab bo'lmadi",
+  "repository_link": "Repozitoriya havolasi (GitHub/GitLab)",
+  "enter_repo_url": "Repozitoriya havolasini kiriting...",
+  "repository_updated": "Repozitoriya havolasi muvaffaqiyatli yangilandi",
+  "failed_update_repository": "Repozitoriya havolasini yangilab bo'lmadi",
+  "edit_repository": "Repozitoriya havolasini tahrirlash",
+  "delete_repository": "Repozitoriya havolasini o'chirish",
+  "confirm_delete_repository": "Repozitoriya havolasini o'chirishga ishonchingiz komilmi?",
+  "repository_deleted": "Repozitoriya havolasi o'chirildi",
+  "failed_delete_repository": "Repozitoriya havolasini o'chirib bo'lmadi",
+  "no_repository_linked": "Ushbu loyiha uchun repozitoriya havolasi ko'rsatilmagan",
+  "save": "Saqlash"
 }

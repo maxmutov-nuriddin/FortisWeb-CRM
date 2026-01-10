@@ -438,5 +438,16 @@
    "upload_tz": "Upload TZ",
    "download_tz": "Download TZ",
    "no_tz_uploaded": "No TZ uploaded for this order",
-   "failed_download_file": "Failed to download file"
+   "failed_download_file": "Failed to download file",
+   "repository_link": "Repository Link (GitHub/GitLab)",
+   "enter_repo_url": "Enter repository URL...",
+   "repository_updated": "Repository link updated successfully",
+   "failed_update_repository": "Failed to update repository link",
+   "edit_repository": "Edit repository link",
+   "delete_repository": "Delete repository link",
+   "confirm_delete_repository": "Are you sure you want to delete the repository link?",
+   "repository_deleted": "Repository link deleted",
+   "failed_delete_repository": "Failed to delete repository link",
+   "no_repository_linked": "No repository link provided for this project",
+   "save": "Save"
 }
