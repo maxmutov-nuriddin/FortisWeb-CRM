@@ -381,6 +381,23 @@ const Profiles = () => {
                         <option value="team_lead">Team Lead</option>
                         <option value="company_admin">Admin</option>
                      </select>
+
+                     {isSuperAdmin && (
+                        <select
+                           name="companyId"
+                           value={formData.companyId}
+                           onChange={e => setFormData({ ...formData, companyId: e.target.value })}
+                           className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl"
+                           required
+                        >
+                           <option value="">Select Company</option>
+                           {companies?.data?.companies?.map(company => (
+                              <option key={company._id} value={company._id}>
+                                 {company.name}
+                              </option>
+                           ))}
+                        </select>
+                     )}
                      <button className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all mt-4">
                         {isEditMode ? 'Save Changes' : 'Create Account'}
                      </button>

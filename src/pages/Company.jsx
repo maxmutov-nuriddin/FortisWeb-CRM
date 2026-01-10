@@ -217,14 +217,19 @@ const Company = () => {
    const handleSubmit = async (e) => {
       e.preventDefault();
       try {
+         const finalData = { ...formData };
+         if (finalData.email && !finalData.email.includes('@')) {
+            finalData.email = finalData.email.trim() + '@gmail.com';
+         }
+
          if (isEditMode && editingCompanyId) {
-            const updateData = { ...formData };
+            const updateData = { ...finalData };
             if (!updateData.password) delete updateData.password;
             await updateCompany(editingCompanyId, updateData);
-            toast.success(formData.name + " Company updated successfully");
+            toast.success(finalData.name + " Company updated successfully");
          } else {
-            await createCompany(formData);
-            toast.success(formData.name + " Company created successfully");
+            await createCompany(finalData);
+            toast.success(finalData.name + " Company created successfully");
          }
          closeCreateModal();
          await getCompanies();
