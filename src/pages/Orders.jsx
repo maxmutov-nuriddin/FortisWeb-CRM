@@ -1142,18 +1142,18 @@ const Orders = () => {
                                  <div className="flex items-center space-x-2">
                                     <button
                                        onClick={(e) => handleViewDetails(e, order)}
-                                       className="bg-dark-accent hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
+                                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                     >
                                        {t('view')}
                                     </button>
-                                    {(isSuperAdmin || isCompanyAdmin) && (
+                                    {/* {(isSuperAdmin || isCompanyAdmin) && (
                                        <button
                                           onClick={(e) => handleEditOrder(e, order)}
                                           className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
                                        >
                                           {t('edit')}
                                        </button>
-                                    )}
+                                    )} */}
                                     {(isSuperAdmin || isCompanyAdmin) && (
                                        <button
                                           onClick={(e) => handleDeleteOrder(e, order._id)}
