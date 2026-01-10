@@ -17,6 +17,7 @@ const Company = () => {
    const [selectedCompany, setSelectedCompany] = useState(null);
    const [isModalOpen, setIsModalOpen] = useState(false);
    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+   const [showPassword, setShowPassword] = useState(false);
 
 
    const [formData, setFormData] = useState({
@@ -511,7 +512,27 @@ const Company = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            <input name="name" value={formData.name} onChange={handleInputChange} placeholder="Company Name" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
                            <input name="email" type="email" value={formData.email} onChange={handleInputChange} onBlur={e => { const val = e.target.value; if (val && !val.includes('@')) { setFormData(prev => ({ ...prev, email: val.trim() + '@gmail.com' })); } }} placeholder="Email" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
-                           {!isEditMode && <input name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="Password" required className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />}
+                           {!isEditMode && (
+                              <div className="relative">
+                                 <input
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    placeholder="Password"
+                                    required
+                                    minLength={6}
+                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl pr-12"
+                                 />
+                                 <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                 >
+                                    {showPassword ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>}
+                                 </button>
+                              </div>
+                           )}
                            <input name="address" value={formData.address} onChange={handleInputChange} placeholder="Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
                         </div>
                         <button type="submit" className="w-full bg-red-600 text-white font-bold py-3 rounded-xl mt-4">Save Company</button>
