@@ -35,6 +35,7 @@ const Orders = () => {
    const [tzFile, setTzFile] = useState(null);
    const [repoUrl, setRepoUrl] = useState('');
    const [isEditingRepo, setIsEditingRepo] = useState(false);
+   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false); // State for status dropdown
 
    const [formData, setFormData] = useState({
       title: '',
@@ -837,6 +838,7 @@ const Orders = () => {
       setSelectedOrder(null);
       setIsEditMode(false);
       setIsCreateMode(false);
+      setIsStatusMenuOpen(false);
       resetForm();
    };
 
@@ -1146,14 +1148,6 @@ const Orders = () => {
                                     >
                                        {t('view')}
                                     </button>
-                                    {/* {(isSuperAdmin || isCompanyAdmin) && (
-                                       <button
-                                          onClick={(e) => handleEditOrder(e, order)}
-                                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-medium transition"
-                                       >
-                                          {t('edit')}
-                                       </button>
-                                    )} */}
                                     {(isSuperAdmin || isCompanyAdmin) && (
                                        <button
                                           onClick={(e) => handleDeleteOrder(e, order._id)}
@@ -1394,24 +1388,29 @@ const Orders = () => {
                               </div>
                            )}
 
-                           <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                                 {t('status')}
-                              </label>
-                              <select
-                                 name="status"
-                                 value={formData.status}
-                                 onChange={handleInputChange}
-                                 className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
-                              >
-                                 <option value="pending">Pending</option>
-                                 <option value="in_progress">In Progress</option>
-                                 <option value="review">Review</option>
-                                 <option value="revision">Revision</option>
-                                 <option value="completed">Completed</option>
-                                 <option value="cancelled">Cancelled</option>
-                              </select>
-                           </div>
+                           {/* Status - Visible ONLY in Edit Mode */}
+                           {
+                              !isCreateMode && (
+                                 <div>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                                       {t('status')}
+                                    </label>
+                                    <select
+                                       name="status"
+                                       value={formData.status}
+                                       onChange={handleInputChange}
+                                       className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                                    >
+                                       <option value="pending">Pending</option>
+                                       <option value="in_progress">In Progress</option>
+                                       <option value="review">Review</option>
+                                       <option value="revision">Revision</option>
+                                       <option value="completed">Completed</option>
+                                       <option value="cancelled">Cancelled</option>
+                                    </select>
+                                 </div>
+                              )
+                           }
 
                            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
                               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">{t('client_information')}</h3>
@@ -2205,6 +2204,68 @@ const Orders = () => {
                               >
                                  Close
                               </button>
+                              {/* Quick Status Change - Only for admins */}
+                              {(isSuperAdmin || isCompanyAdmin) && (
+                                 <div className="relative">
+                                    <button
+                                       className={`px-4 py-2.5 rounded-lg text-xs font-semibold transition flex items-center space-x-2 border ${isStatusMenuOpen
+                                          ? 'bg-dark-accent text-white border-dark-accent shadow-lg ring-2 ring-red-500 ring-opacity-30'
+                                          : 'bg-white dark:bg-dark-tertiary text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:border-dark-accent dark:hover:border-dark-accent'
+                                          }`}
+                                       onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsStatusMenuOpen(!isStatusMenuOpen);
+                                       }}
+                                    >
+                                       <i className="fa-solid fa-rotate text-xs"></i>
+                                       <span>Change Status</span>
+                                       <i className={`fa-solid fa-chevron-down text-[10px] transition-transform duration-200 ${isStatusMenuOpen ? 'transform rotate-180' : ''}`}></i>
+                                    </button>
+
+                                    {isStatusMenuOpen && (
+                                       <div className="absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-dark-secondary border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden transform transition-all duration-200 origin-bottom-right">
+                                          <div className="p-1">
+                                             {[
+                                                { id: 'pending', icon: 'fa-regular fa-clock', color: 'text-yellow-500', bg: 'hover:bg-yellow-50 dark:hover:bg-yellow-900/10' },
+                                                { id: 'in_progress', icon: 'fa-solid fa-spinner', color: 'text-blue-500', bg: 'hover:bg-blue-50 dark:hover:bg-blue-900/10' },
+                                                { id: 'review', icon: 'fa-solid fa-glasses', color: 'text-purple-500', bg: 'hover:bg-purple-50 dark:hover:bg-purple-900/10' },
+                                                { id: 'revision', icon: 'fa-solid fa-rotate-left', color: 'text-pink-500', bg: 'hover:bg-pink-50 dark:hover:bg-pink-900/10' },
+                                                { id: 'completed', icon: 'fa-solid fa-check-circle', color: 'text-green-500', bg: 'hover:bg-green-50 dark:hover:bg-green-900/10' },
+                                                { id: 'cancelled', icon: 'fa-solid fa-ban', color: 'text-red-500', bg: 'hover:bg-red-50 dark:hover:bg-red-900/10' }
+                                             ].map((status) => (
+                                                <button
+                                                   key={status.id}
+                                                   onClick={async (e) => {
+                                                      e.stopPropagation();
+                                                      if (window.confirm(`Are you sure you want to mark this order as ${status.id.toUpperCase().replace('_', ' ')}?`)) {
+                                                         try {
+                                                            await updateProject(selectedOrder._id, { status: status.id });
+                                                            toast.success(`Order status updated to ${status.id}`);
+                                                            setIsStatusMenuOpen(false);
+                                                         } catch (err) {
+                                                            toast.error('Failed to update status');
+                                                         }
+                                                      }
+                                                   }}
+                                                   className={`w-full text-left px-3 py-2.5 text-xs rounded-lg flex items-center space-x-3 transition-colors ${status.bg} ${selectedOrder.status === status.id ? 'bg-gray-50 dark:bg-dark-tertiary' : ''
+                                                      }`}
+                                                >
+                                                   <div className={`w-6 h-6 rounded-full flex items-center justify-center bg-opacity-10 ${status.color.replace('text-', 'bg-')}`}>
+                                                      <i className={`${status.icon} ${status.color}`}></i>
+                                                   </div>
+                                                   <span className={`font-medium ${selectedOrder.status === status.id ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                      {status.id.charAt(0).toUpperCase() + status.id.slice(1).replace('_', ' ')}
+                                                   </span>
+                                                   {selectedOrder.status === status.id && (
+                                                      <i className="fa-solid fa-check text-dark-accent ml-auto"></i>
+                                                   )}
+                                                </button>
+                                             ))}
+                                          </div>
+                                       </div>
+                                    )}
+                                 </div>
+                              )}
                               {(isSuperAdmin || isCompanyAdmin) && (
                                  <div className="flex space-x-3">
                                     <button
