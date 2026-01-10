@@ -73,6 +73,7 @@ const Orders = () => {
       assignProject,
       acceptProject,
       addRepository,
+      deleteRepository,
       isLoading
    } = useProjectStore();
 
@@ -1848,13 +1849,21 @@ const Orders = () => {
                                           <button
                                              onClick={async () => {
                                                 try {
-                                                   await addRepository(selectedOrder._id, { repository: repoUrl });
+                                                   try {
+                                                      // Align with backend schema: repository: { url: ... }
+                                                      await addRepository(selectedOrder._id, { url: repoUrl, repositoryUrl: repoUrl });
+                                                   } catch (apiErr) {
+                                                      console.warn('addRepository endpoint failed, trying updateProject fallback...', apiErr);
+                                                      // Fallback to general project update sending the proper object structure
+                                                      await updateProject(selectedOrder._id, { repository: { url: repoUrl } });
+                                                   }
+
                                                    toast.success(t('repository_updated'));
                                                    setIsEditingRepo(false);
-                                                   // Update selected order locally
-                                                   setSelectedOrder(prev => ({ ...prev, repository: repoUrl }));
+                                                   setSelectedOrder(prev => ({ ...prev, repository: { url: repoUrl }, repositoryUrl: repoUrl }));
                                                 } catch (err) {
-                                                   toast.error(t('failed_update_repository'));
+                                                   const errMsg = err.response?.data?.message || err.message || t('failed_update_repository');
+                                                   toast.error(errMsg);
                                                 }
                                              }}
                                              className="px-4 py-1.5 text-xs font-medium text-white bg-dark-accent hover:bg-opacity-90 rounded-lg transition"
@@ -1878,35 +1887,48 @@ const Orders = () => {
                                                    <i className="fa-solid fa-link mr-2 text-xs"></i>
                                                    {repoDisplayUrl}
                                                 </a>
-                                                {(isTeamLead || isSuperAdmin || isCompanyAdmin) && (
-                                                   <div className="flex items-center space-x-2">
-                                                      <button
-                                                         onClick={() => setIsEditingRepo(true)}
-                                                         className="p-1.5 text-gray-400 hover:text-dark-accent transition"
-                                                         title={t('edit_repository')}
-                                                      >
-                                                         <i className="fa-solid fa-pen-to-square text-sm"></i>
-                                                      </button>
-                                                      <button
-                                                         onClick={async () => {
-                                                            if (window.confirm(t('confirm_delete_repository'))) {
-                                                               try {
-                                                                  await addRepository(selectedOrder._id, { repository: '' });
-                                                                  toast.success(t('repository_deleted'));
-                                                                  setRepoUrl('');
-                                                                  setSelectedOrder(prev => ({ ...prev, repository: '', repositoryUrl: '' }));
-                                                               } catch (err) {
-                                                                  toast.error(t('failed_delete_repository'));
+                                                <div className="flex items-center space-x-2">
+                                                   <button
+                                                      onClick={() => {
+                                                         navigator.clipboard.writeText(repoDisplayUrl);
+                                                         toast.success(t('copied_to_clipboard') || 'Copied to clipboard');
+                                                      }}
+                                                      className="p-1.5 text-gray-400 hover:text-blue-500 transition"
+                                                      title={t('copy_repository') || 'Copy URL'}
+                                                   >
+                                                      <i className="fa-solid fa-copy text-sm"></i>
+                                                   </button>
+                                                   {(isTeamLead || isSuperAdmin || isCompanyAdmin) && (
+                                                      <>
+                                                         <button
+                                                            onClick={() => setIsEditingRepo(true)}
+                                                            className="p-1.5 text-gray-400 hover:text-dark-accent transition"
+                                                            title={t('edit_repository')}
+                                                         >
+                                                            <i className="fa-solid fa-pen-to-square text-sm"></i>
+                                                         </button>
+                                                         <button
+                                                            onClick={async () => {
+                                                               if (window.confirm(t('confirm_delete_repository'))) {
+                                                                  try {
+                                                                     await deleteRepository(selectedOrder._id);
+                                                                     toast.success(t('repository_deleted'));
+                                                                     setRepoUrl('');
+                                                                     setSelectedOrder(prev => ({ ...prev, repository: null, repositoryUrl: '' }));
+                                                                  } catch (err) {
+                                                                     const errMsg = err.response?.data?.message || err.message || t('failed_delete_repository');
+                                                                     toast.error(errMsg);
+                                                                  }
                                                                }
-                                                            }
-                                                         }}
-                                                         className="p-1.5 text-gray-400 hover:text-red-500 transition"
-                                                         title={t('delete_repository')}
-                                                      >
-                                                         <i className="fa-solid fa-trash-can text-sm"></i>
-                                                      </button>
-                                                   </div>
-                                                )}
+                                                            }}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 transition"
+                                                            title={t('delete_repository')}
+                                                         >
+                                                            <i className="fa-solid fa-trash text-sm"></i>
+                                                         </button>
+                                                      </>
+                                                   )}
+                                                </div>
                                              </>
                                           ) : (
                                              <p className="text-sm text-gray-500 italic">{t('no_repository_linked')}</p>
@@ -2200,8 +2222,9 @@ const Orders = () => {
                   </div>
                </div>
             </div>
-         )}
-      </div>
+         )
+         }
+      </div >
    );
 };
 

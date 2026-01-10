@@ -230,6 +230,30 @@ export const useProjectStore = create((set) => ({
       }
    },
 
+   deleteRepository: async (id) => {
+      set({ isLoading: true, error: null });
+      try {
+         await projectsApi.deleteRepository(id);
+         set((state) => {
+            const currentList = state.projects?.data?.projects || (Array.isArray(state.projects) ? state.projects : []);
+            return {
+               projects: {
+                  ...state.projects,
+                  data: {
+                     ...state.projects?.data,
+                     projects: currentList.map(p => (p._id === id || p.id === id) ? { ...p, repository: null, repositoryUrl: '' } : p)
+                  }
+               },
+               selectedProject: (state.selectedProject?._id === id || state.selectedProject?.id === id) ? { ...state.selectedProject, repository: null, repositoryUrl: '' } : state.selectedProject,
+               isLoading: false
+            };
+         });
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to delete repository', isLoading: false });
+         throw error;
+      }
+   },
+
    getRepoCommits: async (id) => {
       set({ isLoading: true, error: null });
       try {

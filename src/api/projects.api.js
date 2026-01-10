@@ -11,6 +11,7 @@ export const projectsApi = {
    updateWorkPercentage: (id, membersWork) => api.put(`/api/projects/${id}/work-percentage`, { membersWork }),
    addResults: (id, data) => api.post(`/api/projects/${id}/results`, data),
    addRepository: (id, data) => api.post(`/api/projects/${id}/repository`, data),
+   deleteRepository: (id) => api.delete(`/api/projects/${id}/repository`),
    getRepoCommits: (id) => api.get(`/api/projects/${id}/repository/commits`),
    requestRevision: (id, data) => api.post(`/api/projects/${id}/revision`, data),
    complete: (id) => api.put(`/api/projects/${id}/complete`),

@@ -449,5 +449,7 @@
   "repository_deleted": "Repozitoriya havolasi o'chirildi",
   "failed_delete_repository": "Repozitoriya havolasini o'chirib bo'lmadi",
   "no_repository_linked": "Ushbu loyiha uchun repozitoriya havolasi ko'rsatilmagan",
+  "copy_repository": "Repozitoriya havolasini nusxalash",
+  "copied_to_clipboard": "Havola vaqtinchalik xotiraga nusxalandi",
   "save": "Saqlash"
 }

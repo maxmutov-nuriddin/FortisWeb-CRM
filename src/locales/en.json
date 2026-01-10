@@ -449,5 +449,7 @@
    "repository_deleted": "Repository link deleted",
    "failed_delete_repository": "Failed to delete repository link",
    "no_repository_linked": "No repository link provided for this project",
+   "copy_repository": "Copy repository link",
+   "copied_to_clipboard": "Link copied to clipboard",
    "save": "Save"
 }
