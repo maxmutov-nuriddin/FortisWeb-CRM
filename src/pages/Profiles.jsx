@@ -35,6 +35,7 @@ const Profiles = () => {
    const [selectedUser, setSelectedUser] = useState(null);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [searchQuery, setSearchQuery] = useState('');
+   const [showPassword, setShowPassword] = useState(false);
 
    // Form States
    const [formData, setFormData] = useState({
@@ -372,7 +373,24 @@ const Profiles = () => {
                      <input name="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Full Name" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
                      <input name="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} onBlur={e => { const val = e.target.value; if (val && !val.includes('@')) { setFormData({ ...formData, email: val.trim() + '@gmail.com' }); } }} placeholder="Email Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
                      {!isEditMode && (
-                        <input name="password" type="password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} placeholder="Password" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" required />
+                        <div className="relative">
+                           <input
+                              name="password"
+                              type={showPassword ? "text" : "password"}
+                              value={formData.password}
+                              onChange={e => setFormData({ ...formData, password: e.target.value })}
+                              placeholder="Password"
+                              className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl pr-12"
+                              required
+                           />
+                           <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                           >
+                              {showPassword ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>}
+                           </button>
+                        </div>
                      )}
                      <select name="role" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl">
                         <option value="employee">Employee</option>
@@ -398,8 +416,22 @@ const Profiles = () => {
                            ))}
                         </select>
                      )}
-                     <button className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all mt-4">
-                        {isEditMode ? 'Save Changes' : 'Create Account'}
+                     <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full text-white font-bold py-3 rounded-xl shadow-lg shadow-red-500/20 transition-all mt-4 flex items-center justify-center gap-2 ${isSubmitting
+                           ? 'bg-gray-400 cursor-not-allowed'
+                           : 'bg-red-600 hover:bg-red-700 hover:-translate-y-0.5'
+                           }`}
+                     >
+                        {isSubmitting ? (
+                           <>
+                              <i className="fa-solid fa-circle-notch animate-spin"></i>
+                              <span>{isEditMode ? 'Saving...' : 'Creating...'}</span>
+                           </>
+                        ) : (
+                           <span>{isEditMode ? 'Save Changes' : 'Create Account'}</span>
+                        )}
                      </button>
                   </form>
                   <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500">
