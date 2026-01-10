@@ -1,7 +1,7 @@
 const PageLoader = () => {
    return (
       <div className="loader-wrapper">
-         <span className="loader" />
+         <span className="loader " />
 
          <style>{`
         .loader-wrapper {

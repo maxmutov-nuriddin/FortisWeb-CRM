@@ -32,11 +32,9 @@ const Projects = () => {
    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
    const [selectedProjectForDetails, setSelectedProjectForDetails] = useState(null);
 
-   // File Replacement State
    const [replacingFileId, setReplacingFileId] = useState(null);
    const replaceInputRef = React.useRef(null);
 
-   // Fetch projects and files on mount
    useEffect(() => {
       const companyId = userData?.company?._id || userData?.company;
       if (companyId) {
@@ -53,12 +51,10 @@ const Projects = () => {
       if (!myId) return [];
 
       return allProjects.filter(p => {
-         // 1. Team Lead: sees projects where they are lead OR projects assign to their team
          if (myRole === 'team_lead') {
             const leadId = String(p.teamLead?._id || p.teamLead || '');
             return leadId === myId;
          }
-         // 2. Regular Member: sees projects where they are in assignedMembers
          if (['frontend', 'backend', 'marketer', 'designer', 'employee'].includes(myRole)) {
             const isAssigned = p.assignedMembers?.some(m => {
                const mId = String(m.user?._id || m.user || m || '');
@@ -66,7 +62,6 @@ const Projects = () => {
             });
             return isAssigned;
          }
-         // 3. Admins see all (if they access this page)
          if (['super_admin', 'company_admin'].includes(myRole)) {
             return true;
          }
@@ -75,7 +70,6 @@ const Projects = () => {
    }, [projects, userData]);
 
    const filteredProjects = useMemo(() => {
-      // Filter by status
       return statusFilter === 'All' ? myProjects : myProjects.filter(p => p.status === statusFilter.toLowerCase());
    }, [myProjects, statusFilter]);
 
@@ -99,7 +93,6 @@ const Projects = () => {
 
    const handleDelete = async (project) => {
       if (!window.confirm(t('confirm_delete_project') || 'Are you sure you want to delete this project?')) return;
-
       try {
          await deleteProject(project._id);
          toast.success(t('project_deleted_success') || 'Project deleted successfully');
@@ -138,7 +131,7 @@ const Projects = () => {
    const handleStartReplace = (fileId) => {
       setReplacingFileId(fileId);
       if (replaceInputRef.current) {
-         replaceInputRef.current.value = ''; // Reset input
+         replaceInputRef.current.value = '';
          replaceInputRef.current.click();
       }
    };
@@ -153,7 +146,6 @@ const Projects = () => {
          return;
       }
 
-      // 1. Delete old file
       try {
          await deleteFile(replacingFileId);
       } catch (error) {
@@ -162,7 +154,6 @@ const Projects = () => {
          return;
       }
 
-      // 2. Upload new file with same metadata
       const formData = new FormData();
       formData.append('file', file);
       if (oldFile.companyId) formData.append('companyId', oldFile.companyId);
@@ -174,7 +165,6 @@ const Projects = () => {
          await uploadFile(formData);
          toast.success('File replaced successfully');
          setReplacingFileId(null);
-
          if (userData?.company) {
             const companyId = userData.company._id || userData.company;
             getFiles({ companyId });
@@ -185,168 +175,171 @@ const Projects = () => {
       }
    };
 
+   const statusBadge = (status) => {
+      switch (status) {
+         case 'assigned': return 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30';
+         case 'in_progress': return 'bg-yellow-50 text-yellow-600 border border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30';
+         case 'review': return 'bg-purple-50 text-purple-600 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-900/30';
+         case 'completed': return 'bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30';
+         default: return 'bg-gray-50 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
+      }
+   };
+
    if ((projectsLoading || uploadsLoading) && myProjects?.length === 0) return <PageLoader />;
 
    return (
-      <div className="p-8 space-y-8 min-h-screen bg-gray-50 dark:bg-dark-primary">
-         {/* Hidden File Input for Replacement */}
-         <input
-            type="file"
-            ref={replaceInputRef}
-            className="hidden"
-            onChange={handleFileReplace}
-         />
+      <div className="min-h-screen p-6 lg:p-10 bg-gray-50/50 dark:bg-black text-gray-900 dark:text-white font-sans">
+         <div className="max-w-[1600px] mx-auto space-y-10">
+            {/* Hidden File Input */}
+            <input type="file" ref={replaceInputRef} className="hidden" onChange={handleFileReplace} />
 
-         {/* Header */}
-         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('my_projects')}</h1>
-               <p className="text-gray-500 dark:text-gray-400">{t('manage_active_assignments')}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-               <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="bg-dark-accent hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center shadow-lg shadow-blue-500/20 transform hover:-translate-y-0.5"
-               >
-                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>
-                  Upload File
-               </button>
-               <select
-                  className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-dark-accent/50 shadow-sm"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-               >
-                  <option value="All">{t('all_statuses')}</option>
-                  <option value="assigned">{t('assigned_new')}</option>
-                  <option value="in_progress">{t('in_progress')}</option>
-                  <option value="review">{t('review')}</option>
-                  <option value="completed">{t('completed')}</option>
-               </select>
-            </div>
-         </div>
-
-         {/* Projects Grid */}
-         {filteredProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-               {filteredProjects.map((project, index) => {
-                  const projectFiles = uploads.filter(file => file.orderId === project._id);
-
-                  return (
-                     <div
-                        key={project._id}
-                        className="group relative flex flex-col bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:border-dark-accent/30 transition-all duration-300"
-                     >
-
-
-                        {/* Files Section  */}
-                        <div className="flex-1 space-y-3 mb-4">
-                           <div className="flex items-center justify-between text-xs text-gray-400 uppercase font-semibold tracking-wider">
-                              <span>Files ({projectFiles.length})</span>
-                              <button
-                                 onClick={(e) => { e.stopPropagation(); setSelectedProjectForDetails(project); }}
-                                 className="text-[10px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors flex items-center gap-1.5"
-                              >
-                                 <i className="fa-solid fa-circle-info text-xs"></i>
-                                 View Order Info
-                              </button>
-                           </div>
-
-                           {projectFiles.length > 0 ? (
-                              <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1 customize-scrollbar">
-                                 {projectFiles.map(file => {
-                                    const ext = (file.originalName || '').split('.').pop().toLowerCase();
-                                    let iconClass = 'fa-solid fa-file';
-                                    let iconColor = 'text-gray-400';
-
-                                    if (['pdf'].includes(ext)) { iconClass = 'fa-solid fa-file-pdf'; iconColor = 'text-red-500'; }
-                                    else if (['jpg', 'png', 'jpeg'].includes(ext)) { iconClass = 'fa-solid fa-file-image'; iconColor = 'text-purple-500'; }
-                                    else if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-solid fa-file-word'; iconColor = 'text-blue-500'; }
-                                    else if (['zip', 'rar'].includes(ext)) { iconClass = 'fa-solid fa-file-zipper'; iconColor = 'text-yellow-500'; }
-
-                                    const formatDate = (dateStr) => {
-                                       const date = new Date(dateStr);
-                                       if (isNaN(date.getTime())) return null;
-                                       return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
-                                    };
-
-                                    const uploadTime = formatDate(file.createdAt) || formatDate(file.updatedAt) || formatDate(project.createdAt) || 'N/A';
-
-                                    return (
-                                       <div
-                                          key={file._id}
-                                          onClick={() => handleDownload(file)}
-                                          className="flex items-center p-2 rounded-lg bg-gray-50 dark:bg-dark-tertiary border border-gray-100 dark:border-gray-700 hover:border-dark-accent/50 cursor-pointer transition-all group/file relative overflow-hidden"
-                                       >
-                                          <i className={`${iconClass} ${iconColor} text-lg mr-2`}></i>
-
-                                          <div className="flex-1 min-w-0 mr-1">
-                                             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate">{file.originalName}</p>
-                                             <div className="flex items-center gap-2">
-                                                <p className="text-[10px] text-gray-400">{(file.size / 1024).toFixed(0)}KB</p>
-                                                <span className="text-[10px] text-gray-400 font-bold">•</span>
-                                                <p className="text-[10px] text-gray-500 font-medium" title="Upload time">
-                                                   {uploadTime}
-                                                </p>
-                                             </div>
-                                          </div>
-
-                                          {/* File Actions */}
-                                          <div className="flex items-center gap-1 opacity-40 group-hover/file:opacity-100 transition-opacity">
-                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }}
-                                                className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-1.5 rounded-lg transition-colors"
-                                                title="Replace File"
-                                             >
-                                                <i className="fa-solid fa-pen text-xs"></i>
-                                             </button>
-                                             <button
-                                                onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }}
-                                                className="text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-lg transition-colors"
-                                                title="Delete File"
-                                             >
-                                                <i className="fa-solid fa-trash text-xs"></i>
-                                             </button>
-                                          </div>
-                                       </div>
-                                    )
-                                 })}
-                              </div>
-                           ) : (
-                              <div className="text-center py-6 bg-gray-50 dark:bg-dark-tertiary rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
-                                 <p className="text-xs text-gray-400">No files uploaded</p>
-                              </div>
-                           )}
-                        </div>
-
-
-
-                        {/* Actions Footer (Accept) - Only if team lead & assigned */}
-                        {userData?.role === 'team_lead' && project.status === 'assigned' && (
-                           <div className="mt-3">
-                              <button
-                                 onClick={() => handleAccept(project)}
-                                 disabled={isSubmitting}
-                                 className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold shadow-green-500/20 shadow-lg transition"
-                              >
-                                 Accept Assignment
-                              </button>
-                           </div>
-                        )}
-                     </div>
-                  );
-               })}
-            </div>
-         ) : (
-            <div className="flex flex-col items-center justify-center p-16 bg-white dark:bg-dark-secondary rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm text-center">
-               <div className="w-20 h-20 bg-gray-100 dark:bg-dark-tertiary rounded-full flex items-center justify-center mb-6">
-                  <i className="fa-solid fa-folder-open text-4xl text-gray-400"></i>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+               <div>
+                  <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">{t('my_projects')}</h1>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t('manage_active_assignments')}</p>
                </div>
-               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Projects Found</h3>
-               <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                  There are no projects matching your current filters. Try changing the status filter or checking back later.
-               </p>
+               <div className="flex flex-wrap items-center gap-4">
+                  <select
+                     className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 shadow-sm hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                     value={statusFilter}
+                     onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                     <option value="All">{t('all_statuses')}</option>
+                     <option value="assigned">{t('assigned_new')}</option>
+                     <option value="in_progress">{t('in_progress')}</option>
+                     <option value="review">{t('review')}</option>
+                     <option value="completed">{t('completed')}</option>
+                  </select>
+                  <button
+                     onClick={() => setIsUploadModalOpen(true)}
+                     className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/20 hover:shadow-red-900/40 hover:-translate-y-0.5 flex items-center gap-2"
+                  >
+                     <i className="fa-solid fa-cloud-arrow-up"></i>
+                     Upload File
+                  </button>
+               </div>
             </div>
-         )}
+
+            {/* Content */}
+            {filteredProjects.length > 0 ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filteredProjects.map((project, index) => {
+                     const projectFiles = uploads.filter(file => file.orderId === project._id);
+
+                     return (
+                        <div key={project._id} className="group bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm hover:shadow-2xl hover:border-red-500/30 dark:hover:border-red-500/30 transition-all duration-300 relative overflow-hidden flex flex-col">
+                           {/* Decorative gradient blob */}
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 rounded-bl-[100px] -mr-10 -mt-10 opacity-50 group-hover:scale-110 transition-transform duration-500"></div>
+
+                           <div className="relative z-10 flex flex-col h-full">
+                              {/* Header Card */}
+                              <div className="flex justify-between items-start mb-6">
+                                 <div>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 inline-block ${statusBadge(project.status)}`}>
+                                       {project.status.replace('_', ' ')}
+                                    </span>
+                                    <h3
+                                       className="text-xl font-bold text-gray-900 dark:text-white leading-tight cursor-pointer hover:text-red-500 transition-colors"
+                                       onClick={() => setSelectedProjectForDetails(project)}
+                                    >
+                                       {project.title}
+                                    </h3>
+                                 </div>
+                                 <button
+                                    onClick={() => setSelectedProjectForDetails(project)}
+                                    className="w-8 h-8 rounded-full bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-gray-400 hover:text-white hover:bg-black dark:hover:bg-white dark:hover:text-black transition-all"
+                                 >
+                                    <i className="fa-solid fa-arrow-right -rotate-45"></i>
+                                 </button>
+                              </div>
+
+                              {/* Info Grid */}
+                              <div className="grid grid-cols-2 gap-4 mb-6">
+                                 <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Created</div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{new Date(project.createdAt).toLocaleDateString()}</div>
+                                 </div>
+                                 <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Deadline</div>
+                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{new Date(project.deadline).toLocaleDateString()}</div>
+                                 </div>
+                              </div>
+
+                              {/* Files Section */}
+                              <div className="flex-1 min-h-[100px]">
+                                 <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    <span>Files ({projectFiles.length})</span>
+                                    <i className="fa-solid fa-paperclip"></i>
+                                 </div>
+
+                                 <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+                                    {projectFiles.length > 0 ? (
+                                       projectFiles.map(file => {
+                                          const ext = (file.originalName || '').split('.').pop().toLowerCase();
+                                          let iconClass = 'fa-solid fa-file';
+                                          let iconColor = 'text-gray-400';
+
+                                          if (['pdf'].includes(ext)) { iconClass = 'fa-solid fa-file-pdf'; iconColor = 'text-red-500'; }
+                                          else if (['jpg', 'png', 'jpeg'].includes(ext)) { iconClass = 'fa-solid fa-file-image'; iconColor = 'text-purple-500'; }
+                                          else if (['doc', 'docx'].includes(ext)) { iconClass = 'fa-solid fa-file-word'; iconColor = 'text-blue-500'; }
+                                          else if (['zip', 'rar'].includes(ext)) { iconClass = 'fa-solid fa-file-zipper'; iconColor = 'text-yellow-500'; }
+
+                                          return (
+                                             <div key={file._id} onClick={() => handleDownload(file)} className="flex items-center p-2.5 rounded-xl bg-gray-50 dark:bg-zinc-800/50 hover:bg-gray-100 dark:hover:bg-zinc-800 cursor-pointer group/file transition-colors border border-transparent hover:border-gray-200 dark:hover:border-zinc-700">
+                                                <i className={`${iconClass} ${iconColor} text-lg mr-3`}></i>
+                                                <div className="flex-1 min-w-0">
+                                                   <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{file.originalName}</p>
+                                                   <p className="text-[10px] text-gray-400 font-medium">{(file.size / 1024).toFixed(0)}KB</p>
+                                                </div>
+                                                <div className="flex gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                                                   <button onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-blue-500 shadow-sm transition-colors" title="Replace">
+                                                      <i className="fa-solid fa-pen text-[10px]"></i>
+                                                   </button>
+                                                   <button onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm transition-colors" title="Delete">
+                                                      <i className="fa-solid fa-trash text-[10px]"></i>
+                                                   </button>
+                                                </div>
+                                             </div>
+                                          );
+                                       })
+                                    ) : (
+                                       <div className="text-center py-8 border-2 border-dashed border-gray-100 dark:border-zinc-800 rounded-xl">
+                                          <p className="text-xs text-gray-400 font-medium">No files attached</p>
+                                       </div>
+                                    )}
+                                 </div>
+                              </div>
+
+                              {/* Footer Action */}
+                              {userData?.role === 'team_lead' && project.status === 'assigned' && (
+                                 <div className="mt-6 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                    <button
+                                       onClick={() => handleAccept(project)}
+                                       disabled={isSubmitting}
+                                       className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl text-sm font-bold shadow-green-500/20 shadow-lg transition-all active:scale-95"
+                                    >
+                                       Accept Assignment
+                                    </button>
+                                 </div>
+                              )}
+                           </div>
+                        </div>
+                     );
+                  })}
+               </div>
+            ) : (
+               <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 shadow-sm">
+                  <div className="w-24 h-24 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6">
+                     <i className="fa-solid fa-folder-open text-3xl text-gray-300 dark:text-zinc-600"></i>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Projects Found</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm text-center">
+                     There are no projects matching your current filters. Try changing the status filter or checking back later.
+                  </p>
+               </div>
+            )}
+         </div>
 
          <UniversalUploadModal
             isOpen={isUploadModalOpen}

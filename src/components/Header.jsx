@@ -18,7 +18,7 @@ const Header = ({ toggleSidebar }) => {
       if (userData?._id && (userData.role === 'worker' || userData.role === 'team_lead')) {
          getTasksByUser(userData._id);
       }
-   }, [user?.data?.user?._id, user?.user?._id, user?._id, user?.data?.user?.role, user?.user?.role, user?.role]);
+   }, [user?.role]);
 
    const userData = user?.data?.user || user?.user || user;
    const currentUserId = userData?._id;
@@ -30,7 +30,6 @@ const Header = ({ toggleSidebar }) => {
          return !readBy.includes(currentUserId);
       }).length || 0;
 
-   // Calculate new tasks count (status === 'todo')
    const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
    const newTasksCount = allTasks.filter(t =>
       String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId) &&
@@ -43,7 +42,6 @@ const Header = ({ toggleSidebar }) => {
             const isPending = project.status === 'pending';
             if (!isPending) return false;
 
-            // Role-based filtering
             const role = userData?.role;
             if (role === 'super_admin' || role === 'company_admin') return true;
 
@@ -51,41 +49,25 @@ const Header = ({ toggleSidebar }) => {
                return String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
             }
 
-            // Worker
             const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
-
             if (isAssigned) {
-               // Ensure we only check tasks assigned to THIS user (handling stale store data)
                const userTasks = allTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId));
-
-               // Filter tasks for this specific project
                const projectTasks = userTasks.filter(t => String(t.project?._id || t.project || '') === String(project._id));
-
-               // 1. If no tasks assigned yet -> Hide notification
                if (projectTasks.length === 0) return false;
-
-               // 2. If has completed task -> Hide notification
                const hasCompletedTask = projectTasks.some(t => t.status === 'completed');
                if (hasCompletedTask) return false;
-
-               // 3. Has active tasks -> Show notification
                return true;
             }
             return false;
          }
       ).length || 0;
 
-   // ===================== AUTH =====================
-
-
-   // ===================== PROJECTS =====================
    useEffect(() => {
       const companyId = userData?.company?._id || userData?.company;
       if (!companyId) return;
       getProjectsByCompany(companyId);
-   }, [userData?.company?._id || userData?.company]);
+   }, [userData?.company]);
 
-   // ===================== ERRORS =====================
    useEffect(() => {
       if (authError) console.error(authError);
       if (projectsError) console.error(projectsError);
@@ -93,65 +75,64 @@ const Header = ({ toggleSidebar }) => {
    }, [authError, projectsError, chatsError]);
 
    return (
-      <>
-         <header id="header" className="bg-white dark:bg-dark-secondary border-b border-gray-200 dark:border-gray-800 px-4 md:px-8 py-4 shrink-0 transition-all duration-300">
-            <div className="flex items-center justify-between gap-4">
+      <header id="header" className="sticky top-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 transition-all duration-300">
+         <div className="flex items-center justify-between px-6 py-4">
 
-               {/* Left Side: Hamburger & Search */}
-               <div className="flex items-center space-x-4 flex-1">
-                  {/* Hamburger Menu (Mobile Only) */}
-                  <button
-                     onClick={toggleSidebar}
-                     className="md:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white focus:outline-none"
-                  >
-                     <i className="fa-solid fa-bars text-xl"></i>
-                  </button>
+            {/* Left: Mobile Toggle */}
+            <div className="flex items-center gap-4">
+               <button
+                  onClick={toggleSidebar}
+                  className="md:hidden w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+               >
+                  <i className="fa-solid fa-bars text-lg"></i>
+               </button>
 
-                  {/* Search Bar */}
-                  {/* <div className="relative flex-1 max-w-md hidden sm:block">
-                     <i className="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
-                     <input type="text" placeholder={t('search')} className="w-full bg-gray-50 dark:bg-dark-tertiary border border-gray-200 dark:border-gray-700 rounded-lg pl-11 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-dark-accent transition-colors" />
-                  </div> */}
-                  {/* Mobile Search Icon (optional replacement for full bar) */}
-                  <button className="sm:hidden text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                     <i className="fa-solid fa-search text-xl"></i>
-                  </button>
-               </div>
-
-               {/* Right Side: Icons & Profile */}
-               <div className="flex items-center space-x-3 md:space-x-6">
-                  <Link title={t('orders')} to="/orders" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                     <i className="fa-solid fa-bell text-xl"></i>
-                     {(newOrdersCount || newTasksCount) > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-dark-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newOrdersCount + newTasksCount}</span>
-                     )}
-                  </Link>
-                  <Link title={t('team_chats')} to="/team-chats" className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                     <i className="fa-solid fa-comment-dots text-xl"></i>
-                     {newChatsCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">{newChatsCount}</span>
-                     )}
-                  </Link>
-                  <div className="h-8 w-px bg-gray-200 dark:bg-gray-700 hidden md:block"></div>
-
-                  {/* Profile Section */}
-                  <Link to="/settings" className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-tertiary px-2 py-1 md:px-3 md:py-2 rounded-lg transition-colors">
-                     <img
-                        src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
-                        className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent object-cover"
-                        alt={userData?.name}
-                     />
-                     <div className="hidden md:block">
-                        <div className="text-md font-medium text-gray-900 dark:text-white">{userData?.name || 'User'}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
-                     </div>
-                  </Link>
-               </div>
+               {/* Breadcrumbs or Page Title could go here */}
             </div>
-         </header >
-      </>
-   );
 
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+               <div className="flex items-center gap-1 bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 p-1.5 rounded-2xl">
+                  <Link
+                     to="/orders"
+                     className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800 transition-all relative group"
+                     title={t('orders')}
+                  >
+                     <i className="fa-regular fa-bell text-lg"></i>
+                     {(newOrdersCount || newTasksCount) > 0 && (
+                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-zinc-900 rounded-full"></span>
+                     )}
+                  </Link>
+
+                  <Link
+                     to="/team-chats"
+                     className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-zinc-800 transition-all relative group"
+                     title={t('team_chats')}
+                  >
+                     <i className="fa-regular fa-comment-dots text-lg"></i>
+                     {newChatsCount > 0 && (
+                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-zinc-900 rounded-full"></span>
+                     )}
+                  </Link>
+               </div>
+
+               <div className="h-8 w-px bg-gray-200 dark:bg-zinc-800 mx-1"></div>
+
+               <Link to="/settings" className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors group">
+                  <div className="text-right hidden sm:block">
+                     <div className="text-sm font-bold text-gray-900 dark:text-white leading-tight group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">{userData?.name || 'User'}</div>
+                     <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
+                  </div>
+                  <img
+                     src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
+                     className="w-10 h-10 rounded-xl border-2 border-white dark:border-zinc-800 shadow-sm object-cover"
+                     alt={userData?.name}
+                  />
+               </Link>
+            </div>
+         </div>
+      </header>
+   );
 };
 
 export default Header;

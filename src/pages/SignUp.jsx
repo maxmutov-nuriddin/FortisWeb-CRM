@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth.store';
@@ -70,113 +71,101 @@ const SignUp = () => {
    };
 
    return (
-      <div className="w-full min-h-screen bg-gray-100 dark:bg-black flex items-center justify-center">
-         <div className="w-full max-w-md bg-white dark:bg-dark-secondary rounded-xl shadow-xl dark:shadow-none p-8 mx-4 border border-gray-200 dark:border-gray-800">
-            <div className="flex items-center justify-between mb-8">
-               <Link to="/" className="flex items-center space-x-3">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
-               </Link>
-               <h3 className="text-gray-900 dark:text-white text-xl font-bold">Sign Up</h3>
+      <div className="w-full min-h-screen flex items-center justify-center relative overflow-hidden bg-black">
+         {/* Animated Gradient Background */}
+         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black z-0"></div>
+         <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+            <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-red-600/20 rounded-full blur-[120px] animate-pulse"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+         </div>
+
+         <div className="w-full max-w-md bg-white/10 dark:bg-black/40 backdrop-blur-xl rounded-3xl shadow-2xl p-8 mx-4 border border-white/10 relative z-10">
+            <div className="flex flex-col items-center mb-8">
+               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-red-600/30 mb-4">
+                  F
+               </div>
+               <h2 className="text-3xl font-black text-white tracking-tight">Create Account</h2>
+               <p className="text-gray-400 text-sm mt-2">Join FortisWeb today</p>
             </div>
+
             {authError && (
-               <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500 rounded-lg">
-                  <p className="text-red-600 dark:text-red-500 text-sm">{authError}</p>
+               <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+                  <i className="fa-solid fa-circle-exclamation text-red-500"></i>
+                  <p className="text-red-400 text-sm font-medium">{authError}</p>
                </div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-               <div className="mb-4">
-                  <input
-                     type="text"
-                     name="name"
-                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-dark-secondary text-gray-900 dark:text-gray-200 rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent placeholder-gray-500 dark:placeholder-gray-500"
-                     placeholder="Full Name"
-                     value={formData.name}
-                     onChange={handleChange}
-                     required
-                  />
-               </div>
 
-               <div className="mb-4">
-                  <input
-                     type="email"
-                     name="email"
-                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent"
-                     placeholder="Email address"
-                     value={formData.email}
-                     onChange={handleChange}
-                     onBlur={e => {
-                        const val = e.target.value;
-                        if (val && !val.includes('@')) {
-                           setFormData(prev => ({ ...prev, email: val.trim() + '@gmail.com' }));
-                        }
-                     }}
-                     required
-                  />
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
-                     Domain @gmail.com will be added automatically if missing
-                  </p>
-               </div>
-
-               <div className="mb-4 relative">
-                  <input
-                     type={showPassword ? "text" : "password"}
-                     name="password"
-                     className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent pr-12"
-                     placeholder="Password"
-                     value={formData.password}
-                     onChange={handleChange}
-                     required
-                     minLength={6}
-                  />
-                  <button
-                     type="button"
-                     onClick={() => setShowPassword(!showPassword)}
-                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-900 focus:outline-none"
-                  >
-                     {showPassword ? (
-                        <i className="fa fa-eye-slash"></i>
-                     ) : (
-                        <i className="fa fa-eye"></i>
-                     )}
-                  </button>
-               </div>
-
-               <div className="flex items-center justify-end mb-6">
-                  {/* <div className="w-full mr-2">
-                     <select
-                        name="role"
-                        id="chooseRole"
-                        value={formData.role}
+            <form onSubmit={handleSubmit} className="space-y-5">
+               <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Full Name</label>
+                  <div className="relative">
+                     <i className="fa-regular fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+                     <input
+                        type="text"
+                        name="name"
+                        className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl focus:outline-none focus:border-red-500 focus:bg-white/10 transition-all placeholder-gray-600"
+                        placeholder="John Doe"
+                        value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:border-red-500 dark:focus:border-dark-accent appearance-none"
+                        required
+                     />
+                  </div>
+               </div>
+
+               <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Email Address</label>
+                  <div className="relative">
+                     <i className="fa-regular fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+                     <input
+                        type="email"
+                        name="email"
+                        className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl focus:outline-none focus:border-red-500 focus:bg-white/10 transition-all placeholder-gray-600"
+                        placeholder="name@email.com"
+                        value={formData.email}
+                        onChange={handleChange}
+                        onBlur={e => {
+                           const val = e.target.value;
+                           if (val && !val.includes('@')) {
+                              setFormData(prev => ({ ...prev, email: val.trim() + '@gmail.com' }));
+                           }
+                        }}
+                        required
+                     />
+                  </div>
+               </div>
+
+               <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Password</label>
+                  <div className="relative">
+                     <i className="fa-solid fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+                     <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        className="w-full pl-12 pr-12 py-3.5 bg-white/5 border border-white/10 text-white rounded-xl focus:outline-none focus:border-red-500 focus:bg-white/10 transition-all placeholder-gray-600"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength={6}
+                     />
+                     <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors focus:outline-none"
                      >
-                        <option value="view">Choose user role</option>
-                        <option value="super_admin">Support</option>
-                        <option value="company_admin">Company Admin</option>
-                        <option value="team_lead">Team Lead</option>
-                        <option value="designer">Designer</option>
-                        <option value="frontend">Frontend</option>
-                        <option value="backend">Backend</option>
-                        <option value="marketer">Marketer</option>
-                        <option value="employee">Employee</option>
-                     </select>
-                  </div> */}
-                  <Link to="/forgot-password" className="text-red-600 dark:text-dark-accent text-sm hover:underline whitespace-nowrap">
-                     Forgot Password
-                  </Link>
+                        {showPassword ? <i className="fa-solid fa-eye-slash"></i> : <i className="fa-solid fa-eye"></i>}
+                     </button>
+                  </div>
                </div>
 
                <button
                   type="submit"
                   disabled={isLoading || authLoading}
-                  className="w-full bg-red-600 dark:bg-dark-accent hover:bg-red-700 dark:hover:bg-red-600 text-white font-medium py-3 rounded-lg transition-colors mb-6 shadow-lg shadow-red-900/20"
+                  className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-red-900/40 hover:shadow-red-900/60 hover:-translate-y-0.5 mt-2"
                >
                   {isLoading || authLoading ? (
-                     <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                     <span className="flex items-center justify-center gap-2">
+                        <i className="fa-solid fa-circle-notch animate-spin"></i>
                         Creating Account...
                      </span>
                   ) : (
@@ -184,12 +173,15 @@ const SignUp = () => {
                   )}
                </button>
             </form>
-            <p className="text-center text-gray-500 dark:text-gray-400 text-sm">
-               Already have an Account?{' '}
-               <Link to="/signin" className="text-red-600 dark:text-dark-accent hover:underline">
-                  Sign In
-               </Link>
-            </p>
+
+            <div className="mt-8 text-center">
+               <p className="text-gray-500 text-sm">
+                  Already have an account?{' '}
+                  <Link to="/signin" className="text-white font-bold hover:text-red-500 transition-colors">
+                     Sign In
+                  </Link>
+               </p>
+            </div>
          </div>
       </div>
    );

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable no-unused-vars */
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -11,17 +12,16 @@ import { useTranslation } from 'react-i18next';
 import { useCompanyStore } from '../store/company.store';
 import { useTaskStore } from '../store/task.store';
 
-
 const Sidebar = ({ isOpen, toggleSidebar }) => {
    const { t } = useTranslation();
    const navigate = useNavigate()
    const location = useLocation();
 
    const { user, logout, error: authError } = useAuthStore();
-   const { projects, getProjectsByCompany, getAllProjects, error: projectsError } = useProjectStore();
-   const { users, getUsersByCompany, getAllUsers, error: usersError } = useUserStore();
+   const { projects, getProjectsByCompany, getAllProjects } = useProjectStore();
+   const { users, getUsersByCompany, getAllUsers } = useUserStore();
    const { companies, getCompanies } = useCompanyStore();
-   const { chats, error: chatsError } = useChatStore();
+   const { chats } = useChatStore();
    const { updateUserStatus } = useUserStore();
    const { tasks, getTasksByUser } = useTaskStore();
 
@@ -30,8 +30,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       if (userData?._id && (userData.role === 'worker' || userData.role === 'team_lead')) {
          getTasksByUser(userData._id);
       }
-   }, [user?.data?.user?._id, user?.user?._id, user?._id, user?.data?.user?.role, user?.user?.role, user?.role]);
-
+   }, [user, user?.role]);
 
    const userData = user?.data?.user || user?.user || user;
    const currentUserId = userData?._id;
@@ -44,7 +43,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
          return !readBy.includes(currentUserId);
       }).length || 0;
 
-   // Calculate new tasks count (status === 'todo')
    const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
    const newTasksCount = allTasks.filter(t =>
       String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId) &&
@@ -57,7 +55,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             const isPending = project.status === 'pending';
             if (!isPending) return false;
 
-            // Role-based filtering
             const role = userData?.role;
             if (role === 'super_admin' || role === 'company_admin') return true;
 
@@ -65,25 +62,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                return String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
             }
 
-            // Worker
             const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
-
             if (isAssigned) {
-               const allTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
-               // Ensure we only check tasks assigned to THIS user (handling stale store data)
                const userTasks = allTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(currentUserId));
-
-               // Filter tasks for this specific project
                const projectTasks = userTasks.filter(t => String(t.project?._id || t.project || '') === String(project._id));
-
-               // 1. If no tasks assigned yet -> Hide notification
                if (projectTasks.length === 0) return false;
-
-               // 2. If has completed task -> Hide notification
                const hasCompletedTask = projectTasks.some(t => t.status === 'completed');
                if (hasCompletedTask) return false;
-
-               // 3. Has active tasks -> Show notification
                return true;
             }
             return false;
@@ -119,193 +104,139 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       const projectsList = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
       const usersList = users?.data?.users || (Array.isArray(users) ? users : []);
 
-      // Role-based filtering for projects (similar to Dashboard)
       let filteredProjects = projectsList;
       if (!isSuperAdmin && userData?.role !== 'company_admin') {
          filteredProjects = projectsList.filter(p => {
             const isAssigned = p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
-            return isAssigned || String(p.team?._id || p.team || '') !== ''; // Simplified for sidebar
+            return isAssigned || String(p.team?._id || p.team || '') !== '';
          });
       }
 
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveProjectsCount(filteredProjects.filter(p => ['in_progress', 'review', 'revision'].includes(p.status)).length);
       setTeamMembersCount(usersList.length);
    }, [projects, users, userData, isSuperAdmin, currentUserId]);
 
-   // Check if link is active, including sub-routes or specific matches
    const isActive = (path) => {
-      if (path === '/' && location.pathname !== '/') return 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-gray-900 dark:hover:text-white';
+      if (path === '/' && location.pathname !== '/') return 'text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800/50';
       return location.pathname.startsWith(path) && (path !== '/' || location.pathname === '/')
-         ? 'bg-dark-accent text-white'
-         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-tertiary hover:text-gray-900 dark:hover:text-white';
+         ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg shadow-gray-900/10 dark:shadow-white/5'
+         : 'text-gray-500 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800/50';
    };
 
    const handleLogout = () => {
-      toast.warn(
-         ({ closeToast }) => (
-            <div className="text-sm">
-               <p className="mb-3 text-white">
-                  {t('logout_confirm')}
-               </p>
-
-               <div className="flex justify-end gap-2">
-                  <button
-                     onClick={closeToast}
-                     className="px-3 py-1 rounded bg-gray-600 text-white text-xs"
-                  >
-                     {t('cancel')}
-                  </button>
-
-                  <button
-                     onClick={async () => {
-                        try {
-                           if (userData?._id) {
-                              await updateUserStatus(userData._id, false)
-                           }
-
-                           logout();
-                           closeToast()
-                           navigate('/signin')
-                        } catch (e) {
-                           console.error(e)
-                        }
-                     }}
-                     className="px-3 py-1 rounded bg-red-600 text-white text-xs"
-                  >
-                     {t('logout')}
-                  </button>
-               </div>
-            </div>
-         ),
-         {
-            position: 'top-right',
-            autoClose: 5000,
-            closeOnClick: false,
-            draggable: false,
-            theme: 'dark',
+      if (window.confirm(t('logout_confirm'))) {
+         try {
+            if (userData?._id) updateUserStatus(userData._id, false);
+            logout();
+            navigate('/signin');
+         } catch (e) {
+            console.error(e);
          }
-      )
+      }
    }
-
-   // ===================== ERRORS =====================
-   useEffect(() => {
-      if (authError) console.error(authError);
-      if (projectsError) console.error(projectsError);
-      if (chatsError) console.error(chatsError);
-      if (usersError) console.error(usersError);
-   }, [authError, projectsError, chatsError, usersError]);
 
    return (
       <>
+         {/* Mobile Overlay */}
+         {isOpen && (
+            <div
+               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden transition-opacity"
+               onClick={toggleSidebar}
+            ></div>
+         )}
+
          <aside
             id="sidebar"
             className={`
-            fixed inset-y-0 left-0 z-30 w-64 bg-white dark:bg-dark-secondary border-r border-gray-200 dark:border-gray-800 flex flex-col h-full transform transition-transform duration-300 ease-in-out
+            fixed inset-y-0 left-0 z-30 w-72 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-gray-100 dark:border-zinc-800 flex flex-col h-full transform transition-all duration-300 ease-in-out
             md:static md:translate-x-0
             ${isOpen ? 'translate-x-0' : '-translate-x-full'}
          `}>
-            <div id="logo-section" className="p-5 border-b border-gray-200 dark:border-gray-800">
-               <Link to="/" className="flex items-center space-x-3">
-                  <div className="w-12 h-12 flex items-center justify-center">
-                     <img className='rounded-full border-2 border-dark-accent' src="fortislogo.JPG" alt="" />
+            {/* Logo Section */}
+            <div id="logo-section" className="h-20 flex items-center px-8 border-b border-gray-100 dark:border-zinc-800/50">
+               <Link to="/" className="flex items-center space-x-3 group">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:scale-105 transition-transform duration-300">
+                     <span className="font-bold text-xl">F</span>
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">FortisWeb</h2>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">FortisWeb</h2>
                </Link>
             </div>
 
-            <nav id="sidebar-nav" className="flex-1 py-6 px-3 overflow-y-auto">
-               <div className="space-y-1">
-                  <Link to="/" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/')}`}>
-                     <i className="fa-solid fa-chart-line w-5"></i>
-                     <span className="font-medium">{t('dashboard')}</span>
-                  </Link>
-                  {(userData?.role === 'super_admin') && (
-                     <Link to="/company" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/company')}`}>
-                        <i className="fa-solid fa-building w-5"></i>
-                        <span className="font-medium">{t('company')}</span>
-                     </Link>
-                  )}
-                  <Link to="/orders" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/orders')}`}>
-                     <i className="fa-brands fa-telegram w-5"></i>
-                     <span className="font-medium">{t('orders')}</span>
-                     {newOrdersCount > 0 && (
-                        <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">{newOrdersCount}</span>
+            {/* Navigation */}
+            <nav id="sidebar-nav" className="flex-1 py-8 px-5 overflow-y-auto custom-scrollbar space-y-1">
+               {[
+                  { path: '/', icon: 'fa-chart-pie', label: 'dashboard' },
+                  ...(userData?.role === 'super_admin' ? [{ path: '/company', icon: 'fa-building', label: 'company' }] : []),
+                  { path: '/orders', icon: 'fa-file-invoice', label: 'orders', count: newOrdersCount, color: 'bg-red-500' },
+                  { path: '/profiles', icon: 'fa-users', label: 'profiles' },
+                  { path: '/tasks', icon: 'fa-list-check', label: 'tasks', count: newTasksCount, color: 'bg-red-500' },
+                  { path: '/team-chats', icon: 'fa-comments', label: 'team_chats', count: newChatsCount, color: 'bg-green-500' },
+                  { path: '/payments', icon: 'fa-wallet', label: 'payments' },
+                  { path: '/projects', icon: 'fa-layer-group', label: 'projects' },
+                  { path: '/settings', icon: 'fa-gear', label: 'settings' },
+               ].map((item, index) => (
+                  <Link
+                     key={index}
+                     to={item.path}
+                     className={`flex items-center space-x-3.5 px-5 py-3.5 rounded-2xl transition-all duration-200 font-medium text-sm group ${isActive(item.path)}`}
+                  >
+                     <i className={`fa-solid ${item.icon} w-5 text-center transition-transform group-hover:scale-110`}></i>
+                     <span>{t(item.label)}</span>
+                     {item.count > 0 && (
+                        <span className={`ml-auto ${item.color} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm`}>{item.count}</span>
                      )}
                   </Link>
-                  <Link to="/profiles" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/profiles')}`}>
-                     <i className="fa-solid fa-users w-5"></i>
-                     <span className="font-medium">{t('profiles')}</span>
-                  </Link>
-                  <Link to="/tasks" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/tasks')}`}>
-                     <i className="fa-solid fa-tasks w-5"></i>
-                     <span className="font-medium">{t('tasks')}</span>
-                     {newTasksCount > 0 && (
-                       <span className="ml-auto bg-dark-accent text-white text-xs px-2 py-1 rounded-full">{newTasksCount}</span>
-                     )}
-                  </Link>
-                  <Link to="/team-chats" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/team')}`}>
-                     <i className="fa-solid fa-comments w-5"></i>
-                     <span className="font-medium">{t('team_chats')}</span>
-                     {newChatsCount > 0 && (
-                        <span className="ml-auto bg-green-500 text-white text-xs px-2 py-1 rounded-full">{newChatsCount}</span>
-                     )}
-                  </Link>
-                  <Link to="/payments" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/payments')}`}>
-                     <i className="fa-solid fa-credit-card w-5"></i>
-                     <span className="font-medium">{t('payments')}</span>
-                  </Link>
-                  <Link to="/projects" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/projects')}`}>
-                     <i className="fa-solid fa-folder-open w-5"></i>
-                     <span className="font-medium">{t('projects')}</span>
-                  </Link>
-                  <Link to="/settings" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition ${isActive('/settings')}`}>
-                     <i className="fa-solid fa-cog w-5"></i>
-                     <span className="font-medium">{t('settings')}</span>
-                  </Link>
-               </div>
+               ))}
 
-               <div className="mt-8 px-4">
-                  <div className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                     <div className="flex items-center space-x-2 mb-2">
-                        <i className="fa-solid fa-bolt text-dark-accent"></i>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{t('quick_stats')}</span>
-                     </div>
-                     <div className="space-y-2 text-xs">
-                        <div className="flex justify-between">
-                           <span className="text-gray-500 dark:text-gray-400">{t('active_projects')}</span>
-                           <span className="text-gray-900 dark:text-white font-semibold">{activeProjectsCount}</span>
+               {/* Quick Stats Card */}
+               <div className="mt-10 px-2">
+                  <div className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-zinc-800 rounded-2xl p-5 border border-gray-100 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
+                     {/* Decorative background element */}
+                     <div className="absolute top-0 right-0 -mr-4 -mt-4 w-16 h-16 bg-red-500/10 rounded-full blur-xl group-hover:bg-red-500/20 transition-colors"></div>
+
+                     <div className="flex items-center gap-2 mb-4 relative z-10">
+                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-black flex items-center justify-center shadow-sm text-red-500">
+                           <i className="fa-solid fa-bolt text-xs"></i>
                         </div>
-                        <div className="flex justify-between">
-                           <span className="text-gray-500 dark:text-gray-400">{t('team_members')}</span>
-                           <span className="text-gray-900 dark:text-white font-semibold">{teamMembersCount}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t('quick_stats')}</span>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-4 relative z-10">
+                        <div>
+                           <div className="text-2xl font-bold text-gray-900 dark:text-white">{activeProjectsCount}</div>
+                           <div className="text-[10px] font-medium text-gray-500 truncate">{t('active_projects')}</div>
+                        </div>
+                        <div>
+                           <div className="text-2xl font-bold text-gray-900 dark:text-white">{teamMembersCount}</div>
+                           <div className="text-[10px] font-medium text-gray-500 truncate">{t('team_members')}</div>
                         </div>
                      </div>
                   </div>
                </div>
             </nav>
 
-            <div id="sidebar-footer" className="p-4 border-t border-gray-200 dark:border-gray-800">
-               <div className="flex items-center space-x-3">
-                  <img
-                     src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
-                     className="w-8 h-8 md:w-9 md:h-9 rounded-full border-2 border-dark-accent object-cover"
-                     alt={userData?.name}
-                  />
-                  <div className="flex-1 min-w-0">
-                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{userData?.name || 'User'}</div>
-                     <div className="text-xs text-dark-accent truncate capitalize">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
+            {/* Footer */}
+            <div id="sidebar-footer" className="p-6 border-t border-gray-100 dark:border-zinc-800/50">
+               <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-zinc-900 hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer group" onClick={() => navigate('/settings')}>
+                  <div className="flex items-center gap-3 overflow-hidden">
+                     <img
+                        src={userData?.avatar || `https://ui-avatars.com/api/?name=${userData?.name}`}
+                        className="w-10 h-10 rounded-xl border border-white dark:border-zinc-700 shadow-sm object-cover"
+                        alt={userData?.name}
+                     />
+                     <div className="min-w-0">
+                        <div className="text-sm font-bold text-gray-900 dark:text-white truncate">{userData?.name || 'User'}</div>
+                        <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide truncate">{userData?.role?.replace('_', ' ') || 'Guest'}</div>
+                     </div>
                   </div>
-                  <i
-                     onClick={handleLogout}
-                     className="fa-solid fa-sign-out-alt text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors"
-                  />
+                  <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="text-gray-400 hover:text-red-500 transition-colors p-2">
+                     <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                  </button>
                </div>
             </div>
          </aside>
       </>
    );
 };
-
 
 export default Sidebar;

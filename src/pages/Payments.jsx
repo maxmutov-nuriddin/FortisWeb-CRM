@@ -283,33 +283,13 @@ const Payments = () => {
       type: 'pie',
       labels: [t('execution_pool_label'), t('lead_management_label'), t('company'), t('admin_label')],
       values: [stats.executionPool, stats.leadManagementPool, stats.companyPool, stats.adminPool],
-      marker: { colors: ['#10B981', '#8B5CF6', '#3B82F6', '#FF0000'] },
+      marker: { colors: ['#10B981', '#8B5CF6', '#3B82F6', '#EF4444'] },
       textinfo: 'label+value',
       textfont: { color: '#FFFFFF', size: 10 },
       hovertemplate: '%{label}: $%{value}<extra></extra>'
    }];
 
    const distributionLayout = { autosize: true, margin: { t: 0, r: 0, b: 0, l: 0 }, plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', showlegend: false };
-
-   const revenueTrend = useMemo(() => {
-      const map = {};
-      const now = new Date(), months = [];
-      const count = timePeriod === '6m' ? 6 : timePeriod === '1y' ? 12 : 24;
-      for (let i = count - 1; i >= 0; i--) {
-         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-         const label = d.toLocaleString('en', { month: 'short' }), key = `${d.getFullYear()}-${d.getMonth()}`;
-         months.push({ label, key }); map[key] = 0;
-      }
-      const list = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-      list.forEach(p => {
-         const d = new Date(p.createdAt), key = `${d.getFullYear()}-${d.getMonth()}`;
-         if (map[key] !== undefined) map[key] += (Number(p.totalAmount) || Number(p.amount) || 0);
-      });
-      return { labels: months.map(m => m.label), values: months.map(m => map[m.key]) };
-   }, [payments, timePeriod]);
-
-   const revenueData = [{ type: 'scatter', mode: 'lines+markers', x: revenueTrend.labels, y: revenueTrend.values, line: { color: '#10B981', width: 3, shape: 'spline' }, marker: { size: 6, color: '#10B981' }, fill: 'tozeroy', fillcolor: 'rgba(16, 185, 129, 0.1)' }];
-   const revenueLayout = { autosize: true, xaxis: { gridcolor: '#2A2A2A', color: '#9CA3AF' }, yaxis: { gridcolor: '#2A2A2A', color: '#9CA3AF', tickformat: '$,.0f' }, margin: { t: 20, r: 20, b: 40, l: 60 }, plot_bgcolor: 'rgba(0,0,0,0)', paper_bgcolor: 'rgba(0,0,0,0)', showlegend: false };
 
    const handleConfirm = async (id) => {
       setIsSubmitting(true);
@@ -328,17 +308,19 @@ const Payments = () => {
    if (isLoading && paymentsList?.length === 0) return <PageLoader />;
 
    return (
-      <div className="p-8 space-y-8">
-         <div id="payments-header-section">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="min-h-screen p-6 lg:p-10 bg-gray-50/50 dark:bg-black text-gray-900 dark:text-white font-sans">
+         <div className="max-w-[1600px] mx-auto space-y-8">
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t('payment_management')}</h1>
-                  <p className="text-gray-500 dark:text-gray-400">{t('payment_management_desc')}</p>
+                  <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">{t('payment_management')}</h1>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t('payment_management_desc')}</p>
                </div>
                <div className="flex flex-wrap items-center gap-3">
                   {isSuperAdmin && (
                      <select
-                        className="bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-dark-accent"
+                        className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 shadow-sm"
                         value={viewCompanyId}
                         onChange={(e) => setViewCompanyId(e.target.value)}
                      >
@@ -346,94 +328,230 @@ const Payments = () => {
                         {allCompanies.map(c => (<option key={c._id} value={c._id}>{c.name}</option>))}
                      </select>
                   )}
-                  <button onClick={handleExport} className="bg-white dark:bg-dark-tertiary hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-white px-4 py-2.5 rounded-lg text-sm font-medium transition flex items-center space-x-2 border border-gray-300 dark:border-gray-700">
+                  <button onClick={handleExport} className="bg-white dark:bg-zinc-900 hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-900 dark:text-white px-6 py-3 rounded-xl text-sm font-bold transition shadow-sm border border-gray-200 dark:border-zinc-800 flex items-center gap-2">
                      <i className="fa-solid fa-download"></i>
                      <span>{t('export_report')}</span>
                   </button>
                </div>
             </div>
-         </div>
 
-         <div id="payments-stats-section" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm dark:shadow-none transition">
-               <div className="flex items-center justify-between mb-3"><div className="w-11 h-11 bg-green-500 bg-opacity-20 rounded-lg flex items-center justify-center"><i className="fa-solid fa-dollar-sign text-green-500 text-xl"></i></div></div>
-               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_total_earnings') : t('total_revenue')}</h3>
-               <p className="text-2xl font-bold text-gray-900 dark:text-white">${(!isSuperAdmin ? (stats?.myTotalEarnings || 0) : (stats?.totalRevenue || 0)).toLocaleString()}</p>
-            </div>
-            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm dark:shadow-none transition">
-               <div className="flex items-center justify-between mb-3"><div className="w-11 h-11 bg-yellow-500 bg-opacity-20 rounded-lg flex items-center justify-center"><i className="fa-solid fa-clock text-yellow-500 text-xl"></i></div><span className="text-xs text-yellow-500 font-medium">{stats.pendingCount} {t('pending_count')}</span></div>
-               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('pending_payments')}</h3>
-               <p className="text-2xl font-bold text-gray-900 dark:text-white">${stats?.pendingAmount?.toLocaleString()}</p>
-            </div>
-            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm dark:shadow-none transition">
-               <div className="flex items-center justify-between mb-3"><div className="w-11 h-11 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center"><i className="fa-solid fa-calendar text-blue-500 text-xl"></i></div></div>
-               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{t('this_month')}</h3>
-               <p className="text-2xl font-bold text-gray-900 dark:text-white">${stats?.thisMonthAmount?.toLocaleString()}</p>
-            </div>
-            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-sm dark:shadow-none transition">
-               <div className="flex items-center justify-between mb-3"><div className="w-11 h-11 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center"><i className="fa-solid fa-users text-purple-500 text-xl"></i></div></div>
-               <h3 className="text-gray-500 dark:text-gray-400 text-xs mb-1">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</h3>
-               <p className="text-2xl font-bold text-gray-900 dark:text-white">${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}</p>
-            </div>
-         </div>
-
-         <div id="payment-distribution-section" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1 lg:col-span-2 bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
-               <div className="mb-6"><h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('payment_distribution_calculator')}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{t('automatic_salary_split_desc')}</p></div>
-               <div className="bg-gray-100 dark:bg-dark-tertiary rounded-lg p-5 mb-6 border border-gray-200 dark:border-gray-700">
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">{t('calculator_amount_label')}</label>
-                  <input type="number" value={projectAmount} onChange={(e) => setProjectAmount(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-white dark:bg-dark-secondary border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 text-gray-900 dark:text-white text-xl font-semibold focus:outline-none" />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+               <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-green-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{!isSuperAdmin ? t('my_total_earnings') : t('total_revenue')}</p>
+                     <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${(!isSuperAdmin ? (stats?.myTotalEarnings || 0) : (stats?.totalRevenue || 0)).toLocaleString()}</p>
+                     <div className="h-1 w-12 bg-green-500 rounded-full"></div>
+                  </div>
                </div>
-               <div className="space-y-4">
-                  {[{ label: t('admin_generic'), val: rates => rates.admin, color: 'blue', icon: 'fa-user-tie' }, { label: t('company_generic'), val: rates => rates.company, color: 'yellow', icon: 'fa-building' }, { label: t('team_lead'), val: rates => rates.team * 0.2, color: 'purple', icon: 'fa-crown' }, { label: t('execution_pool'), val: rates => rates.team * 0.8, color: 'green', icon: 'fa-microchip' }].map((row, idx) => (
-                     <div key={idx} className="bg-gray-50 dark:bg-dark-tertiary rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                        <div className="flex items-center space-x-3"><div className={`w-10 h-10 bg-${row.color}-500 bg-opacity-20 rounded-lg flex items-center justify-center`}><i className={`fa-solid ${row.icon} text-${row.color}-500`}></i></div><div><p className="text-gray-900 dark:text-white font-medium">{row.label}</p></div></div>
-                        <div className="text-right"><p className="text-xl font-bold text-gray-900 dark:text-white">${(projectAmount * row.val(distributionRates)).toLocaleString()}</p></div>
+               <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-yellow-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                     <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('pending_payments')}</p>
+                        <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded-full">{stats.pendingCount} pending</span>
                      </div>
-                  ))}
+                     <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${stats?.pendingAmount?.toLocaleString()}</p>
+                     <div className="h-1 w-12 bg-yellow-500 rounded-full"></div>
+                  </div>
+               </div>
+               <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{t('this_month')}</p>
+                     <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${stats?.thisMonthAmount?.toLocaleString()}</p>
+                     <div className="h-1 w-12 bg-blue-500 rounded-full"></div>
+                  </div>
+               </div>
+               <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                  <div className="relative z-10">
+                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</p>
+                     <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}</p>
+                     <div className="h-1 w-12 bg-purple-500 rounded-full"></div>
+                  </div>
                </div>
             </div>
-            <div className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm dark:shadow-none">
-               <div className="mb-6"><h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('distribution_chart')}</h3></div>
-               <div className="w-full h-[350px]"><Plot data={distributionData} layout={distributionLayout} useResizeHandler={true} style={{ width: "100%", height: "100%" }} config={{ displayModeBar: false }} /></div>
-            </div>
-         </div>
 
-         <div id="pending-payments-section" className="bg-white dark:bg-dark-secondary border border-gray-200 dark:border-gray-800 rounded-xl p-6 mb-8 shadow-sm dark:shadow-none">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-               <div><h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">{t('all_payments')}</h3></div>
-               <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <div className="relative flex-1 sm:w-64"><i className="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i><input type="text" placeholder={t('search_payments_placeholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none" /></div>
-                  <select className="bg-gray-100 dark:bg-dark-tertiary border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                     <option value="all">{t('all_statuses')}</option><option value="pending">{t('pending')}</option><option value="confirmed">{t('confirmed')}</option><option value="completed">{t('completed')}</option>
-                  </select>
+            {/* Distribution Calculator & Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+               <div className="col-span-1 lg:col-span-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-8 shadow-sm">
+                  <div className="mb-6">
+                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                        <i className="fa-solid fa-calculator text-gray-400"></i>
+                        {t('payment_distribution_calculator')}
+                     </h3>
+                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t('automatic_salary_split_desc')}</p>
+                  </div>
+
+                  <div className="bg-gray-50/50 dark:bg-black/40 rounded-2xl p-6 mb-8 border border-gray-100 dark:border-zinc-800">
+                     <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 block">{t('calculator_amount_label')}</label>
+                     <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xl">$</span>
+                        <input
+                           type="number"
+                           value={projectAmount}
+                           onChange={(e) => setProjectAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                           className="w-full bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-10 py-3 text-gray-900 dark:text-white text-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        />
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     {[{ label: t('admin_generic'), val: rates => rates.admin, color: 'blue', icon: 'fa-user-tie' }, { label: t('company_generic'), val: rates => rates.company, color: 'yellow', icon: 'fa-building' }, { label: t('team_lead'), val: rates => rates.team * 0.2, color: 'purple', icon: 'fa-crown' }, { label: t('execution_pool'), val: rates => rates.team * 0.8, color: 'green', icon: 'fa-microchip' }].map((row, idx) => (
+                        <div key={idx} className="bg-gray-50 dark:bg-black/20 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors">
+                           <div className="flex items-center space-x-3">
+                              <div className={`w-10 h-10 bg-${row.color}-50 dark:bg-${row.color}-900/20 rounded-xl flex items-center justify-center`}>
+                                 <i className={`fa-solid ${row.icon} text-${row.color}-500`}></i>
+                              </div>
+                              <div>
+                                 <p className="text-sm font-bold text-gray-900 dark:text-white">{row.label}</p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <p className="text-lg font-black text-gray-900 dark:text-white">${(projectAmount * row.val(distributionRates)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-8 shadow-sm flex flex-col justify-center items-center">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 w-full text-left flex items-center gap-2">
+                     <i className="fa-solid fa-chart-pie text-gray-400"></i>
+                     {t('distribution_chart')}
+                  </h3>
+                  <div className="w-full h-[300px]">
+                     <Plot data={distributionData} layout={distributionLayout} useResizeHandler={true} style={{ width: "100%", height: "100%" }} config={{ displayModeBar: false }} />
+                  </div>
                </div>
             </div>
-            <div className="overflow-x-auto">
-               <table className="w-full min-w-[800px]">
-                  <thead><tr className="border-b border-gray-200 dark:border-gray-800">
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('date_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('description_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('client_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('amount_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('my_salary_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('method_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('status_th')}</th>
-                     <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{t('action_th')}</th>
-                  </tr></thead>
-                  <tbody>{filteredPayments.length > 0 ? filteredPayments.map(payment => (
-                     <tr key={payment._id} className="border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-dark-tertiary transition">
-                        <td className="py-4 px-4"><p className="text-sm text-gray-900 dark:text-white">{new Date(payment.createdAt).toLocaleDateString()}</p></td>
-                        <td className="py-4 px-4"><p className="text-sm text-gray-900 dark:text-white font-medium">{payment.description || t('no_description')}</p><p className="text-xs text-gray-500">{payment._id.slice(-8)}</p></td>
-                        <td className="py-4 px-4">{(() => { const name = payment.client?.name || payment.project?.createdBy?.name || t('unknown'); return <div className="flex items-center space-x-2"><div className="w-8 h-8 rounded-full bg-dark-accent/10 flex items-center justify-center text-[10px] text-dark-accent font-bold">{name.charAt(0).toUpperCase()}</div><p className="text-sm text-gray-900 dark:text-white font-medium">{name}</p></div>; })()}</td>
-                        <td className="py-4 px-4"><p className="text-sm text-gray-900 dark:text-white font-semibold">${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}</p></td>
-                        <td className="py-4 px-4">{(() => { const share = calculateMyShare(payment); return share > 0 ? <p className="text-sm text-green-500 font-bold">+${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p> : <span className="text-xs text-gray-400">—</span>; })()}</td>
-                        <td className="py-4 px-4"><select value={payment.paymentMethod || 'bank_transfer'} disabled={payment.status !== 'pending' || isSubmitting} onChange={async e => { try { await updatePayment(payment._id, { paymentMethod: e.target.value }); toast.success(t('update_success')); } catch (e) { toast.error(t('update_failed')); } }} className="bg-white dark:bg-dark-secondary text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-700 disabled:opacity-50"><option value="bank_transfer">{t('bank_transfer')}</option><option value="cash">{t('cash')}</option><option value="card">{t('card')}</option><option value="paypal">{t('paypal')}</option><option value="crypto">{t('crypto')}</option><option value="other">{t('other')}</option></select></td>
-                        <td className="py-4 px-4"><span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${payment.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500' : payment.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'}`}>{t(payment.status)}</span></td>
-                        <td className="py-4 px-4"><div className="flex items-center gap-2">{(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? <button onClick={() => handleConfirm(payment._id)} disabled={isSubmitting} className="bg-green-500/10 hover:bg-green-500 text-green-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold">{t('confirm')}</button> : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? <button onClick={() => handleComplete(payment._id)} disabled={isSubmitting} className="bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold">{t('complete')}</button> : <span className="text-xs text-gray-500 italic">{t('no_actions')}</span>}</div></td>
-                     </tr>
-                  )) : <tr><td colSpan="8" className="text-center py-8 text-gray-500">{t('no_payments_found')}</td></tr>}</tbody>
-               </table>
+
+            {/* Payments Table */}
+            <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl shadow-sm overflow-hidden">
+               <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                     <i className="fa-solid fa-list text-gray-400"></i>
+                     {t('all_payments')}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                     <div className="relative">
+                        <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input
+                           type="text"
+                           placeholder={t('search_payments_placeholder')}
+                           value={searchQuery}
+                           onChange={(e) => setSearchQuery(e.target.value)}
+                           className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        />
+                     </div>
+                     <select className="px-4 py-2.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                        <option value="all">{t('all_statuses')}</option>
+                        <option value="pending">{t('pending')}</option>
+                        <option value="confirmed">{t('confirmed')}</option>
+                        <option value="completed">{t('completed')}</option>
+                     </select>
+                  </div>
+               </div>
+
+               <div className="overflow-x-auto">
+                  <table className="w-full whitespace-nowrap">
+                     <thead>
+                        <tr className="bg-gray-50/50 dark:bg-zinc-800/50 text-left">
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('date_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('description_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('client_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('amount_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('my_salary_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('method_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('status_th')}</th>
+                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider text-right">{t('action_th')}</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                        {filteredPayments.length > 0 ? filteredPayments.map(payment => (
+                           <tr key={payment._id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
+                              <td className="px-6 py-4 text-sm font-medium text-gray-500">
+                                 {new Date(payment.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <p className="text-sm font-bold text-gray-900 dark:text-white">{payment.description || t('no_description')}</p>
+                                 <p className="text-xs text-gray-400 font-mono mt-0.5">#{payment._id.slice(-6)}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                 {(() => {
+                                    const name = payment.client?.name || payment.project?.createdBy?.name || t('unknown');
+                                    return (
+                                       <div className="flex items-center gap-2">
+                                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                             {name.charAt(0).toUpperCase()}
+                                          </div>
+                                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{name}</span>
+                                       </div>
+                                    );
+                                 })()}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <span className="text-sm font-black text-gray-900 dark:text-white">
+                                    ${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                 {(() => {
+                                    const share = calculateMyShare(payment);
+                                    return share > 0 ? (
+                                       <span className="inline-flex items-center gap-1 text-sm font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
+                                          +${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                       </span>
+                                    ) : <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
+                                 })()}
+                              </td>
+                              <td className="px-6 py-4">
+                                 <select
+                                    value={payment.paymentMethod || 'bank_transfer'}
+                                    disabled={payment.status !== 'pending' || isSubmitting}
+                                    onChange={async e => { try { await updatePayment(payment._id, { paymentMethod: e.target.value }); toast.success(t('update_success')); } catch (e) { toast.error(t('update_failed')); } }}
+                                    className="bg-gray-50 dark:bg-black/40 text-xs font-bold text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none cursor-pointer"
+                                 >
+                                    <option value="bank_transfer">{t('bank_transfer')}</option>
+                                    <option value="cash">{t('cash')}</option>
+                                    <option value="card">{t('card')}</option>
+                                    <option value="paypal">{t('paypal')}</option>
+                                    <option value="crypto">{t('crypto')}</option>
+                                    <option value="other">{t('other')}</option>
+                                 </select>
+                              </td>
+                              <td className="px-6 py-4">
+                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${payment.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
+                                       payment.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30' :
+                                          'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30'
+                                    }`}>
+                                    {t(payment.status)}
+                                 </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                 <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    {(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? (
+                                       <button onClick={() => handleConfirm(payment._id)} disabled={isSubmitting} className="bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                                          {t('confirm')}
+                                       </button>
+                                    ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
+                                       <button onClick={() => handleComplete(payment._id)} disabled={isSubmitting} className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                                          {t('complete')}
+                                       </button>
+                                    ) : (
+                                       <span className="text-xs font-medium text-gray-400 italic block py-1.5">{t('no_actions')}</span>
+                                    )}
+                                 </div>
+                              </td>
+                           </tr>
+                        )) : (
+                           <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500 font-medium">{t('no_payments_found')}</td></tr>
+                        )}
+                     </tbody>
+                  </table>
+               </div>
             </div>
          </div>
       </div>
