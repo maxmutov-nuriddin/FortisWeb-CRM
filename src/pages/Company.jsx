@@ -30,6 +30,7 @@ const Company = () => {
    });
    const [isEditMode, setIsEditMode] = useState(false);
    const [editingCompanyId, setEditingCompanyId] = useState(null);
+   const [isSubmitting, setIsSubmitting] = useState(false);
 
    const { companies, getCompanies, createCompany, deleteCompany, updateCompany, updateCompanyStatus, updateDistributionRates, isLoading } = useCompanyStore();
    const { user } = useAuthStore();
@@ -218,6 +219,7 @@ const Company = () => {
 
    const handleSubmit = async (e) => {
       e.preventDefault();
+      setIsSubmitting(true);
       try {
          const finalData = { ...formData };
          if (finalData.email && !finalData.email.includes('@')) {
@@ -307,6 +309,8 @@ const Company = () => {
       } catch (error) {
          console.error('Error submitting company:', error);
          toast.error('Failed to save company:' + (error.response?.data?.message || error.message));
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -605,7 +609,23 @@ const Company = () => {
                            )}
                            <input name="address" value={formData.address} onChange={handleInputChange} placeholder="Address" className="w-full px-4 py-3 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl" />
                         </div>
-                        <button type="submit" className="w-full bg-red-600 text-white font-bold py-3 rounded-xl mt-4">Save Company</button>
+                        <button
+                           type="submit"
+                           disabled={isSubmitting}
+                           className={`w-full text-white font-bold py-3 rounded-xl mt-4 transition-all flex items-center justify-center gap-2 ${isSubmitting
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/20 hover:shadow-red-900/40 hover:-translate-y-0.5'
+                              }`}
+                        >
+                           {isSubmitting ? (
+                              <>
+                                 <i className="fa-solid fa-circle-notch animate-spin"></i>
+                                 <span>{isEditMode ? 'Saving...' : 'Creating Company & Admin...'}</span>
+                              </>
+                           ) : (
+                              <span>{isEditMode ? 'Save Company' : 'Create Company'}</span>
+                           )}
+                        </button>
                      </form>
                   ) : (
                      <div className="space-y-6">
