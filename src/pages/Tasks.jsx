@@ -39,7 +39,8 @@ const Tasks = () => {
    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false); // New
    const [cancellationReason, setCancellationReason] = useState(''); // New
-   const [taskToCancel, setTaskToCancel] = useState(null); // New
+   const [taskToCancel, setTaskToCancel] = useState(null);
+   const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
    const [currentTask, setCurrentTask] = useState(null);
    const [formData, setFormData] = useState({
       title: '',
@@ -278,9 +279,11 @@ const Tasks = () => {
       e.preventDefault();
       if (!taskToCancel || !cancellationReason.trim()) return;
 
+      setIsSubmitting(true);
       try {
          const id = taskToCancel._id || taskToCancel.id;
-         // 1. Add comment
+         // 1. Add comment with timestamp
+         const timestamp = new Date().toLocaleString();
          await addTaskComment(id, { text: `${t('task_cancelled_reason')}: ${cancellationReason}` });
          // 2. Update status
          await updateTaskStatus(id, { status: 'cancelled' });
@@ -290,6 +293,8 @@ const Tasks = () => {
          setTaskToCancel(null);
       } catch (error) {
          toast.error(t('failed_cancel_task'));
+      } finally {
+         setIsSubmitting(false);
       }
    };
 
@@ -509,6 +514,7 @@ const Tasks = () => {
 
    if (isLoading && taskList?.length === 0) return <PageLoader />;
 
+
    return (
       <div className="p-8 space-y-8">
          {/* Header */}
@@ -619,20 +625,34 @@ const Tasks = () => {
 
                         <section className="bg-gray-50 dark:bg-dark-tertiary rounded-xl p-5 border border-gray-100 dark:border-gray-800">
                            <h3 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">{t('project_info')}</h3>
-                           <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                 <div className="text-[10px] text-gray-500 uppercase">{t('project_name')}</div>
-                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.project?.title || currentTask.project?.name || t('unknown')}</div>
-                              </div>
-                              <div>
-                                 <div className="text-[10px] text-gray-500 uppercase">{t('budget')}</div>
-                                 <div className="text-sm font-medium text-green-600 dark:text-green-400">${currentTask.project?.budget || 0}</div>
-                              </div>
-                              <div className="col-span-2">
-                                 <div className="text-[10px] text-gray-500 uppercase">{t('client')}</div>
-                                 <div className="text-sm font-medium text-gray-900 dark:text-white">{currentTask.project?.client || t('unknown')}</div>
-                              </div>
-                           </div>
+                           {(() => {
+                              // Lookup full project details in case currentTask.project is just an ID or partial
+                              const projectId = currentTask.project?._id || currentTask.project?.id || currentTask.project;
+                              const fullProject = projectOptions.find(p => (p._id || p.id) === projectId) || currentTask.project || {};
+
+                              return (
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                       <div className="text-[10px] text-gray-500 uppercase">{t('project_name')}</div>
+                                       <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={fullProject.title || fullProject.name}>
+                                          {fullProject.title || fullProject.name || t('unknown')}
+                                       </div>
+                                    </div>
+                                    <div>
+                                       <div className="text-[10px] text-gray-500 uppercase">{t('budget')}</div>
+                                       <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                                          {fullProject.budget ? `$${fullProject.budget.toLocaleString()}` : '$0'}
+                                       </div>
+                                    </div>
+                                    <div className="col-span-2">
+                                       <div className="text-[10px] text-gray-500 uppercase">{t('client')}</div>
+                                       <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                          {fullProject.client?.name || fullProject.client?.username || fullProject.client || fullProject.clientName || t('unknown_client')}
+                                       </div>
+                                    </div>
+                                 </div>
+                              );
+                           })()}
                         </section>
                      </div>
 
@@ -689,7 +709,14 @@ const Tasks = () => {
                                           <div key={idx} className="bg-gray-50 dark:bg-dark-secondary p-3 rounded-lg text-xs">
                                              <div className="flex justify-between items-center mb-1">
                                                 <span className="font-bold text-gray-800 dark:text-gray-200">{comment.user?.name || t('user')}</span>
-                                                <span className="text-gray-400 text-[10px]">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                                <span className="text-gray-400 text-[10px]">{new Date(comment.createdAt).toLocaleString('ru-RU', {
+                                                   year: 'numeric',
+                                                   month: '2-digit',
+                                                   day: '2-digit',
+                                                   hour: '2-digit',
+                                                   minute: '2-digit',
+                                                   second: '2-digit',
+                                                })}</span>
                                              </div>
                                              <p className="text-gray-600 dark:text-gray-400">{comment.text}</p>
                                           </div>
@@ -738,6 +765,9 @@ const Tasks = () => {
 
                   <form onSubmit={async (e) => {
                      e.preventDefault();
+                     if (isSubmitting) return;
+
+                     setIsSubmitting(true);
                      try {
                         const finalData = { ...formData };
                         // Automatically set a deadline if it's missing (backend often requires it)
@@ -759,6 +789,8 @@ const Tasks = () => {
                         setIsEditModalOpen(false);
                      } catch (error) {
                         toast.error(error.message || 'Operation failed');
+                     } finally {
+                        setIsSubmitting(false);
                      }
                   }} className="space-y-6">
                      <div className="grid grid-cols-2 gap-4">
@@ -847,8 +879,10 @@ const Tasks = () => {
                         </button>
                         <button
                            type="submit"
-                           className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20"
+                           className="flex-1 bg-dark-accent hover:bg-red-600 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-dark-accent/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                           disabled={isSubmitting}
                         >
+                           {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
                            {isEditModalOpen ? t('update_task') : t('create_task')}
                         </button>
                      </div>
@@ -879,13 +913,16 @@ const Tasks = () => {
                            type="button"
                            onClick={() => setIsCancelModalOpen(false)}
                            className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-bold py-2 rounded-lg transition"
+                           disabled={isSubmitting}
                         >
                            {t('back')}
                         </button>
                         <button
                            type="submit"
-                           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition"
+                           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                           disabled={isSubmitting}
                         >
+                           {isSubmitting && <i className="fa-solid fa-spinner fa-spin"></i>}
                            {t('confirm_cancel')}
                         </button>
                      </div>
