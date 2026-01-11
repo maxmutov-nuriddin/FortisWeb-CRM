@@ -237,9 +237,26 @@ const Payments = () => {
       let teamLeadId = '';
       teamLeadId = String(fullProject.teamLead?._id || fullProject.teamLead || '');
 
+      // Resolve company first to use for team lookup
+      const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
+      const pCompId = String(payment.company?._id || payment.company || fullProject.company?._id || fullProject.company || '');
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const pSettings = (payment.company && payment.company.settings) ? payment.company : null;
+      const foundComp = companyList.find(c => String(c._id) === pCompId);
+      const pComp = pSettings || foundComp || selectedCompany;
+
       if (!teamLeadId && fullProject.team) {
-         const teamRef = fullProject.team;
-         teamLeadId = String(teamRef.teamLead?._id || teamRef.teamLead || teamRef.teamLeadId || '');
+         // Try to find team in company's teams array
+         const teamId = String(fullProject.team._id || fullProject.team);
+         const teamDef = pComp?.teams?.find(t => String(t._id) === teamId);
+
+         if (teamDef) {
+            teamLeadId = String(teamDef.teamLead?._id || teamDef.teamLead || '');
+         } else if (fullProject.team.teamLead) {
+            // Fallback if team was populated
+            const teamRef = fullProject.team;
+            teamLeadId = String(teamRef.teamLead?._id || teamRef.teamLead || teamRef.teamLeadId || '');
+         }
       }
 
       if (!teamLeadId && fullProject.createdBy) {
@@ -249,6 +266,12 @@ const Payments = () => {
          if (creator?.role === 'team_lead') {
             teamLeadId = createdById;
          }
+      }
+
+      // Fallback: If no teamLead found in project data, but user is a team_lead by role,
+      // treat them as the Team Lead for this project (for commission purposes)
+      if (!teamLeadId && userData.role === 'team_lead') {
+         teamLeadId = currentUserId;
       }
 
       const isLead = currentUserId === teamLeadId;
@@ -271,13 +294,7 @@ const Payments = () => {
          return 0;
       }
 
-      const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
-      const pCompId = String(payment.company?._id || payment.company || fullProject.company?._id || fullProject.company || '');
-      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      // Prefer populated company from payment, then lookup, then fallback
-      const pSettings = (payment.company && payment.company.settings) ? payment.company : null;
-      const foundComp = companyList.find(c => String(c._id) === pCompId);
-      const pComp = pSettings || foundComp || selectedCompany;
+      // Company already resolved above for team lookup
       const rates = getCompanyRates(pComp);
 
       let share = 0;
