@@ -187,7 +187,9 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                      <i className={`fa-solid ${item.icon} w-5 text-center transition-transform group-hover:scale-110`}></i>
                      <span>{t(item.label)}</span>
                      {item.count > 0 && (
-                        <span className={`ml-auto ${item.color} text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm`}>{item.count}</span>
+                        <span className={`text-xs font-bold text-white ml-auto ${item.color} px-2 py-0.5 rounded-full shadow-sm`} >
+                           {item.count}
+                        </span>
                      )}
                   </Link>
                ))}
@@ -238,7 +240,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   </button>
                </div>
             </div>
-         </aside>
+         </aside >
       </>
    );
 };

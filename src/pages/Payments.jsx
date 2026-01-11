@@ -9,6 +9,7 @@ import { useCompanyStore } from '../store/company.store';
 import { useUserStore } from '../store/user.store';
 import { useProjectStore } from '../store/project.store';
 import { useTaskStore } from '../store/task.store';
+import { paymentsApi } from '../api/payments.api';
 import PageLoader from '../components/loader/PageLoader';
 import { useTranslation } from 'react-i18next';
 
@@ -128,12 +129,17 @@ const Payments = () => {
          const projectList = currentProjects?.data?.projects || currentProjects?.projects || (Array.isArray(currentProjects) ? currentProjects : []);
          const projectIds = projectList.map(p => p._id || p.id).filter(Boolean);
 
-         if (projectIds.length > 0 && userData?._id) {
-            // Fetch tasks in parallel
-            await Promise.all([
-               getTasksByProjects(projectIds),
-               getTasksByUser(userData._id)
-            ]);
+         // Always fetch user tasks, and project tasks if we have projects
+         const taskRequests = [];
+         if (userData?._id) {
+            taskRequests.push(getTasksByUser(userData._id));
+         }
+         if (projectIds.length > 0) {
+            taskRequests.push(getTasksByProjects(projectIds));
+         }
+
+         if (taskRequests.length > 0) {
+            await Promise.all(taskRequests);
          }
       } catch (error) {
          console.error('❌ Error fetching payments:', error);
@@ -250,6 +256,7 @@ const Payments = () => {
          return memberId === currentUserId;
       });
 
+      // If user is not involved in this project, return 0
       if (!isLead && !isAssigned && projectTasks.length === 0) {
          return 0;
       }
@@ -260,14 +267,18 @@ const Payments = () => {
       const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
       const rates = getCompanyRates(pComp);
 
-      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-
       let share = 0;
 
-      if (isLead) {
-         const managementReward = totalAmount * rates.team * 0.2;
-         share += managementReward;
+      // Team Lead Commission (from company settings)
+      if (isLead && fullProject.status === 'completed') {
+         const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+         const teamLeadCommissionRate = settings.teamLeadCommissionRate || 10; // Default 10%
+         const commission = (totalAmount * teamLeadCommissionRate) / 100;
+         share += commission;
       }
+
+      // Employee task-based salary
+      const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
 
       if (totalWeight > 0 && projectTasks.length > 0) {
          const myTasks = projectTasks.filter(t => {
@@ -277,23 +288,63 @@ const Payments = () => {
 
          if (myTasks.length > 0) {
             const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-            const executionShare = (myWeight / totalWeight) * (totalAmount * rates.team * 0.8);
-            share += executionShare;
+            const teamBudget = totalAmount * rates.team;
+            const myShare = (myWeight / totalWeight) * teamBudget;
+            share += myShare;
          }
       }
 
+      // Company Admin commission
       if (userData.role === 'company_admin') {
          const adminShare = totalAmount * rates.admin;
          share += adminShare;
       }
 
-      if (userData.role === 'super_admin') {
-         const companyShare = totalAmount * rates.company;
-         share += companyShare;
-      }
-
       return share;
    }, [userData, tasks, projects, companies, selectedCompany, getCompanyRates, users]);
+
+   // Fetch salaries from backend for all completed payments
+   const [paymentSalaries, setPaymentSalaries] = useState({});
+   const [salariesLoading, setSalariesLoading] = useState(false);
+
+   useEffect(() => {
+      const fetchSalaries = async () => {
+         if (!userData || filteredPayments.length === 0) return;
+
+         setSalariesLoading(true);
+         const salariesMap = {};
+
+         try {
+            // Fetch salaries for all completed payments
+            const completedPayments = filteredPayments.filter(p => p.status === 'completed');
+
+            for (const payment of completedPayments) {
+               try {
+                  const res = await paymentsApi.getSalaries(payment._id);
+                  const salaries = res.data?.data?.salaries || [];
+
+                  // Find current user's salary
+                  const mySalary = salaries.find(s =>
+                     String(s.employeeId) === String(userData._id)
+                  );
+
+                  salariesMap[payment._id] = mySalary?.amount || 0;
+               } catch (err) {
+                  // If error, set to 0
+                  salariesMap[payment._id] = 0;
+               }
+            }
+
+            setPaymentSalaries(salariesMap);
+         } catch (error) {
+            console.error('Error fetching salaries:', error);
+         } finally {
+            setSalariesLoading(false);
+         }
+      };
+
+      fetchSalaries();
+   }, [filteredPayments, userData]);
 
    const stats = useMemo(() => {
       const activeList = filteredPayments;
@@ -643,7 +694,11 @@ const Payments = () => {
                                  </td>
                                  <td className="px-6 py-4">
                                     {(() => {
-                                       const share = calculateMyShare(payment);
+                                       const share = paymentSalaries[payment._id];
+                                       if (share === undefined) {
+                                          // Still loading or not completed
+                                          return <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
+                                       }
                                        return share > 0 ? (
                                           <span className="inline-flex items-center gap-1 text-sm font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
                                              +${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
