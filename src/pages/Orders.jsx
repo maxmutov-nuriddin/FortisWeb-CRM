@@ -844,16 +844,7 @@ const Orders = () => {
                                     <option value="cancelled">Cancelled</option>
                                  </select>
                                  {/* Payment Confirmation Button - Only for admins when status is pending */}
-                                 {isAdmin && selectedOrder.status === 'pending' && (
-                                    <button
-                                       onClick={() => setIsPaymentModalOpen(true)}
-                                       className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5"
-                                       title="Confirm payment and start order"
-                                    >
-                                       <i className="fa-solid fa-check-circle"></i>
-                                       Confirm Payment
-                                    </button>
-                                 )}
+
                               </div>
                            </div>
                            <div className="col-span-2">
