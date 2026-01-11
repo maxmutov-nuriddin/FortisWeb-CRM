@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
@@ -201,6 +202,7 @@ const Dashboard = () => {
          const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
          const rates = getCompanyRates(pComp);
 
+
          execution += amount * rates.team * 0.8;
          leadManagement += amount * rates.team * 0.2;
          admin += amount * rates.admin;
@@ -209,6 +211,8 @@ const Dashboard = () => {
 
       setSalaryTotals({ execution, leadManagement, admin, company });
    }, [filteredPayments, distributionRates, companies, selectedCompany, getCompanyRates]);
+
+   console.log(distributionRates);
 
    useEffect(() => {
       if (isAdmin || !tasks || !filteredProjects) return;
@@ -462,6 +466,9 @@ const Dashboard = () => {
    const confirmedPayment = projectPayments.find(p => p.status === 'confirmed' || p.status === 'completed');
    const paymentStatus = confirmedPayment ? 'paid' : (projectPayments.length || selectedProject?.status === 'pending') ? 'pending' : 'none';
    const totalPaid = confirmedPayment?.totalAmount || 0;
+
+   console.log(todayRevenue);
+
 
    if ((authLoading || paymentsLoading || projectsLoading || companiesLoading || usersLoading) && (filteredProjects?.length === 0)) return <PageLoader />;
 
