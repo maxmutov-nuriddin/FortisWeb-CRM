@@ -60,21 +60,28 @@ export const usePaymentStore = create((set, get) => ({
       try {
          const response = await paymentsApi.complete(id);
          const updatedPayment = response.data?.data?.payment || response.data?.payment || response.data;
+
          set((state) => {
             const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+            const newList = currentList.map((p) => (String(p.id || p._id) === String(id) ? updatedPayment : p));
+
             return {
                payments: {
                   ...state.payments,
                   data: {
                      ...state.payments?.data,
-                     payments: currentList.map((p) => (String(p.id || p._id) === String(id) ? updatedPayment : p))
+                     payments: newList
                   }
                },
                isLoading: false
             };
          });
       } catch (error) {
+         console.error('❌ Complete Payment Error:', error);
+         console.error('❌ Error Response:', error.response?.data);
+         console.error('❌ Error Message:', error.response?.data?.message);
          set({ error: error.response?.data?.message || 'Failed to complete payment', isLoading: false });
+         throw error;
       }
    },
 

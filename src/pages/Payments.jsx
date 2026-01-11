@@ -318,7 +318,7 @@ const Payments = () => {
       );
 
       const myTotalEarnings = activeList.reduce((sum, p) =>
-         (p.status === 'completed' || p.status === 'confirmed')
+         p.status === 'completed' // Only count completed payments (when money is actually paid)
             ? sum + calculateMyShare(p)
             : sum,
          0
@@ -392,7 +392,7 @@ const Payments = () => {
       try {
          await confirmPayment(id);
          toast.success(t('payment_confirmed_success'));
-         await fetchData();
+         // Don't call fetchData - store already updated the payment
       } catch (e) {
          console.error(e);
          toast.error(t('failed_confirm_payment'));
@@ -406,7 +406,7 @@ const Payments = () => {
       try {
          await completePayment(id);
          toast.success(t('payment_marked_paid'));
-         await fetchData();
+         // Don't call fetchData - store already updated the payment
       } catch (e) {
          console.error(e);
          toast.error(t('failed_complete_payment'));
