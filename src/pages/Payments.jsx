@@ -369,8 +369,12 @@ const Payments = () => {
          sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0
       );
 
-      // Use actual totalEarned from user database instead of calculating
-      const myTotalEarnings = userData?.totalEarned || 0;
+      const myTotalEarnings = activeList.reduce((sum, p) =>
+         p.status === 'completed' // Only count completed payments (when money is actually paid)
+            ? sum + calculateMyShare(p)
+            : sum,
+         0
+      );
 
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
       const myEstimatedShare = !isSuperAdmin ? projectList.reduce((sum, proj) =>
