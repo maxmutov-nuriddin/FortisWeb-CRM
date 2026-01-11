@@ -228,7 +228,7 @@ const Payments = () => {
       const allTasks = Array.isArray(tasks) ? tasks : (tasks?.data?.tasks || tasks?.tasks || []);
       const projectTasks = allTasks.filter(t => {
          const taskProjectId = String(t.project?._id || t.project?.id || t.project || '');
-         return taskProjectId === projectId && t.status === 'completed';
+         return taskProjectId === projectId; // Include all tasks for estimate
       });
 
       let teamLeadId = '';
@@ -256,8 +256,14 @@ const Payments = () => {
          return memberId === currentUserId;
       });
 
-      // If user is not involved in this project, return 0
-      if (!isLead && !isAssigned && projectTasks.length === 0) {
+      // Check if user has tasks
+      const myTasks = projectTasks.filter(t => {
+         const taskAssignedId = String(t.assignedTo?._id || t.assignedTo?.id || t.assignedTo || '');
+         return taskAssignedId === currentUserId;
+      });
+
+      // If user is not involved in this project AT ALL, return 0
+      if (!isLead && !isAssigned && myTasks.length === 0) {
          return 0;
       }
 
@@ -269,10 +275,10 @@ const Payments = () => {
 
       let share = 0;
 
-      // Team Lead Commission (from company settings)
-      if (isLead && fullProject.status === 'completed') {
+      // Team Lead Commission
+      if (isLead) {
          const settings = pComp?.settings || pComp?.data?.company?.settings || {};
-         const teamLeadCommissionRate = settings.teamLeadCommissionRate || 10; // Default 10%
+         const teamLeadCommissionRate = settings.teamLeadCommissionRate || 10;
          const commission = (totalAmount * teamLeadCommissionRate) / 100;
          share += commission;
       }
@@ -280,18 +286,19 @@ const Payments = () => {
       // Employee task-based salary
       const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
 
-      if (totalWeight > 0 && projectTasks.length > 0) {
-         const myTasks = projectTasks.filter(t => {
-            const taskAssignedId = String(t.assignedTo?._id || t.assignedTo?.id || t.assignedTo || '');
-            return taskAssignedId === currentUserId;
-         });
+      if (totalWeight > 0 && myTasks.length > 0) {
+         const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
+         const teamBudget = totalAmount * rates.team;
+         const myShare = (myWeight / totalWeight) * teamBudget;
+         share += myShare;
+      }
 
-         if (myTasks.length > 0) {
-            const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-            const teamBudget = totalAmount * rates.team;
-            const myShare = (myWeight / totalWeight) * teamBudget;
-            share += myShare;
-         }
+      // Fallback: If user is assigned but has no tasks yet, estimate equal distribution
+      if (isAssigned && myTasks.length === 0 && totalWeight === 0 && fullProject.status !== 'completed') {
+         const memberCount = assignedMembers.length || 1;
+         const teamBudget = totalAmount * rates.team;
+         const estimatedShare = teamBudget / memberCount;
+         share += estimatedShare;
       }
 
       // Company Admin commission
@@ -369,12 +376,7 @@ const Payments = () => {
          sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0
       );
 
-      const myTotalEarnings = activeList.reduce((sum, p) =>
-         p.status === 'completed' // Only count completed payments (when money is actually paid)
-            ? sum + calculateMyShare(p)
-            : sum,
-         0
-      );
+      const myTotalEarnings = userData?.totalEarned || 0;
 
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
       const myEstimatedShare = !isSuperAdmin ? projectList.reduce((sum, proj) =>
