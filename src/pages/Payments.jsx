@@ -273,7 +273,10 @@ const Payments = () => {
       const totalAmount = Number(payment.totalAmount) || Number(payment.amount) || 0;
       const pCompId = String(payment.company?._id || payment.company || fullProject.company?._id || fullProject.company || '');
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+      // Prefer populated company from payment, then lookup, then fallback
+      const pSettings = (payment.company && payment.company.settings) ? payment.company : null;
+      const foundComp = companyList.find(c => String(c._id) === pCompId);
+      const pComp = pSettings || foundComp || selectedCompany;
       const rates = getCompanyRates(pComp);
 
       let share = 0;
@@ -404,7 +407,10 @@ const Payments = () => {
       activeList.forEach(p => {
          const amount = Number(p.totalAmount) || Number(p.amount) || 0;
          const pCompId = String(p.company?._id || p.company || p.project?.company?._id || p.project?.company || '');
-         const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+         // Prefer populated company from payment, then lookup, then fallback
+         const pSettings = (p.company && p.company.settings) ? p.company : null;
+         const foundComp = companyList.find(c => String(c._id) === pCompId);
+         const pComp = pSettings || foundComp || selectedCompany;
          const rates = getCompanyRates(pComp);
 
          const settings = pComp?.settings || pComp?.data?.company?.settings || {};
