@@ -179,9 +179,30 @@ const Tasks = () => {
                }
             }
          } else {
-            await getTasksByUser(userId);
-            if (companyId) {
-               await getProjectsByCompany(companyId);
+            // For regular users (workers), fetch both their own tasks AND tasks from projects they are members of
+            // This ensures they see unassigned tasks in their projects
+            const userProjects = await getProjectsByCompany(companyId);
+            const allProjects = userProjects?.data?.projects || userProjects?.projects || (Array.isArray(userProjects) ? userProjects : []) || [];
+
+            // Filter projects where user is a member/assigned
+            const myProjectIds = allProjects
+               .filter(p => {
+                  const currentUserId = String(userId);
+                  // Check assignedMembers
+                  const isMember = p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId);
+                  // Check assignedTeam
+                  // (For simplicity, if we don't have full team data here, we rely on assignedMembers for now, 
+                  // or if backend filter worked. But to be safe for "Unassigned" visibility, we need to know if user is part of the project context)
+                  return isMember;
+               })
+               .map(p => p._id || p.id)
+               .filter(Boolean);
+
+            if (myProjectIds.length > 0) {
+               await getTasksByProjects(myProjectIds);
+            } else {
+               // Fallback to just user's directly assigned tasks if no project membership found
+               await getTasksByUser(userId);
             }
          }
       } catch (error) {
@@ -190,9 +211,36 @@ const Tasks = () => {
    };
 
    const taskList = useMemo(() => {
-      const list = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || tasks?.tasks || [];
+      let list = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || tasks?.tasks || [];
+
+      // Enrich tasks with project data from project store if missing
+      // This fixes the "Unknown Project" / "Client Unknown" issue
+      const projectList = Array.isArray(projects) ? projects : projects?.data?.projects || projects?.projects || [];
+
+      if (list.length > 0 && projectList.length > 0) {
+         list = list.map(task => {
+            // If task already has a full project object with title, keep it
+            if (task.project && (task.project.title || task.project.name)) {
+               return task;
+            }
+
+            // Otherwise, try to find the project in the store
+            const projectId = task.project?._id || task.project || task.projectId;
+            if (projectId) {
+               const foundProject = projectList.find(p => (p._id || p.id) === projectId);
+               if (foundProject) {
+                  return {
+                     ...task,
+                     project: foundProject
+                  };
+               }
+            }
+            return task;
+         });
+      }
+
       return list;
-   }, [tasks]);
+   }, [tasks, projects]);
 
    const filteredTasks = useMemo(() => {
       let result = taskList;
