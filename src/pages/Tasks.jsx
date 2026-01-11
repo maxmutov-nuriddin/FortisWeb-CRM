@@ -482,7 +482,7 @@ const Tasks = () => {
                            }`}>
                            {t(task.priority)}
                         </span>
-                        {task.weight > 1 && (
+                        {task.weight && task.weight >= 1 && (
                            <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded-full">
                               <i className="fa-solid fa-scale-balanced"></i> {task.weight}
                            </span>
@@ -506,9 +506,11 @@ const Tasks = () => {
                                  {task.assignedTo?.name?.[0] || '?'}
                               </div>
                            )}
-                           <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[80px]">
-                              {task.assignedTo?.name?.split(' ')[0] || t('unassigned')}
-                           </span>
+                           {task.assignedTo?.name && (
+                              <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[80px]">
+                                 {task.assignedTo.name.split(' ')[0]}
+                              </span>
+                           )}
                         </div>
 
                         <div className={`text-[10px] font-medium flex items-center gap-1.5 ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? 'text-red-500 bg-red-50 dark:bg-red-900/10 px-2 py-1 rounded-full' : 'text-gray-400'
