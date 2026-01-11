@@ -62,7 +62,7 @@ const Orders = () => {
    const isAdmin = isSuperAdmin || isCompanyAdmin;
 
    const { companies, getCompanies, getCompanyById, selectedCompany } = useCompanyStore();
-   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, addRepository, isLoading: projectsLoading } = useProjectStore();
+   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, addRepository, assignProject, isLoading: projectsLoading } = useProjectStore();
    const { getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { tasks, getTasksByUser } = useTaskStore();
    const { uploadFile, getFiles, uploads } = useProjectUploadStore();
@@ -126,8 +126,60 @@ const Orders = () => {
 
    const projectsList = useMemo(() => {
       const allProjects = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
+
+      // Debug logging
+      if (userData?.role === 'team_lead' && allProjects.length > 0) {
+         console.log('=== TEAM LEAD DEBUG ===');
+         console.log('Current User ID:', userData._id);
+         console.log('Total Projects:', allProjects.length);
+         allProjects.forEach((p, idx) => {
+            console.log(`Project ${idx + 1}:`, {
+               title: p.title,
+               teamLead: p.teamLead,
+               assignedTeam: p.assignedTeam,
+               assignedTeamId: p.assignedTeamId
+            });
+         });
+      }
+
       if (userData?.role === 'team_lead') {
-         return allProjects.filter(p => String(p.teamLead?._id || p.teamLead || '') === String(userData._id));
+         const currentUserId = String(userData._id);
+
+         // Get all teams from all companies to match assignedTeamId
+         const allTeams = [];
+         allCompanies.forEach(company => {
+            if (company.teams && Array.isArray(company.teams)) {
+               allTeams.push(...company.teams);
+            }
+         });
+
+         const filtered = allProjects.filter(p => {
+            // Check direct teamLead field
+            const projectTeamLeadId = String(p.teamLead?._id || p.teamLead || '');
+            if (projectTeamLeadId === currentUserId) return true;
+
+            // Check assignedTeam.teamLead (if populated)
+            const assignedTeamLeadId = String(p.assignedTeam?.teamLead?._id || p.assignedTeam?.teamLead || '');
+            if (assignedTeamLeadId === currentUserId) return true;
+
+            // Check assignedTeamId by looking up in company teams
+            const assignedTeamId = String(p.assignedTeam?._id || p.assignedTeam || p.assignedTeamId || '');
+            if (assignedTeamId) {
+               const team = allTeams.find(t => String(t._id || t.id) === assignedTeamId);
+               if (team) {
+                  const teamLeadId = String(team.teamLead?._id || team.teamLead || '');
+                  if (teamLeadId === currentUserId) {
+                     console.log('✓ Project matches via assignedTeamId lookup:', p.title, 'Team:', team.name);
+                     return true;
+                  }
+               }
+            }
+
+            return false;
+         });
+
+         console.log('Filtered projects for team lead:', filtered.length);
+         return filtered;
       }
       if (userData?.role === 'worker') {
          const userTasks = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || [];
@@ -135,7 +187,7 @@ const Orders = () => {
          return allProjects.filter(p => myProjectIds.has(String(p._id)));
       }
       return allProjects;
-   }, [projects, userData, tasks]);
+   }, [projects, userData, tasks, allCompanies]);
 
    const filteredOrders = useMemo(() => {
       let result = [...projectsList];
@@ -308,6 +360,7 @@ const Orders = () => {
             budget: parseFloat(formData.budget) || 0,
             deadline: formData.deadline || undefined,
             priority: formData.priority,
+            status: isEditMode ? formData.status : 'pending', // Always pending for new orders
             companyId: isSuperAdmin ? formData.selectedCompanyId : activeCompanyId,
             assignedTeamId: formData.assignedTeamId,
             client: {
@@ -320,19 +373,52 @@ const Orders = () => {
          };
 
          let result;
+         let projectId;
+
          if (isEditMode && selectedOrder) {
             result = await updateProject(selectedOrder._id, projectData);
+            projectId = selectedOrder._id;
+
+            // Assign team after update
+            if (formData.assignedTeamId) {
+               try {
+                  await assignProject(projectId, { assignedTeamId: formData.assignedTeamId });
+               } catch (assignErr) {
+                  console.error('Failed to assign team:', assignErr);
+                  toast.warning('Order updated but team assignment failed');
+               }
+            }
+
             toast.success('Order updated successfully');
          } else {
+            // Create project first
             result = await createProject(projectData);
+            projectId = result?.data?.project?._id || result?.data?._id || result?._id;
+
+            // Assign team after creation
+            if (projectId && formData.assignedTeamId) {
+               try {
+                  const assignResult = await assignProject(projectId, { assignedTeamId: formData.assignedTeamId });
+                  console.log('Team assigned successfully:', assignResult);
+
+                  // Ensure status remains 'pending' after team assignment
+                  // Backend might auto-change to 'in_progress', so we explicitly set it back
+                  await updateProject(projectId, { status: 'pending' });
+               } catch (assignErr) {
+                  console.error('Failed to assign team:', assignErr);
+                  toast.warning('Order created but team assignment failed');
+               }
+            }
+
             toast.success('Order created successfully');
          }
 
+
          // Upload file if present
-         if (uploadedFile && result?.data?.project?._id) {
+         if (uploadedFile && projectId) {
             const fileFormData = new FormData();
             fileFormData.append('file', uploadedFile);
-            fileFormData.append('orderId', result.data.project._id);
+            fileFormData.append('orderId', projectId);
             if (isSuperAdmin && formData.selectedCompanyId) {
                fileFormData.append('companyId', formData.selectedCompanyId);
             } else if (activeCompanyId) {
@@ -349,11 +435,10 @@ const Orders = () => {
          }
 
          // Create initial pending payment
-         if (result?.data?.project?._id || result?._id) {
-            const pId = result.data?.project?._id || result.data?._id || result._id;
+         if (projectId) {
             try {
                await createPayment({
-                  projectId: pId,
+                  projectId: projectId,
                   totalAmount: parseFloat(formData.budget) || 0,
                   paymentMethod: formData.paymentMethod || 'bank_transfer'
                });
@@ -362,6 +447,7 @@ const Orders = () => {
                toast.warning('Order created but failed to initialize payment status');
             }
          }
+
 
          setIsModalOpen(false);
          setIsSubmitting(false);

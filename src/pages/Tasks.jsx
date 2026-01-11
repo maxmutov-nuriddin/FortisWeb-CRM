@@ -30,7 +30,7 @@ const Tasks = () => {
 
    const { projects, getAllProjects, getProjectsByCompany } = useProjectStore();
    const { users: companyUsers, getUsersByCompany, getAllUsers } = useUserStore();
-   const { companies, getCompanies } = useCompanyStore();
+   const { companies, getCompanies, getCompanyById, selectedCompany } = useCompanyStore();
 
    const [filter, setFilter] = useState('all');
    const [searchQuery, setSearchQuery] = useState('');
@@ -110,20 +110,68 @@ const Tasks = () => {
             if (companyId) {
                const [projResult] = await Promise.all([
                   getProjectsByCompany(companyId),
-                  getUsersByCompany(companyId)
+                  getUsersByCompany(companyId),
+                  getCompanyById(companyId) // Load company data to get teams info
                ]);
 
                let projs = projResult?.data?.projects || projResult?.projects || (Array.isArray(projResult) ? projResult : []);
 
                if (role === 'team_lead') {
                   const currentUserId = String(userId);
-                  projs = projs.filter(p =>
-                     String(p.teamLead?._id || p.teamLead || '') === currentUserId ||
-                     (p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId))
-                  );
+
+                  console.log('=== TASKS - TEAM LEAD DEBUG ===');
+                  console.log('Current User ID:', currentUserId);
+                  console.log('Total Projects before filter:', projs.length);
+
+                  // Get company data to access teams
+                  // For team_lead, use selectedCompany (loaded by getCompanyById)
+                  const companyData = selectedCompany?.data || selectedCompany;
+                  const allTeams = companyData?.teams || [];
+
+                  console.log('Selected Company:', companyData?.name);
+                  console.log('All Teams:', allTeams.map(t => ({ id: t._id, name: t.name, teamLead: t.teamLead })));
+
+                  projs = projs.filter(p => {
+                     // Check direct teamLead field
+                     const projectTeamLeadId = String(p.teamLead?._id || p.teamLead || '');
+                     if (projectTeamLeadId === currentUserId) {
+                        console.log('✓ Project matches (direct teamLead):', p.title);
+                        return true;
+                     }
+
+                     // Check assignedTeam.teamLead (if populated)
+                     const assignedTeamLeadId = String(p.assignedTeam?.teamLead?._id || p.assignedTeam?.teamLead || '');
+                     if (assignedTeamLeadId === currentUserId) {
+                        console.log('✓ Project matches (assignedTeam.teamLead):', p.title);
+                        return true;
+                     }
+
+                     // Check assignedTeamId by looking up in company teams
+                     const assignedTeamId = String(p.assignedTeam?._id || p.assignedTeam || p.assignedTeamId || '');
+                     if (assignedTeamId) {
+                        const team = allTeams.find(t => String(t._id || t.id) === assignedTeamId);
+                        if (team) {
+                           const teamLeadId = String(team.teamLead?._id || team.teamLead || '');
+                           if (teamLeadId === currentUserId) {
+                              console.log('✓ Project matches (assignedTeamId lookup):', p.title, 'Team:', team.name);
+                              return true;
+                           }
+                        }
+                     }
+
+                     // Check if user is assigned member
+                     const isAssignedMember = p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId);
+                     if (isAssignedMember) {
+                        console.log('✓ Project matches (assigned member):', p.title);
+                     }
+                     return isAssignedMember;
+                  });
+
+                  console.log('Filtered Projects for team lead:', projs.length);
                }
 
                const pIds = projs.map(p => p._id || p.id).filter(Boolean);
+               console.log('Project IDs to fetch tasks for:', pIds);
                if (pIds.length > 0) {
                   await getTasksByProjects(pIds);
                } else {
@@ -308,10 +356,35 @@ const Tasks = () => {
 
       if (role === 'team_lead') {
          const currentUserId = String(userId);
-         list = list.filter(p =>
-            String(p.teamLead?._id || p.teamLead || '') === currentUserId ||
-            (p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId))
-         );
+
+         // Get company data to access teams
+         // For team_lead, use selectedCompany (loaded by getCompanyById)
+         const companyData = selectedCompany?.data || selectedCompany;
+         const allTeams = companyData?.teams || [];
+
+         list = list.filter(p => {
+            // Check direct teamLead field
+            const projectTeamLeadId = String(p.teamLead?._id || p.teamLead || '');
+            if (projectTeamLeadId === currentUserId) return true;
+
+            // Check assignedTeam.teamLead (if populated)
+            const assignedTeamLeadId = String(p.assignedTeam?.teamLead?._id || p.assignedTeam?.teamLead || '');
+            if (assignedTeamLeadId === currentUserId) return true;
+
+            // Check assignedTeamId by looking up in company teams
+            const assignedTeamId = String(p.assignedTeam?._id || p.assignedTeam || p.assignedTeamId || '');
+            if (assignedTeamId) {
+               const team = allTeams.find(t => String(t._id || t.id) === assignedTeamId);
+               if (team) {
+                  const teamLeadId = String(team.teamLead?._id || team.teamLead || '');
+                  if (teamLeadId === currentUserId) return true;
+               }
+            }
+
+            // Check if user is assigned member
+            const isAssignedMember = p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId);
+            return isAssignedMember;
+         });
       } else if (role !== 'super_admin' && role !== 'company_admin') {
          const currentUserId = String(userId);
          list = list.filter(p =>
@@ -320,7 +393,7 @@ const Tasks = () => {
       }
 
       return list;
-   }, [projects, role, userId]);
+   }, [projects, role, userId, selectedCompany]);
 
    const userOptions = useMemo(() => {
       const rawUsers = Array.isArray(companyUsers) ? companyUsers : companyUsers?.data?.users || [];
