@@ -59,21 +59,16 @@ const Chat = () => {
    const attemptRef = useRef(new Set());
 
    useEffect(() => {
-      if (userData?.company) {
-         const companyId = userData.company._id || userData.company;
-         getUsersByCompany(companyId);
-      }
-   }, [userData?.company, getUsersByCompany]);
-
-   useEffect(() => {
       const initChat = async () => {
          if (Array.isArray(chats) && !isLoading && userData?._id) {
             let targetChat = null;
             const companyId = userData.company?._id || userData.company || null;
+            const teamId = userData.team?._id || userData.team || userData.assignedTeam?._id || userData.assignedTeam || null;
+
             const createPayload = { participants: [userData._id] };
             if (companyId && typeof companyId === 'string') createPayload.company = companyId;
 
-            const attemptKey = `${activeTab}-${companyId || 'no-comp'}`;
+            const attemptKey = `${activeTab}-${companyId || 'no-comp'}-${teamId || 'no-team'}`;
 
             const getParticipants = async () => {
                if (!companyId) return [userData._id];
@@ -102,11 +97,32 @@ const Chat = () => {
                   return;
                }
             } else if (activeTab === 'team') {
-               targetChat = chats.find(c => (c.type === 'team' && c.name === 'Department Team'));
-               if (!targetChat && (userData?.role === 'team_lead' || IsCompanyAdmin) && companyId && !attemptRef.current.has(attemptKey)) {
+               // Filter for team chat that matches user's team if possible, or generic name
+               targetChat = chats.find(c => (c.type === 'team' && c.team === teamId));
+
+               // Only Team Lead or Company Admin (if in team) can create. 
+               // REQUIRED: teamId must exist.
+               if (!targetChat && (userData?.role === 'team_lead' || (IsCompanyAdmin && teamId)) && teamId && companyId && !attemptRef.current.has(attemptKey)) {
                   attemptRef.current.add(attemptKey);
-                  const ids = await getParticipants();
-                  createChat({ ...createPayload, type: 'team', name: 'Department Team', participants: ids })
+                  // For team chat, we might want only team members? 
+                  // For now, logic fetches all company users. This might be too broad for "Team Chat" (Isolation rule).
+                  // Ideally "getTeamMembers". But keeping existing logic for participants unless specifically asked to change participant fetch logic.
+                  // Wait, strict rule: "Team chat: Only same team members". 
+                  // If we use 'getParticipants' (all company users), we violate this.
+                  // We should filter participants by teamId if possible.
+                  // But 'users' store might identify teams.
+                  // For minimal change, we proceed, but correct backend validates participants? 
+                  // Backend `createChat` checks: "participants belong to teamId".
+                  // So we MUST filter participants here or let Backend handle it (backend might reject if we send all company users).
+                  // Let's rely on Backend to validate or we pass only self?
+                  // Better: pass ONLY self in `participants`. Admin can add others? Or Backend auto-adds team members?
+                  // ChatController `createChat` doesn't auto-add team members.
+                  // Let's just create with self and let user add others? Or try to find team members.
+                  // Given "Frontend Integration" task, I will just fix the `teamId` param.
+
+                  createChat({ ...createPayload, type: 'team', name: 'Department Team', teamId: teamId }) // Removed explicit participants to let backend handle or user add? 
+                     // Wait, previous code sent `ids` (all company). This WILL fail backend check.
+                     // I will send `[userData._id]` as participants, plus `teamId`.
                      .then((newChat) => selectChat(newChat)).catch(err => console.error("Team init failed", err));
                   return;
                }
@@ -117,8 +133,10 @@ const Chat = () => {
                   targetChat = chats.find(c => c.name === supportName);
                   if (!targetChat && !attemptRef.current.has(attemptKey)) {
                      attemptRef.current.add(attemptKey);
-                     const ids = await getParticipants();
-                     createChat({ ...createPayload, type: 'team', name: supportName, participants: ids })
+                     // Support chat: Company Admin + Super Admins.
+                     // Backend `createChat` for type='support' auto-sets participants.
+                     // So we don't need to fetch company users.
+                     createChat({ ...createPayload, type: 'support', name: supportName, participants: [userData._id] })
                         .then((newChat) => selectChat(newChat)).catch(err => console.error("Support init failed", err));
                      return;
                   }
@@ -400,8 +418,8 @@ const Chat = () => {
                                     )}
 
                                     <div className={`relative px-5 py-3 rounded-2xl text-sm font-medium shadow-sm border transition-all ${isMe
-                                          ? 'bg-blue-600 text-white border-blue-600 rounded-br-none'
-                                          : 'bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-zinc-700 rounded-bl-none'
+                                       ? 'bg-blue-600 text-white border-blue-600 rounded-br-none'
+                                       : 'bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border-gray-100 dark:border-zinc-700 rounded-bl-none'
                                        }`}>
                                        {editingMessageId === msg._id ? (
                                           <div className="flex flex-col gap-2 min-w-[200px]">

@@ -24,12 +24,26 @@ const Payments = () => {
    const { user } = useAuthStore();
    const { companies, selectedCompany, getCompanies, getCompanyById } = useCompanyStore();
    const { users, getAllUsers, getUsersByCompany } = useUserStore();
-   const { payments, getAllPayments, getPaymentsByCompany, getPaymentsByUser, confirmPayment, completePayment, updatePayment, exportPaymentHistory, isLoading } = usePaymentStore();
+   const {
+      payments,
+      paymentHistory,
+      getAllPayments,
+      getPaymentsByCompany,
+      getPaymentsByUser,
+      getPaymentHistory,
+      confirmPayment,
+      completePayment,
+      updatePayment,
+      exportPaymentHistory,
+      isLoading
+   } = usePaymentStore();
    const { projects, getProjectsByCompany } = useProjectStore();
    const { tasks, getTasksByProjects, getTasksByUser } = useTaskStore();
 
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
+
+   const [activeTab, setActiveTab] = useState(userData?.role === 'employee' ? 'history' : 'invoices');
 
    const getCompanyRates = useMemo(() => (comp) => {
       const realComp = comp?.company || comp?.data?.company || comp || {};
@@ -56,6 +70,9 @@ const Payments = () => {
 
    const fetchData = async () => {
       try {
+         // Always fetch history for current user context
+         getPaymentHistory({});
+
          if (isSuperAdmin && viewCompanyId === 'all') {
             if (allCompanies.length > 0) {
                const ids = allCompanies.map(c => c._id);
@@ -428,13 +445,26 @@ const Payments = () => {
                </div>
             </div>
 
-            {/* Payments Table */}
-            <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl shadow-sm overflow-hidden">
+            {/* Payments/History Tabs & Table */}
+            <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl shadow-sm overflow-hidden min-h-[500px]">
                <div className="p-6 border-b border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                     <i className="fa-solid fa-list text-gray-400"></i>
-                     {t('all_payments')}
-                  </h3>
+                  <div className="flex items-center gap-6">
+                     <div className="flex p-1 bg-gray-100 dark:bg-zinc-800 rounded-xl">
+                        <button
+                           onClick={() => setActiveTab('invoices')}
+                           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'invoices' ? 'bg-white dark:bg-black text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        >
+                           {t('invoices', 'Project Invoices')}
+                        </button>
+                        <button
+                           onClick={() => setActiveTab('history')}
+                           className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'history' ? 'bg-white dark:bg-black text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        >
+                           {t('earnings_history', 'Earnings History')}
+                        </button>
+                     </div>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                      <div className="relative">
                         <i className="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -456,101 +486,157 @@ const Payments = () => {
                </div>
 
                <div className="overflow-x-auto">
-                  <table className="w-full whitespace-nowrap">
-                     <thead>
-                        <tr className="bg-gray-50/50 dark:bg-zinc-800/50 text-left">
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('date_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('description_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('client_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('amount_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('my_salary_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('method_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('status_th')}</th>
-                           <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider text-right">{t('action_th')}</th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
-                        {filteredPayments.length > 0 ? filteredPayments.map(payment => (
-                           <tr key={payment._id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
-                              <td className="px-6 py-4 text-sm font-medium text-gray-500">
-                                 {new Date(payment.createdAt).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4">
-                                 <p className="text-sm font-bold text-gray-900 dark:text-white">{payment.description || t('no_description')}</p>
-                                 <p className="text-xs text-gray-400 font-mono mt-0.5">#{payment._id.slice(-6)}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                 {(() => {
-                                    const name = payment.client?.name || payment.project?.createdBy?.name || t('unknown');
-                                    return (
-                                       <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                                             {name.charAt(0).toUpperCase()}
+                  {activeTab === 'invoices' ? (
+                     <table className="w-full whitespace-nowrap">
+                        <thead>
+                           <tr className="bg-gray-50/50 dark:bg-zinc-800/50 text-left">
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('date_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('description_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('client_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('amount_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('my_salary_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('method_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('status_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider text-right">{t('action_th')}</th>
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                           {filteredPayments.length > 0 ? filteredPayments.map(payment => (
+                              <tr key={payment._id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors group">
+                                 <td className="px-6 py-4 text-sm font-medium text-gray-500">
+                                    {new Date(payment.createdAt).toLocaleDateString()}
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{payment.description || t('no_description')}</p>
+                                    <p className="text-xs text-gray-400 font-mono mt-0.5">#{payment._id.slice(-6)}</p>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    {(() => {
+                                       const name = payment.client?.name || payment.project?.createdBy?.name || t('unknown');
+                                       return (
+                                          <div className="flex items-center gap-2">
+                                             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-zinc-700 dark:to-zinc-600 flex items-center justify-center text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                                                {name.charAt(0).toUpperCase()}
+                                             </div>
+                                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{name}</span>
                                           </div>
-                                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{name}</span>
-                                       </div>
-                                    );
-                                 })()}
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className="text-sm font-black text-gray-900 dark:text-white">
-                                    ${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                 {(() => {
-                                    const share = calculateMyShare(payment);
-                                    return share > 0 ? (
-                                       <span className="inline-flex items-center gap-1 text-sm font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
-                                          +${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                       </span>
-                                    ) : <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
-                                 })()}
-                              </td>
-                              <td className="px-6 py-4">
-                                 <select
-                                    value={payment.paymentMethod || 'bank_transfer'}
-                                    disabled={payment.status !== 'pending' || isSubmitting}
-                                    onChange={async e => { try { await updatePayment(payment._id, { paymentMethod: e.target.value }); toast.success(t('update_success')); } catch (e) { toast.error(t('update_failed')); } }}
-                                    className="bg-gray-50 dark:bg-black/40 text-xs font-bold text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none cursor-pointer"
-                                 >
-                                    <option value="bank_transfer">{t('bank_transfer')}</option>
-                                    <option value="cash">{t('cash')}</option>
-                                    <option value="card">{t('card')}</option>
-                                    <option value="paypal">{t('paypal')}</option>
-                                    <option value="crypto">{t('crypto')}</option>
-                                    <option value="other">{t('other')}</option>
-                                 </select>
-                              </td>
-                              <td className="px-6 py-4">
-                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${payment.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
+                                       );
+                                    })()}
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <span className="text-sm font-black text-gray-900 dark:text-white">
+                                       ${(Number(payment.totalAmount) || Number(payment.amount) || 0).toLocaleString()}
+                                    </span>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    {(() => {
+                                       const share = calculateMyShare(payment);
+                                       return share > 0 ? (
+                                          <span className="inline-flex items-center gap-1 text-sm font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
+                                             +${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </span>
+                                       ) : <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
+                                    })()}
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <select
+                                       value={payment.paymentMethod || 'bank_transfer'}
+                                       disabled={payment.status !== 'pending' || isSubmitting}
+                                       onChange={async e => { try { await updatePayment(payment._id, { paymentMethod: e.target.value }); toast.success(t('update_success')); } catch (e) { toast.error(t('update_failed')); } }}
+                                       className="bg-gray-50 dark:bg-black/40 text-xs font-bold text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-zinc-800 focus:outline-none focus:border-blue-500 disabled:opacity-50 appearance-none cursor-pointer"
+                                    >
+                                       <option value="bank_transfer">{t('bank_transfer')}</option>
+                                       <option value="cash">{t('cash')}</option>
+                                       <option value="card">{t('card')}</option>
+                                       <option value="paypal">{t('paypal')}</option>
+                                       <option value="crypto">{t('crypto')}</option>
+                                       <option value="other">{t('other')}</option>
+                                    </select>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${payment.status === 'pending' ? 'bg-yellow-50 text-yellow-600 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
                                        payment.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30' :
                                           'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30'
-                                    }`}>
-                                    {t(payment.status)}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                 <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                    {(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? (
-                                       <button onClick={() => handleConfirm(payment._id)} disabled={isSubmitting} className="bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                                          {t('confirm')}
-                                       </button>
-                                    ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
-                                       <button onClick={() => handleComplete(payment._id)} disabled={isSubmitting} className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                                          {t('complete')}
-                                       </button>
-                                    ) : (
-                                       <span className="text-xs font-medium text-gray-400 italic block py-1.5">{t('no_actions')}</span>
-                                    )}
-                                 </div>
-                              </td>
+                                       }`}>
+                                       {t(payment.status)}
+                                    </span>
+                                 </td>
+                                 <td className="px-6 py-4 text-right">
+                                    <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                       {(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? (
+                                          <button onClick={() => handleConfirm(payment._id)} disabled={isSubmitting} className="bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                                             {t('confirm')}
+                                          </button>
+                                       ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
+                                          <button onClick={() => handleComplete(payment._id)} disabled={isSubmitting} className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                                             {t('complete')}
+                                          </button>
+                                       ) : (
+                                          <span className="text-xs font-medium text-gray-400 italic block py-1.5">{t('no_actions')}</span>
+                                       )}
+                                    </div>
+                                 </td>
+                              </tr>
+                           )) : (
+                              <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500 font-medium">{t('no_payments_found')}</td></tr>
+                           )}
+                        </tbody>
+                     </table>
+                  ) : (
+                     <table className="w-full whitespace-nowrap">
+                        <thead>
+                           <tr className="bg-gray-50/50 dark:bg-zinc-800/50 text-left">
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('date_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('type_th', 'Type')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('source_th', 'Source')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('amount_th')}</th>
+                              <th className="px-6 py-4 text-xs font-extrabold text-gray-400 uppercase tracking-wider">{t('status_th')}</th>
                            </tr>
-                        )) : (
-                           <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500 font-medium">{t('no_payments_found')}</td></tr>
-                        )}
-                     </tbody>
-                  </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                           {paymentHistory && paymentHistory.length > 0 ? paymentHistory.map(history => (
+                              <tr key={history._id} className="hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition-colors">
+                                 <td className="px-6 py-4 text-sm font-medium text-gray-500">
+                                    {new Date(history.createdAt).toLocaleDateString()}
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${history.type === 'task_salary' ? 'bg-purple-50 text-purple-600' :
+                                          history.type === 'order_commission' ? 'bg-blue-50 text-blue-600' :
+                                             'bg-orange-50 text-orange-600'
+                                       }`}>
+                                       {history.type?.replace('_', ' ') || 'Earnings'}
+                                    </span>
+                                 </td>
+                                 <td className="px-6 py-4 text-sm">
+                                    {history.taskId ? (
+                                       <span className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                                          <i className="fa-solid fa-list-check text-xs text-gray-400"></i>
+                                          Task Income
+                                       </span>
+                                    ) : history.projectId ? (
+                                       <span className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                                          <i className="fa-solid fa-briefcase text-xs text-gray-400"></i>
+                                          Project Commission
+                                       </span>
+                                    ) : '-'}
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <span className="text-sm font-black text-green-600 dark:text-green-400">
+                                       +${(Number(history.amount) || 0).toLocaleString()}
+                                    </span>
+                                 </td>
+                                 <td className="px-6 py-4">
+                                    <span className="px-2 py-1 rounded text-[10px] font-bold uppercase bg-green-50 text-green-600 border border-green-200">
+                                       Paid
+                                    </span>
+                                 </td>
+                              </tr>
+                           )) : (
+                              <tr><td colSpan="5" className="px-6 py-12 text-center text-gray-500 font-medium">{t('no_history_found', 'No earnings history found')}</td></tr>
+                           )}
+                        </tbody>
+                     </table>
+                  )}
                </div>
             </div>
          </div>
