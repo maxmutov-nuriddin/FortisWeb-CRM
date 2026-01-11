@@ -39,6 +39,7 @@ const Profiles = () => {
    const [selectedTeamCompanyId, setSelectedTeamCompanyId] = useState('');
    const [expandedTeamId, setExpandedTeamId] = useState(null);
    const [isCreatingTeam, setIsCreatingTeam] = useState(false);
+   const [teamMemberFilter, setTeamMemberFilter] = useState('All');
 
    // Form States
    const [formData, setFormData] = useState({
@@ -344,7 +345,7 @@ const Profiles = () => {
                <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm flex items-center justify-between relative overflow-hidden">
                   <div className="relative z-10">
                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Members</p>
-                     <p className="text-3xl font-black text-gray-900 dark:text-white">{stats.total}</p>
+                     <p className="text-3xl font-black text-gray-100 dark:text-white">{stats.total}</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-50 dark:bg-zinc-800 rounded-2xl flex items-center justify-center text-blue-500">
                      <i className="fa-solid fa-users text-xl"></i>
@@ -634,8 +635,14 @@ const Profiles = () => {
                   <div className="space-y-4">
                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">Existing Teams</h3>
                      {(() => {
+                        const companyIdStr = String(userData?.company?._id || userData?.company || '');
                         const companyList = companies?.data?.companies || [];
-                        const relevantCompanies = isSuperAdmin ? companyList : companyList.filter(c => c._id === (userData?.company?._id || userData?.company));
+                        let relevantCompanies = isSuperAdmin ? companyList : companyList.filter(c => String(c._id) === companyIdStr);
+
+                        // Fallback for company admin if list is empty but selectedCompany is loaded
+                        if (!isSuperAdmin && relevantCompanies.length === 0 && selectedCompany && String(selectedCompany._id) === companyIdStr) {
+                           relevantCompanies = [selectedCompany];
+                        }
 
                         if (relevantCompanies.length === 0) {
                            return <p className="text-gray-500 text-center py-8">No companies found</p>;
@@ -660,15 +667,22 @@ const Profiles = () => {
                                           const isExpanded = expandedTeamId === team._id;
                                           const teamMembers = team.members || [];
                                           const teamLead = rawUserList.find(u => u._id === (team.teamLead?._id || team.teamLead));
+
                                           const availableMembers = rawUserList.filter(u => {
                                              const userCompanyId = String(u.company?._id || u.company || '');
                                              const isSameCompany = userCompanyId === company._id;
-                                             const isNotAdmin = u.role !== 'company_admin' && u.role !== 'super_admin';
+
+                                             // Apply role filter
+                                             let matchesFilter = true;
+                                             if (teamMemberFilter === 'Admins') matchesFilter = u.role === 'company_admin' || u.role === 'super_admin';
+                                             else if (teamMemberFilter === 'Team Leads') matchesFilter = u.role === 'team_lead';
+                                             else if (teamMemberFilter === 'Developers') matchesFilter = u.role === 'backend' || u.role === 'frontend';
+
                                              const isNotMember = !teamMembers.some(m => {
                                                 const memberId = String(m?._id || m.user?._id || m.user || m || '');
                                                 return memberId === u._id;
                                              });
-                                             return isSameCompany && isNotAdmin && isNotMember;
+                                             return isSameCompany && matchesFilter && isNotMember;
                                           });
 
                                           return (
@@ -690,12 +704,14 @@ const Profiles = () => {
                                                       >
                                                          <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`}></i>
                                                       </button>
-                                                      <button
-                                                         onClick={() => handleDeleteTeam(company._id, team._id)}
-                                                         className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors"
-                                                      >
-                                                         <i className="fa-solid fa-trash text-xs"></i>
-                                                      </button>
+                                                      {(isSuperAdmin || userData?.role === 'company_admin') && (
+                                                         <button
+                                                            onClick={() => handleDeleteTeam(company._id, team._id)}
+                                                            className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-red-500 transition-colors"
+                                                         >
+                                                            <i className="fa-solid fa-trash text-xs"></i>
+                                                         </button>
+                                                      )}
                                                    </div>
                                                 </div>
 
@@ -705,25 +721,42 @@ const Profiles = () => {
                                                          <h6 className="text-sm font-bold text-gray-700 dark:text-gray-300">
                                                             Members ({teamMembers.length})
                                                          </h6>
-                                                         {availableMembers.length > 0 && (
-                                                            <select
-                                                               onChange={(e) => {
-                                                                  if (e.target.value) {
-                                                                     handleAddTeamMember(team._id, e.target.value, company._id);
-                                                                     e.target.value = '';
-                                                                  }
-                                                               }}
-                                                               className="text-xs px-3 py-1.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-lg"
-                                                            >
-                                                               <option value="">+ Add Member</option>
-                                                               {availableMembers.map(user => (
-                                                                  <option key={user._id} value={user._id}>
-                                                                     {user.name}
-                                                                  </option>
-                                                               ))}
-                                                            </select>
-                                                         )}
                                                       </div>
+
+                                                      {/* Role Filters for Team Member Addition */}
+                                                      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
+                                                         {['All', 'Admins', 'Team Leads', 'Developers'].map(role => (
+                                                            <button
+                                                               key={role}
+                                                               onClick={() => setTeamMemberFilter(role)}
+                                                               className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${teamMemberFilter === role
+                                                                     ? 'bg-red-500 text-white'
+                                                                     : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                                                  }`}
+                                                            >
+                                                               {role}
+                                                            </button>
+                                                         ))}
+                                                      </div>
+
+                                                      {availableMembers.length > 0 && (
+                                                         <select
+                                                            onChange={(e) => {
+                                                               if (e.target.value) {
+                                                                  handleAddTeamMember(team._id, e.target.value, company._id);
+                                                                  e.target.value = '';
+                                                               }
+                                                            }}
+                                                            className="text-xs px-3 py-1.5 bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-lg w-full mb-3"
+                                                         >
+                                                            <option value="">+ Add Member ({teamMemberFilter})</option>
+                                                            {availableMembers.map(user => (
+                                                               <option key={user._id} value={user._id}>
+                                                                  [{user.role.replace('_', ' ')}] {user.name}
+                                                               </option>
+                                                            ))}
+                                                         </select>
+                                                      )}
 
                                                       {teamMembers.length === 0 ? (
                                                          <p className="text-xs text-gray-400">No members yet</p>
