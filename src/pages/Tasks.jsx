@@ -402,9 +402,9 @@ const Tasks = () => {
 
                      <div className="flex items-start justify-between mb-3 gap-3">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${task.priority === 'urgent' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30' :
-                              task.priority === 'high' ? 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-900/30' :
-                                 task.priority === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
-                                    'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30'
+                           task.priority === 'high' ? 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-900/30' :
+                              task.priority === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
+                                 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30'
                            }`}>
                            {t(task.priority)}
                         </span>
@@ -552,8 +552,8 @@ const Tasks = () => {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-6 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all duration-300 ${filter === f
-                        ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg shadow-gray-900/20'
-                        : 'bg-white dark:bg-zinc-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                     ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg shadow-gray-900/20'
+                     : 'bg-white dark:bg-zinc-900 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800'
                      }`}
                >
                   {f === 'all' ? t('all_tasks') : t(f)}
@@ -581,9 +581,9 @@ const Tasks = () => {
                      <div className="flex-1 pr-8">
                         <div className="flex items-center gap-3 mb-3">
                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${currentTask.priority === 'urgent' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400' :
-                                 currentTask.priority === 'high' ? 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/20 dark:text-orange-400' :
-                                    currentTask.priority === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                                       'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400'
+                              currentTask.priority === 'high' ? 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/20 dark:text-orange-400' :
+                                 currentTask.priority === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                                    'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400'
                               }`}>
                               {t(currentTask.priority)}
                            </span>
@@ -645,7 +645,7 @@ const Tasks = () => {
                                     <div className="text-[10px] text-gray-400 uppercase mb-1">{t('status')}</div>
                                     <div className="flex items-center gap-2">
                                        <div className={`w-2.5 h-2.5 rounded-full ${currentTask.status === 'completed' ? 'bg-green-500' :
-                                             currentTask.status === 'in_progress' ? 'bg-yellow-500' : 'bg-gray-400'
+                                          currentTask.status === 'in_progress' ? 'bg-yellow-500' : 'bg-gray-400'
                                           }`}></div>
                                        <span className="font-bold text-gray-900 dark:text-white capitalize">{t(currentTask.status)}</span>
                                     </div>
@@ -757,6 +757,22 @@ const Tasks = () => {
                                  <option value="">{t('select_project')}</option>
                                  {projectOptions.map(p => <option key={p._id || p.id} value={p._id || p.id}>{p.title}</option>)}
                               </select>
+                              {formData.project && (
+                                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    {(() => {
+                                       const selectedProj = projectOptions.find(p => (p._id || p.id) === formData.project);
+                                       if (selectedProj?.team?.name) {
+                                          return (
+                                             <span className="flex items-center gap-1.5">
+                                                <i className="fa-solid fa-users text-red-500"></i>
+                                                Team: <strong className="text-gray-900 dark:text-white">{selectedProj.team.name}</strong>
+                                             </span>
+                                          );
+                                       }
+                                       return null;
+                                    })()}
+                                 </div>
+                              )}
                            </div>
                            <div>
                               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('assignee')}</label>
@@ -767,7 +783,11 @@ const Tasks = () => {
                                  onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                               >
                                  <option value="">{t('select_member')}</option>
-                                 {userOptions.map(u => <option key={u._id || u.id} value={u._id || u.id}>{u.name}</option>)}
+                                 {userOptions.map(u => (
+                                    <option key={u._id || u.id} value={u._id || u.id}>
+                                       {u.name} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
+                                    </option>
+                                 ))}
                               </select>
                            </div>
                         </div>
@@ -836,32 +856,34 @@ const Tasks = () => {
                      </div>
                   </form>
                </div>
-            </div>
+            </div >
          )}
 
          {/* Cancel Task Modal - Kept Simple */}
-         {isCancelModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
-               <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md p-6 relative z-10 shadow-2xl">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('confirm_cancellation')}</h3>
-                  <form onSubmit={handleConfirmCancel}>
-                     <textarea
-                        required
-                        className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-4 mb-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500/20 outline-none"
-                        placeholder={t('reason_placeholder')}
-                        value={cancellationReason}
-                        onChange={(e) => setCancellationReason(e.target.value)}
-                     ></textarea>
-                     <div className="flex justify-end gap-3">
-                        <button type="button" onClick={() => setIsCancelModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition">{t('back')}</button>
-                        <button type="submit" className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition">{t('confirm_cancel')}</button>
-                     </div>
-                  </form>
+         {
+            isCancelModalOpen && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCancelModalOpen(false)}></div>
+                  <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md p-6 relative z-10 shadow-2xl">
+                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{t('confirm_cancellation')}</h3>
+                     <form onSubmit={handleConfirmCancel}>
+                        <textarea
+                           required
+                           className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-4 mb-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500/20 outline-none"
+                           placeholder={t('reason_placeholder')}
+                           value={cancellationReason}
+                           onChange={(e) => setCancellationReason(e.target.value)}
+                        ></textarea>
+                        <div className="flex justify-end gap-3">
+                           <button type="button" onClick={() => setIsCancelModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white transition">{t('back')}</button>
+                           <button type="submit" className="px-5 py-2.5 rounded-xl bg-red-600 text-white font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition">{t('confirm_cancel')}</button>
+                        </div>
+                     </form>
+                  </div>
                </div>
-            </div>
-         )}
-      </div>
+            )
+         }
+      </div >
    );
 };
 
