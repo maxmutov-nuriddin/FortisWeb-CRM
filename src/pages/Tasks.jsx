@@ -108,7 +108,7 @@ const Tasks = () => {
             }
          } else if (role === 'company_admin' || role === 'team_lead') {
             if (companyId) {
-               const [projResult] = await Promise.all([
+               const [projResult, , companyResult] = await Promise.all([
                   getProjectsByCompany(companyId),
                   getUsersByCompany(companyId),
                   getCompanyById(companyId) // Load company data to get teams info
@@ -124,8 +124,8 @@ const Tasks = () => {
                   console.log('Total Projects before filter:', projs.length);
 
                   // Get company data to access teams
-                  // For team_lead, use selectedCompany (loaded by getCompanyById)
-                  const companyData = selectedCompany?.data || selectedCompany;
+                  // For team_lead, use the result from API call directly instead of store state which might be stale
+                  const companyData = companyResult || selectedCompany?.data || selectedCompany;
                   const allTeams = companyData?.teams || [];
 
                   console.log('Selected Company:', companyData?.name);
