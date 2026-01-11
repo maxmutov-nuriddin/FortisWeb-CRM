@@ -457,7 +457,7 @@ const Dashboard = () => {
       p => String(p.project?._id || p.project || '') === String(selectedProject?._id || '')
    ) || [];
    const confirmedPayment = projectPayments.find(p => p.status === 'confirmed' || p.status === 'completed');
-   const paymentStatus = confirmedPayment ? 'paid' : projectPayments.length ? 'pending' : 'none';
+   const paymentStatus = confirmedPayment ? 'paid' : (projectPayments.length || selectedProject?.status === 'pending') ? 'pending' : 'none';
    const totalPaid = confirmedPayment?.totalAmount || 0;
 
    if ((authLoading || paymentsLoading || projectsLoading || companiesLoading || usersLoading) && (filteredProjects?.length === 0)) return <PageLoader />;
