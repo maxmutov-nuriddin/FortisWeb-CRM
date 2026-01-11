@@ -253,8 +253,16 @@ const Orders = () => {
       setIsCreateMode(false);
       setIsModalOpen(true);
 
-      // Load files for this order
-      getFiles({ orderId: order._id });
+      // Load files for this order with error handling
+      try {
+         const companyId = order.company?._id || order.company || activeCompanyId;
+         getFiles({ orderId: order._id, companyId }).catch(err => {
+            console.error('Failed to load files:', err);
+            // Don't show error toast - just log it, files section will be hidden if no files
+         });
+      } catch (err) {
+         console.error('Error loading files:', err);
+      }
    };
 
    const handleEdit = (e, order) => {
@@ -888,12 +896,18 @@ const Orders = () => {
                      </div>
 
                      {/* Technical Specification */}
-                     {uploads && uploads.length > 0 && (
-                        <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
-                           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                              <i className="fa-solid fa-file-alt text-red-500"></i>
-                              Technical Specification
-                           </h3>
+                     <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                           <i className="fa-solid fa-file-alt text-red-500"></i>
+                           Technical Specification (ТЗ)
+                           {isTeamLead && (
+                              <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
+                                 <i className="fa-solid fa-check-circle mr-1"></i>
+                                 Available for download
+                              </span>
+                           )}
+                        </h3>
+                        {uploads && uploads.length > 0 ? (
                            <div className="space-y-2">
                               {uploads.map((file) => (
                                  <div key={file._id} className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-700">
@@ -916,8 +930,18 @@ const Orders = () => {
                                  </div>
                               ))}
                            </div>
-                        </div>
-                     )}
+                        ) : (
+                           <div className="text-center py-4">
+                              <i className="fa-solid fa-file-circle-exclamation text-3xl text-gray-400 mb-2"></i>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                 {isAdmin ? 'No technical specification uploaded yet' : 'Technical specification not available'}
+                              </p>
+                              {isAdmin && (
+                                 <p className="text-xs text-gray-400 mt-1">Upload files when creating or editing the order</p>
+                              )}
+                           </div>
+                        )}
+                     </div>
 
                      {/* Repository Information */}
                      <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">

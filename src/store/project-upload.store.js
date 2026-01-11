@@ -25,9 +25,14 @@ export const useProjectUploadStore = create((set) => ({
       set({ isLoading: true, error: null });
       try {
          const response = await projectUploadsApi.getAll(params);
-         set({ uploads: response.data.data?.files || [], isLoading: false });
+         const files = response.data.data?.files || response.data?.files || [];
+         set({ uploads: files, isLoading: false });
+         return files;
       } catch (error) {
-         set({ error: error.response?.data?.message || 'Failed to fetch files', isLoading: false });
+         console.error('Failed to fetch files:', error);
+         // Set empty array instead of keeping old data on error
+         set({ uploads: [], error: error.response?.data?.message || 'Failed to fetch files', isLoading: false });
+         return [];
       }
    },
 
