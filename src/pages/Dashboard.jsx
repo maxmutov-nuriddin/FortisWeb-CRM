@@ -486,6 +486,7 @@ const Dashboard = () => {
    const recentOrders = useMemo(() => {
       if (!filteredProjects || filteredProjects.length === 0) return [];
       return [...filteredProjects]
+         .filter(p => p.status !== 'completed') // Hide completed projects
          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
          .slice(0, 5);
    }, [filteredProjects]);

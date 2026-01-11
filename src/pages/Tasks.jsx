@@ -255,11 +255,13 @@ const Tasks = () => {
          });
       }
 
-      return list;
+      // Filter out tasks from completed projects globally so stats are correct
+      return list.filter(t => t.project?.status !== 'completed');
    }, [tasks, projects, richProjects]);
 
    const filteredTasks = useMemo(() => {
       let result = taskList;
+
 
       if (filter !== 'all') {
          result = result.filter(t => t.status === filter);
@@ -417,6 +419,9 @@ const Tasks = () => {
 
    const projectOptions = useMemo(() => {
       let list = Array.isArray(projects) ? projects : projects?.data?.projects || [];
+
+      // Filter out completed projects globally
+      list = list.filter(p => p.status !== 'completed');
 
       if (role === 'team_lead') {
          const currentUserId = String(userId);
