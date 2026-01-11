@@ -48,18 +48,17 @@ const Payments = () => {
 
    const getCompanyRates = useMemo(() => (comp) => {
       const realComp = comp?.company || comp?.data?.company || comp || {};
-      const rates = realComp.distributionRates || realComp.settings || realComp || {};
       const settings = realComp.settings || {};
+      const distributionRates = realComp.distributionRates || {};
 
+      // Try to get rates from settings first, then distributionRates, then defaults
       return {
-         admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
-         team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
-         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100,
-         teamLead: Number(settings.teamLeadCommissionRate || rates.teamLeadCommissionRate || 10) / 100
+         admin: Number(settings.customAdminRate || settings.adminRate || distributionRates.customAdminRate || distributionRates.adminRate || 10) / 100,
+         team: Number(settings.customTeamRate || settings.teamRate || distributionRates.customTeamRate || distributionRates.teamRate || 70) / 100,
+         company: Number(settings.customCommissionRate || settings.companyRate || distributionRates.customCommissionRate || distributionRates.companyRate || 20) / 100,
+         teamLead: Number(settings.teamLeadCommissionRate || distributionRates.teamLeadCommissionRate || 10) / 100
       };
    }, []);
-
-   const distributionRates = useMemo(() => getCompanyRates(selectedCompany), [selectedCompany, getCompanyRates]);
 
    const allCompanies = useMemo(() =>
       companies?.data?.companies || (Array.isArray(companies) ? companies : []),
@@ -70,6 +69,50 @@ const Payments = () => {
       isSuperAdmin ? viewCompanyId : (userData?.company?._id || userData?.company || ''),
       [isSuperAdmin, viewCompanyId, userData]
    );
+
+   // Get the active company object for calculator rates
+   const activeCompany = useMemo(() => {
+      // Always prefer selectedCompany as it has complete data with settings
+      if (selectedCompany && selectedCompany._id) {
+         return selectedCompany;
+      }
+
+      // Fallback for super admin viewing specific company
+      if (isSuperAdmin && viewCompanyId && viewCompanyId !== 'all') {
+         const found = allCompanies.find(c => c._id === viewCompanyId);
+         if (found) return found;
+      }
+
+      // Fallback for regular users
+      if (!isSuperAdmin && userData?.company) {
+         const companyId = userData.company._id || userData.company;
+         const found = allCompanies.find(c => c._id === companyId);
+         if (found) return found;
+         // If company not in allCompanies, use userData.company (may be incomplete)
+         if (userData.company._id) return userData.company;
+      }
+
+      return selectedCompany || {};
+   }, [isSuperAdmin, viewCompanyId, allCompanies, userData, selectedCompany]);
+
+   // Fetch company data if selectedCompany is empty for regular users
+   useEffect(() => {
+      if (!isSuperAdmin && userData?.company && (!selectedCompany || !selectedCompany._id)) {
+         const companyId = userData.company._id || userData.company;
+         if (companyId) {
+            getCompanyById(companyId);
+         }
+      }
+   }, [isSuperAdmin, userData, selectedCompany, getCompanyById]);
+
+   const distributionRates = useMemo(() => {
+      console.log('🔍 Active Company:', activeCompany);
+      console.log('🔍 Company Settings:', activeCompany?.settings);
+      console.log('🔍 Distribution Rates:', activeCompany?.distributionRates);
+      const rates = getCompanyRates(activeCompany);
+      console.log('🔍 Calculated Rates:', rates);
+      return rates;
+   }, [activeCompany, getCompanyRates]);
 
    // Load companies once on mount
    useEffect(() => {
