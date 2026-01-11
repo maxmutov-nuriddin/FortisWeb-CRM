@@ -266,7 +266,8 @@ const Payments = () => {
       });
 
       // If user is not involved in this project AT ALL, return 0
-      if (!isLead && !isAssigned && myTasks.length === 0) {
+      // Exception: Company Admins get commission on all projects
+      if (!isLead && !isAssigned && myTasks.length === 0 && userData.role !== 'company_admin') {
          return 0;
       }
 
@@ -345,15 +346,19 @@ const Payments = () => {
                   const res = await paymentsApi.getSalaries(payment._id);
                   const salaries = res.data?.data?.salaries || [];
 
+
                   // Find current user's salary
                   const mySalary = salaries.find(s =>
                      String(s.employeeId) === String(userData._id)
                   );
 
-                  salariesMap[payment._id] = mySalary?.amount || 0;
+                  // Only set if salary exists and is > 0, otherwise leave undefined for calculateMyShare fallback
+                  if (mySalary?.amount && mySalary.amount > 0) {
+                     salariesMap[payment._id] = mySalary.amount;
+                  }
                } catch (err) {
-                  // If error, set to 0
-                  salariesMap[payment._id] = 0;
+                  // If error, don't set anything (leave undefined for fallback calculation)
+                  console.error('Error fetching salary for payment:', payment._id, err);
                }
             }
 
@@ -390,7 +395,20 @@ const Payments = () => {
          sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0
       );
 
-      const myTotalEarnings = userData?.totalEarned || 0;
+
+      // Calculate total earnings from completed payments
+      const completedPayments = activeList.filter(p => p.status === 'completed');
+      const myTotalEarnings = completedPayments.reduce((sum, payment) => {
+         let share = paymentSalaries[payment._id];
+
+         // Use calculateMyShare if backend data not available
+         if (share === undefined || share === 0) {
+            share = calculateMyShare(payment);
+         }
+
+         return sum + (share || 0);
+      }, 0);
+
 
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
       const myEstimatedShare = !isSuperAdmin ? projectList.reduce((sum, proj) =>
@@ -768,16 +786,22 @@ const Payments = () => {
                                  </td>
                                  <td className="px-6 py-4">
                                     {(() => {
-                                       const share = paymentSalaries[payment._id];
+                                       let share = paymentSalaries[payment._id];
+
+                                       // If no backend salary data, calculate estimated share
                                        if (share === undefined) {
-                                          // Still loading or not completed
+                                          share = calculateMyShare(payment);
+                                       }
+
+                                       if (!share || share <= 0) {
                                           return <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
                                        }
-                                       return share > 0 ? (
+
+                                       return (
                                           <span className="inline-flex items-center gap-1 text-sm font-bold text-green-500 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
                                              +${share.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                           </span>
-                                       ) : <span className="text-gray-400 text-lg leading-none">&mdash;</span>;
+                                       );
                                     })()}
                                  </td>
                                  <td className="px-6 py-4">
