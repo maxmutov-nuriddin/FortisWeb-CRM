@@ -122,6 +122,7 @@ export const usePaymentStore = create((set, get) => ({
             },
             isLoading: false
          });
+         return response;
       } catch (error) {
          set({ error: error.response?.data?.message || 'Failed to fetch payments', isLoading: false });
       }

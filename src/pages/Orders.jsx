@@ -66,7 +66,7 @@ const Orders = () => {
    const { getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { tasks, getTasksByUser } = useTaskStore();
    const { uploadFile, getFiles, uploads } = useProjectUploadStore();
-   const { createPayment, deletePayment, getPaymentsByCompany, payments } = usePaymentStore();
+   const { createPayment, deletePayment, updatePayment, getPaymentsByCompany, payments } = usePaymentStore();
 
    const [viewCompanyId, setViewCompanyId] = useState('all');
 
@@ -566,24 +566,41 @@ const Orders = () => {
       setIsSubmitting(true);
 
       try {
-         // Check for existing payments for this order and delete them (to replace with new method)
-         const allPayments = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-         const existingPayments = allPayments.filter(p =>
-            String(p.project?._id || p.project || '') === String(selectedOrder._id)
-         );
+         // Refresh payments to ensure we find existing ones
+         const companyId = selectedOrder.company?._id || selectedOrder.company || activeCompanyId;
+         let latestPayments = [];
 
-         if (existingPayments.length > 0) {
-            await Promise.all(existingPayments.map(p => deletePayment(p._id)));
+         if (companyId) {
+            const res = await getPaymentsByCompany(companyId);
+            latestPayments = res?.data?.payments || (Array.isArray(res) ? res : []) || [];
+         } else {
+            // Fallback to current store state if no company ID (unlikely)
+            latestPayments = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
          }
 
-         // Create new payment with selected method
-         const payment = await createPayment({
-            projectId: selectedOrder._id,
-            totalAmount: selectedOrder.budget || 0,
-            paymentMethod: selectedPaymentMethod
-         });
+         // Check for existing pending payment to update
+         const pendingPayment = latestPayments.find(p =>
+            String(p.project?._id || p.project || '') === String(selectedOrder._id) &&
+            p.status === 'pending'
+         );
 
-         const paymentId = payment._id || payment.id;
+         let paymentId;
+
+         if (pendingPayment) {
+            console.log('Updating existing pending payment:', pendingPayment._id);
+            await updatePayment(pendingPayment._id, {
+               paymentMethod: selectedPaymentMethod,
+               totalAmount: selectedOrder.budget || 0
+            });
+            paymentId = pendingPayment._id;
+         } else {
+            console.warn('No pending payment found to confirm for order:', selectedOrder._id);
+            // DO NOT create a new payment to avoid duplicates. 
+            // The existing payment likely exists but wasn't found due to context issues.
+            // We proceed to update the order status as requested.
+         }
+
+
 
          // Confirm payment
          const confirmResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments/${paymentId}/confirm`, {

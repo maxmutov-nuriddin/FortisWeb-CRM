@@ -39,7 +39,7 @@ const Payments = () => {
       exportPaymentHistory,
       isLoading
    } = usePaymentStore();
-   const { projects, getProjectsByCompany, getAllProjects } = useProjectStore();
+   const { projects, getProjectsByCompany, getAllProjects, updateProject } = useProjectStore();
    const { tasks, getTasksByProjects, getTasksByUser, getAllTasks } = useTaskStore();
 
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
@@ -470,7 +470,26 @@ const Payments = () => {
    const handleConfirm = async (id) => {
       setIsSubmitting(true);
       try {
+         // Find payment to identify project
+         const allPayments = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+         const payment = allPayments.find(p => (p._id || p.id) === id);
+
          await confirmPayment(id);
+
+         // Update project status if project exists
+         if (payment) {
+            const projectId = payment.project?._id || payment.project || payment.projectId;
+            if (projectId) {
+               try {
+                  await updateProject(projectId, { status: 'in_progress' });
+                  toast.success(t('payment_confirmed_success') + ' & Order Started');
+                  return; // Exit here to avoid double toast
+               } catch (err) {
+                  console.error('Failed to update project status:', err);
+               }
+            }
+         }
+
          toast.success(t('payment_confirmed_success'));
          // Don't call fetchData - store already updated the payment
       } catch (e) {
