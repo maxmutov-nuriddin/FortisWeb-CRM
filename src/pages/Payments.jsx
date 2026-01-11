@@ -49,10 +49,13 @@ const Payments = () => {
    const getCompanyRates = useMemo(() => (comp) => {
       const realComp = comp?.company || comp?.data?.company || comp || {};
       const rates = realComp.distributionRates || realComp.settings || realComp || {};
+      const settings = realComp.settings || {};
+
       return {
          admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
          team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
-         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
+         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100,
+         teamLead: Number(settings.teamLeadCommissionRate || rates.teamLeadCommissionRate || 10) / 100
       };
    }, []);
 
@@ -284,20 +287,28 @@ const Payments = () => {
       }
 
       // Employee task-based salary
+      // Calculate execution budget (Team Share - Lead Commission)
+      // Note: Lead Commission is dynamic from settings
+      const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+      const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+      const leadCommissionAmount = totalAmount * teamLeadRateVal;
+
+      const teamBudgetTotal = totalAmount * rates.team;
+      const executionBudget = Math.max(0, teamBudgetTotal - leadCommissionAmount);
+
+      // Employee task-based salary
       const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
 
       if (totalWeight > 0 && myTasks.length > 0) {
          const myWeight = myTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-         const teamBudget = totalAmount * rates.team;
-         const myShare = (myWeight / totalWeight) * teamBudget;
+         const myShare = (myWeight / totalWeight) * executionBudget;
          share += myShare;
       }
 
       // Fallback: If user is assigned but has no tasks yet, estimate equal distribution
       if (isAssigned && myTasks.length === 0 && totalWeight === 0 && fullProject.status !== 'completed') {
          const memberCount = assignedMembers.length || 1;
-         const teamBudget = totalAmount * rates.team;
-         const estimatedShare = teamBudget / memberCount;
+         const estimatedShare = executionBudget / memberCount;
          share += estimatedShare;
       }
 
@@ -396,9 +407,18 @@ const Payments = () => {
          const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
          const rates = getCompanyRates(pComp);
 
-         teamPayouts += amount * rates.team;
-         leadManagementPool += amount * rates.team * 0.2;
-         executionPool += amount * rates.team * 0.8;
+         const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+         const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+
+         const leadShare = amount * teamLeadRateVal;
+         const teamShareTotal = amount * rates.team;
+
+         // Execution pool is the remaining team share after deducting lead commission
+         const executionShare = teamShareTotal - leadShare;
+
+         teamPayouts += teamShareTotal;
+         leadManagementPool += leadShare;
+         executionPool += Math.max(0, executionShare);
          adminPool += amount * rates.admin;
          companyPool += amount * rates.company;
       });
@@ -591,7 +611,15 @@ const Payments = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     {[{ label: t('admin_generic'), val: rates => rates.admin, color: 'blue', icon: 'fa-user-tie' }, { label: t('company_generic'), val: rates => rates.company, color: 'yellow', icon: 'fa-building' }, { label: t('team_lead'), val: rates => rates.team * 0.2, color: 'purple', icon: 'fa-crown' }, { label: t('execution_pool'), val: rates => rates.team * 0.8, color: 'green', icon: 'fa-microchip' }].map((row, idx) => (
+                     {[{
+                        label: t('admin_generic'), val: rates => rates.admin, color: 'blue', icon: 'fa-user-tie'
+                     }, {
+                        label: t('company_generic'), val: rates => rates.company, color: 'yellow', icon: 'fa-building'
+                     }, {
+                        label: t('team_lead'), val: rates => rates.teamLead, color: 'purple', icon: 'fa-crown'
+                     }, {
+                        label: t('execution_pool'), val: rates => Math.max(0, rates.team - rates.teamLead), color: 'green', icon: 'fa-microchip'
+                     }].map((row, idx) => (
                         <div key={idx} className="bg-gray-50 dark:bg-black/20 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors">
                            <div className="flex items-center space-x-3">
                               <div className={`w-10 h-10 bg-${row.color}-50 dark:bg-${row.color}-900/20 rounded-xl flex items-center justify-center`}>
