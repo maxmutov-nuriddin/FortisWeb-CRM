@@ -320,7 +320,7 @@ const Payments = () => {
       catch (e) { console.error(e); toast.error(t('failed_complete_payment')); } finally { setIsSubmitting(false); }
    };
 
-   const handleExport = async () => { try { await exportPaymentHistory(); toast.success(t('export_started_success')); } catch (e) { } };
+   const handleExport = async () => { try { await exportPaymentHistory(); toast.success(t('export_started_success')); } catch (e) { /* empty */ } };
 
    if (isLoading && paymentsList?.length === 0) return <PageLoader />;
 
