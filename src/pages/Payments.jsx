@@ -309,14 +309,15 @@ const Payments = () => {
 
    useEffect(() => {
       const fetchSalaries = async () => {
-         if (!userData || filteredPayments.length === 0) return;
+         const paymentsList = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
+         if (!userData || paymentsList.length === 0) return;
 
          setSalariesLoading(true);
          const salariesMap = {};
 
          try {
             // Fetch salaries for all completed payments
-            const completedPayments = filteredPayments.filter(p => p.status === 'completed');
+            const completedPayments = paymentsList.filter(p => p.status === 'completed');
 
             for (const payment of completedPayments) {
                try {
@@ -344,7 +345,7 @@ const Payments = () => {
       };
 
       fetchSalaries();
-   }, [filteredPayments, userData]);
+   }, [payments, userData]); // Use payments, not filteredPayments
 
    const stats = useMemo(() => {
       const activeList = filteredPayments;
@@ -368,12 +369,8 @@ const Payments = () => {
          sum + (Number(p.totalAmount) || Number(p.amount) || 0), 0
       );
 
-      const myTotalEarnings = activeList.reduce((sum, p) =>
-         p.status === 'completed' // Only count completed payments (when money is actually paid)
-            ? sum + calculateMyShare(p)
-            : sum,
-         0
-      );
+      // Use actual totalEarned from user database instead of calculating
+      const myTotalEarnings = userData?.totalEarned || 0;
 
       const projectList = projects?.data?.projects || projects?.projects || (Array.isArray(projects) ? projects : []);
       const myEstimatedShare = !isSuperAdmin ? projectList.reduce((sum, proj) =>
