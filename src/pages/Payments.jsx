@@ -541,8 +541,26 @@ const Payments = () => {
                <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm relative overflow-hidden group hover:shadow-xl transition-all duration-300">
                   <div className="absolute right-0 top-0 w-24 h-24 bg-purple-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
                   <div className="relative z-10">
-                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{!isSuperAdmin ? t('my_estimated_share') : t('team_payouts')}</p>
-                     <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${(!isSuperAdmin ? (stats?.myEstimatedShare || 0) : (stats?.teamPayouts || 0)).toLocaleString()}</p>
+                     {(() => {
+                        const showTeamPayouts = isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'team_lead';
+
+                        let amount = 0;
+                        if (isSuperAdmin || userData?.role === 'company_admin') {
+                           amount = stats?.teamPayouts || 0;
+                        } else if (userData?.role === 'team_lead') {
+                           // For Team Lead, show only the execution pool (team payouts WITHOUT team lead share)
+                           amount = stats?.executionPool || 0;
+                        } else {
+                           amount = stats?.myEstimatedShare || 0;
+                        }
+
+                        return (
+                           <>
+                              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{showTeamPayouts ? t('team_payouts') : t('my_estimated_share')}</p>
+                              <p className="text-3xl font-black text-gray-900 dark:text-white mb-1">${amount.toLocaleString()}</p>
+                           </>
+                        );
+                     })()}
                      <div className="h-1 w-12 bg-purple-500 rounded-full"></div>
                   </div>
                </div>
