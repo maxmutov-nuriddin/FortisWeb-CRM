@@ -104,25 +104,22 @@ const Chat = () => {
                // REQUIRED: teamId must exist.
                if (!targetChat && (userData?.role === 'team_lead' || (IsCompanyAdmin && teamId)) && teamId && companyId && !attemptRef.current.has(attemptKey)) {
                   attemptRef.current.add(attemptKey);
-                  // For team chat, we might want only team members? 
-                  // For now, logic fetches all company users. This might be too broad for "Team Chat" (Isolation rule).
-                  // Ideally "getTeamMembers". But keeping existing logic for participants unless specifically asked to change participant fetch logic.
-                  // Wait, strict rule: "Team chat: Only same team members". 
-                  // If we use 'getParticipants' (all company users), we violate this.
-                  // We should filter participants by teamId if possible.
-                  // But 'users' store might identify teams.
-                  // For minimal change, we proceed, but correct backend validates participants? 
-                  // Backend `createChat` checks: "participants belong to teamId".
-                  // So we MUST filter participants here or let Backend handle it (backend might reject if we send all company users).
-                  // Let's rely on Backend to validate or we pass only self?
-                  // Better: pass ONLY self in `participants`. Admin can add others? Or Backend auto-adds team members?
-                  // ChatController `createChat` doesn't auto-add team members.
-                  // Let's just create with self and let user add others? Or try to find team members.
-                  // Given "Frontend Integration" task, I will just fix the `teamId` param.
 
-                  createChat({ ...createPayload, type: 'team', name: 'Department Team', teamId: teamId }) // Removed explicit participants to let backend handle or user add? 
-                     // Wait, previous code sent `ids` (all company). This WILL fail backend check.
-                     // I will send `[userData._id]` as participants, plus `teamId`.
+                  // FIX: Filter participants to ONLY be members of the same team
+                  let teamParticipants = [userData._id];
+                  if (users?.data?.users || Array.isArray(users)) {
+                     const allUsers = users?.data?.users || users;
+                     // Filter users who belong to this teamId
+                     const members = allUsers.filter(u =>
+                        (u.team?._id === teamId || u.team === teamId || u.teamId === teamId) ||
+                        (u.assignedTeam?._id === teamId || u.assignedTeam === teamId)
+                     ).map(u => u._id);
+
+                     // Merge and unique
+                     teamParticipants = [...new Set([...teamParticipants, ...members])];
+                  }
+
+                  createChat({ ...createPayload, type: 'team', name: 'Department Team', teamId: teamId, participants: teamParticipants })
                      .then((newChat) => selectChat(newChat)).catch(err => console.error("Team init failed", err));
                   return;
                }
@@ -134,8 +131,6 @@ const Chat = () => {
                   if (!targetChat && !attemptRef.current.has(attemptKey)) {
                      attemptRef.current.add(attemptKey);
                      // Support chat: Company Admin + Super Admins.
-                     // Backend `createChat` for type='support' auto-sets participants.
-                     // So we don't need to fetch company users.
                      createChat({ ...createPayload, type: 'support', name: supportName, participants: [userData._id] })
                         .then((newChat) => selectChat(newChat)).catch(err => console.error("Support init failed", err));
                      return;

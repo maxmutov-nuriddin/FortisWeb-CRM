@@ -193,6 +193,9 @@ const Dashboard = () => {
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
 
       filteredPayments.forEach(p => {
+         // FIX: Ignore pending or canceled payments for stats
+         if (p.status === 'pending' || p.status === 'canceled' || p.status === 'failed') return;
+
          const amount = Number(p.totalAmount) || Number(p.amount) || 0;
          const pCompId = String(p.company?._id || p.company || '');
          const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
@@ -234,7 +237,7 @@ const Dashboard = () => {
          const project = filteredProjects.find(p => String(p._id) === String(task.project?._id || task.project));
          if (project) {
             const projectPayment = (payments?.data?.payments || []).find(pay => String(pay._id) === String(project.payment));
-            if (projectPayment) {
+            if (projectPayment && (projectPayment.status === 'confirmed' || projectPayment.status === 'completed')) {
                const amount = Number(projectPayment.totalAmount) || Number(projectPayment.amount) || 0;
                const pCompId = String(projectPayment.company?._id || projectPayment.company || project.company?._id || project.company || '');
                const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
@@ -371,9 +374,9 @@ const Dashboard = () => {
          setTodayProjectsCount(0);
          return;
       }
-      const todayPayments = paymentsList.filter(p => isToday(p.createdAt));
+      const todayPayments = paymentsList.filter(p => isToday(p.createdAt) && p.status !== 'pending' && p.status !== 'canceled');
       const todaySum = todayPayments.reduce((sum, p) => sum + calculateShare(p), 0);
-      const yesterdaySum = paymentsList.filter(p => isYesterday(p.createdAt)).reduce((sum, p) => sum + calculateShare(p), 0);
+      const yesterdaySum = paymentsList.filter(p => isYesterday(p.createdAt) && p.status !== 'pending' && p.status !== 'canceled').reduce((sum, p) => sum + calculateShare(p), 0);
       const percent = yesterdaySum ? Math.round(((todaySum - yesterdaySum) / yesterdaySum) * 100) : 100;
       setTodayRevenue(Math.round(todaySum));
       setRevenuePercent(percent);

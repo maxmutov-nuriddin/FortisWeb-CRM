@@ -682,7 +682,10 @@ const Profiles = () => {
                                                 const memberId = String(m?._id || m.user?._id || m.user || m || '');
                                                 return memberId === u._id;
                                              });
-                                             return isSameCompany && matchesFilter && isNotMember;
+                                             // FIX: Exclude Admins from team membership to ensure hierarchy
+                                             const isNotAdmin = u.role !== 'company_admin' && u.role !== 'super_admin';
+
+                                             return isSameCompany && matchesFilter && isNotMember && isNotAdmin;
                                           });
 
                                           return (
@@ -725,13 +728,13 @@ const Profiles = () => {
 
                                                       {/* Role Filters for Team Member Addition */}
                                                       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
-                                                         {['All', 'Admins', 'Team Leads', 'Developers'].map(role => (
+                                                         {['All', 'Team Leads', 'Developers'].map(role => (
                                                             <button
                                                                key={role}
                                                                onClick={() => setTeamMemberFilter(role)}
                                                                className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all whitespace-nowrap ${teamMemberFilter === role
-                                                                     ? 'bg-red-500 text-white'
-                                                                     : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                                                  ? 'bg-red-500 text-white'
+                                                                  : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 hover:text-gray-900 dark:hover:text-white'
                                                                   }`}
                                                             >
                                                                {role}
