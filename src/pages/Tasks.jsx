@@ -506,11 +506,9 @@ const Tasks = () => {
                                  {task.assignedTo?.name?.[0] || '?'}
                               </div>
                            )}
-                           {task.assignedTo?.name && (
-                              <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[80px]">
-                                 {task.assignedTo.name.split(' ')[0]}
-                              </span>
-                           )}
+                           <span className="text-[11px] font-medium text-gray-600 dark:text-gray-400 truncate max-w-[80px]">
+                              {task.assignedTo?.name?.split(' ')[0] || t('unassigned') || 'Unassigned'}
+                           </span>
                         </div>
 
                         <div className={`text-[10px] font-medium flex items-center gap-1.5 ${new Date(task.deadline) < new Date() && task.status !== 'completed' ? 'text-red-500 bg-red-50 dark:bg-red-900/10 px-2 py-1 rounded-full' : 'text-gray-400'
@@ -732,7 +730,7 @@ const Tasks = () => {
                                     <div className="flex items-center gap-3">
                                        <img src={currentTask.assignedTo?.avatar || `https://ui-avatars.com/api/?name=${currentTask.assignedTo?.name || 'U'}`} className="w-8 h-8 rounded-full" alt="" />
                                        <div>
-                                          <div className="text-sm font-bold text-gray-900 dark:text-white">{currentTask.assignedTo?.name || t('unassigned')}</div>
+                                          <div className="text-sm font-bold text-gray-900 dark:text-white">{currentTask.assignedTo?.name || t('unassigned') || 'Unassigned'}</div>
                                           <div className="text-[10px] text-gray-500">{currentTask.assignedTo?.role}</div>
                                        </div>
                                     </div>
@@ -790,6 +788,9 @@ const Tasks = () => {
                      setIsSubmitting(true);
                      try {
                         const finalData = { ...formData };
+                        // Ensure numeric fields are numbers
+                        finalData.weight = parseInt(finalData.weight) || 1;
+                        finalData.estimatedHours = parseInt(finalData.estimatedHours) || 0;
                         if (!finalData.deadline) {
                            const d = new Date();
                            d.setDate(d.getDate() + 14);
@@ -798,9 +799,11 @@ const Tasks = () => {
                         if (isEditModalOpen) {
                            await updateTask(currentTask?._id || currentTask?.id, finalData);
                            toast.success(t('task_updated'));
+                           loadPageData();
                         } else {
                            await createTask(finalData);
                            toast.success(t('task_created'));
+                           loadPageData();
                         }
                         setIsCreateModalOpen(false);
                         setIsEditModalOpen(false);
@@ -853,12 +856,11 @@ const Tasks = () => {
                            <div>
                               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{t('assignee')}</label>
                               <select
-                                 required
                                  className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3.5 font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all outline-none"
                                  value={formData.assignedTo}
                                  onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                               >
-                                 <option value="">{t('select_member')}</option>
+                                 <option value="">{t('unassigned') || 'Unassigned'}</option>
                                  {userOptions.map(u => (
                                     <option key={u._id || u.id} value={u._id || u.id}>
                                        {u.name} {u.role ? `(${u.role.replace('_', ' ')})` : ''}
@@ -888,7 +890,7 @@ const Tasks = () => {
                                  type="number" min="0"
                                  className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3.5 font-medium text-gray-900 dark:text-white outline-none"
                                  value={formData.estimatedHours}
-                                 onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
+                                 onChange={(e) => setFormData({ ...formData, estimatedHours: parseInt(e.target.value) || 0 })}
                               />
                            </div>
                            <div>
@@ -897,7 +899,7 @@ const Tasks = () => {
                                  type="number" min="1" max="10"
                                  className="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3.5 font-medium text-gray-900 dark:text-white outline-none"
                                  value={formData.weight}
-                                 onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                                 onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) || 1 })}
                               />
                            </div>
                         </div>
