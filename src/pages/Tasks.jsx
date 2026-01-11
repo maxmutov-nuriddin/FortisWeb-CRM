@@ -42,6 +42,7 @@ const Tasks = () => {
    const [taskToCancel, setTaskToCancel] = useState(null);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [currentTask, setCurrentTask] = useState(null);
+   const [richProjects, setRichProjects] = useState([]); // Store detailed project info for workers
    const [formData, setFormData] = useState({
       title: '',
       description: '',
@@ -200,6 +201,18 @@ const Tasks = () => {
 
             if (myProjectIds.length > 0) {
                await getTasksByProjects(myProjectIds);
+
+               // Fetch full project details for each project to ensure we have Client and Budget info
+               // The getProjectsByCompany list might be "lite" for workers
+               try {
+                  const { getProjectById } = useProjectStore.getState();
+                  const detailedProjects = await Promise.all(
+                     myProjectIds.map(id => getProjectById(id).then(res => res?.data || res || null))
+                  );
+                  setRichProjects(detailedProjects.filter(Boolean));
+               } catch (err) {
+                  console.error('Failed to fetch detailed project info', err);
+               }
             } else {
                // Fallback to just user's directly assigned tasks if no project membership found
                await getTasksByUser(userId);
@@ -214,13 +227,16 @@ const Tasks = () => {
       let list = Array.isArray(tasks) ? tasks : tasks?.data?.tasks || tasks?.tasks || [];
 
       // Enrich tasks with project data from project store if missing
-      // This fixes the "Unknown Project" / "Client Unknown" issue
-      const projectList = Array.isArray(projects) ? projects : projects?.data?.projects || projects?.projects || [];
+      // For workers, prioritize richProjects (fetched by ID) over general projects list
+      const projectList = richProjects.length > 0
+         ? richProjects
+         : (Array.isArray(projects) ? projects : projects?.data?.projects || projects?.projects || []);
 
       if (list.length > 0 && projectList.length > 0) {
          list = list.map(task => {
-            // If task already has a full project object with title, keep it
-            if (task.project && (task.project.title || task.project.name)) {
+            // If task already has a full project object with title AND client, keep it
+            // checking client.name to be sure
+            if (task.project && (task.project.title || task.project.name) && task.project.client?.name) {
                return task;
             }
 
@@ -240,7 +256,7 @@ const Tasks = () => {
       }
 
       return list;
-   }, [tasks, projects]);
+   }, [tasks, projects, richProjects]);
 
    const filteredTasks = useMemo(() => {
       let result = taskList;
