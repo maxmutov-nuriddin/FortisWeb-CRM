@@ -239,23 +239,29 @@ export const usePaymentStore = create((set, get) => ({
       set({ isLoading: true, error: null });
       try {
          await paymentsApi.delete(id);
-         set((state) => {
-            const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
-            return {
-               payments: {
-                  ...state.payments,
-                  data: {
-                     ...state.payments?.data,
-                     payments: currentList.filter((p) => String(p.id || p._id) !== String(id))
-                  }
-               },
-               isLoading: false
-            };
-         });
       } catch (error) {
-         set({ error: error.response?.data?.message || 'Failed to delete payment', isLoading: false });
-         throw error;
+         // If payment not found, consider it deleted and update state
+         if (error.response && error.response.status === 404) {
+            console.warn(`Payment ${id} not found (404), removing from local state.`);
+         } else {
+            set({ error: error.response?.data?.message || 'Failed to delete payment', isLoading: false });
+            throw error;
+         }
       }
+
+      set((state) => {
+         const currentList = state.payments?.data?.payments || (Array.isArray(state.payments) ? state.payments : []);
+         return {
+            payments: {
+               ...state.payments,
+               data: {
+                  ...state.payments?.data,
+                  payments: currentList.filter((p) => String(p.id || p._id) !== String(id))
+               }
+            },
+            isLoading: false
+         };
+      });
    },
 
    deletePaymentsByProject: async (projectId, companyId) => {

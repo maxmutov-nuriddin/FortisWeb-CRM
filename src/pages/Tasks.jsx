@@ -323,7 +323,8 @@ const Tasks = () => {
    }, [projects, role, userId]);
 
    const userOptions = useMemo(() => {
-      const allUsers = Array.isArray(companyUsers) ? companyUsers : companyUsers?.data?.users || [];
+      const rawUsers = Array.isArray(companyUsers) ? companyUsers : companyUsers?.data?.users || [];
+      const allUsers = rawUsers.filter(u => u.role !== 'company_admin');
       if (!formData.project) return allUsers;
 
       const selectedProj = projectOptions.find(p => p._id === formData.project || p.id === formData.project);
