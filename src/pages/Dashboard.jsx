@@ -77,7 +77,10 @@ const Dashboard = () => {
 
       const pCompId = String(payment.company?._id || payment.company || '');
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-      const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+      // Prefer populated company from payment, then lookup, then fallback
+      const pSettings = (payment.company && payment.company.settings) ? payment.company : null;
+      const foundComp = companyList.find(c => String(c._id) === pCompId);
+      const pComp = pSettings || foundComp || selectedCompany;
       const rates = getCompanyRates(pComp);
 
       if (userData.role === 'team_lead') {
@@ -89,7 +92,13 @@ const Dashboard = () => {
       const projectTasks = allTasks.filter(t => String(t.project?._id || t.project || '') === projectId && t.status === 'completed');
 
       const totalWeight = projectTasks.reduce((sum, t) => sum + (Number(t.weight) || 1), 0);
-      const executionPool = amount * rates.team * 0.8;
+
+      // Dynamic Execution Pool
+      const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+      const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+      const leadCommissionAmount = amount * teamLeadRateVal;
+      const teamBudgetTotal = amount * rates.team;
+      const executionPool = Math.max(0, teamBudgetTotal - leadCommissionAmount);
 
       if (totalWeight > 0) {
          const myTasks = projectTasks.filter(t => String(t.assignedTo?._id || t.assignedTo || '') === String(userData._id));
@@ -102,6 +111,7 @@ const Dashboard = () => {
 
    const distributionRates = useMemo(() => getCompanyRates(selectedCompany), [selectedCompany, getCompanyRates]);
 
+   // ... (allTeams logic - unchanged) ...
    const allTeams = useMemo(() => {
       if (!userData) return [];
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
@@ -183,6 +193,7 @@ const Dashboard = () => {
       return all.filter(u => memberIds.has(String(u._id)));
    }, [users, isSuperAdmin, userData, allTeams]);
 
+   // FIX: Update Salary Totals Calculation with Dynamic Rates
    useEffect(() => {
       if (!filteredPayments) return;
 
@@ -199,12 +210,22 @@ const Dashboard = () => {
 
          const amount = Number(p.totalAmount) || Number(p.amount) || 0;
          const pCompId = String(p.company?._id || p.company || '');
-         const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+
+         // Use populated settings
+         const pSettings = (p.company && p.company.settings) ? p.company : null;
+         const foundComp = companyList.find(c => String(c._id) === pCompId);
+         const pComp = pSettings || foundComp || selectedCompany;
          const rates = getCompanyRates(pComp);
 
+         const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+         const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
 
-         execution += amount * rates.team * 0.8;
-         leadManagement += amount * rates.team * 0.2;
+         const leadShare = amount * teamLeadRateVal;
+         const teamShareTotal = amount * rates.team;
+         const executionShare = Math.max(0, teamShareTotal - leadShare);
+
+         execution += executionShare;
+         leadManagement += leadShare;
          admin += amount * rates.admin;
          company += amount * rates.company;
       });
@@ -212,8 +233,8 @@ const Dashboard = () => {
       setSalaryTotals({ execution, leadManagement, admin, company });
    }, [filteredPayments, distributionRates, companies, selectedCompany, getCompanyRates]);
 
-   console.log(distributionRates);
 
+   // FIX: Update Personal Stats Logic for Admins/Team Leads
    useEffect(() => {
       if (isAdmin || !tasks || !filteredProjects) return;
 
@@ -244,11 +265,20 @@ const Dashboard = () => {
             if (projectPayment && (projectPayment.status === 'confirmed' || projectPayment.status === 'completed')) {
                const amount = Number(projectPayment.totalAmount) || Number(projectPayment.amount) || 0;
                const pCompId = String(projectPayment.company?._id || projectPayment.company || project.company?._id || project.company || '');
+
                const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
-               const pComp = companyList.find(c => String(c._id) === pCompId) || selectedCompany;
+               const pSettings = (projectPayment.company && projectPayment.company.settings) ? projectPayment.company : null;
+               const foundComp = companyList.find(c => String(c._id) === pCompId);
+               const pComp = pSettings || foundComp || selectedCompany;
                const rates = getCompanyRates(pComp);
 
-               const executionPool = amount * rates.team * 0.8;
+               const settings = pComp?.settings || pComp?.data?.company?.settings || {};
+               const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+
+               const leadShare = amount * teamLeadRateVal;
+               const teamShareTotal = amount * rates.team;
+               const executionPool = Math.max(0, teamShareTotal - leadShare);
+
                const pId = String(project._id);
                const totalPWeight = projectTotalWeights[pId] || 100;
 
@@ -267,18 +297,33 @@ const Dashboard = () => {
       });
    }, [tasks, filteredProjects, payments, isAdmin, userData, distributionRates]);
 
+   // CHART DATA CONFIGURATION
+   const isTeamLead = userData?.role === 'team_lead';
+   // If Team Lead, show Eexecution + Lead Management. If Admin/SuperAdmin, show All.
+   const chartLabels = isTeamLead
+      ? [t('execution_pool_label'), t('lead_management_label')]
+      : isAdmin
+         ? [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')]
+         : [t('completed'), t('pending')];
+
+   const chartValues = isTeamLead
+      ? [salaryTotals.execution, salaryTotals.leadManagement]
+      : isAdmin
+         ? [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company]
+         : [personalStats.completedWeight, personalStats.totalWeight - personalStats.completedWeight];
+
+   const chartColors = isTeamLead
+      ? ['#10B981', '#8B5CF6']
+      : isAdmin
+         ? ['#10B981', '#8B5CF6', '#EF4444', '#3B82F6']
+         : ['#10B981', '#F59E0B'];
+
    const salaryData = [{
       type: 'pie',
-      labels: isAdmin
-         ? [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')]
-         : [t('completed'), t('pending')],
-      values: isAdmin
-         ? [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company]
-         : [personalStats.completedWeight, personalStats.totalWeight - personalStats.completedWeight],
+      labels: chartLabels,
+      values: chartValues,
       marker: {
-         colors: isAdmin
-            ? ['#10B981', '#8B5CF6', '#EF4444', '#3B82F6']
-            : ['#10B981', '#F59E0B']
+         colors: chartColors
       },
       textinfo: 'label+percent',
       textfont: { color: '#FFFFFF', size: 12 },
@@ -467,9 +512,6 @@ const Dashboard = () => {
    const paymentStatus = confirmedPayment ? 'paid' : (projectPayments.length || selectedProject?.status === 'pending') ? 'pending' : 'none';
    const totalPaid = confirmedPayment?.totalAmount || 0;
 
-   console.log(todayRevenue);
-
-
    if ((authLoading || paymentsLoading || projectsLoading || companiesLoading || usersLoading) && (filteredProjects?.length === 0)) return <PageLoader />;
 
    return (
@@ -562,12 +604,15 @@ const Dashboard = () => {
                   <div className="mt-6 space-y-3">
                      {isAdmin ? (
                         <>
-                           {[
+                           {(isTeamLead ? [
+                              { label: t('execution_pool_label'), value: salaryTotals.execution, color: 'bg-green-500' },
+                              { label: t('lead_management_label'), value: salaryTotals.leadManagement, color: 'bg-purple-500' }
+                           ] : [
                               { label: t('execution_pool_label'), value: salaryTotals.execution, color: 'bg-green-500' },
                               { label: t('lead_management_label'), value: salaryTotals.leadManagement, color: 'bg-purple-500' },
                               { label: t('admin_label'), value: salaryTotals.admin, color: 'bg-red-500' },
                               { label: t('company'), value: salaryTotals.company, color: 'bg-blue-500' }
-                           ].map((item, i) => (
+                           ]).map((item, i) => (
                               <div key={i} className="flex items-center justify-between text-sm group">
                                  <div className="flex items-center gap-3">
                                     <div className={`w-2.5 h-2.5 rounded-full ${item.color} ring-2 ring-white dark:ring-zinc-900 shadow-sm`}></div>
