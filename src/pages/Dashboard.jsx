@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
 import { useProjectStore } from '../store/project.store';
 import { useAuthStore } from '../store/auth.store';
 import PageLoader from '../components/loader/PageLoader';
@@ -38,6 +39,11 @@ const Dashboard = () => {
    const [activeRoles, setActiveRoles] = useState(0);
    const [period, setPeriod] = useState('6m');
    const [selectedProject, setSelectedProject] = useState(null);
+   const [activeIndex, setActiveIndex] = useState(0);
+   const onPieEnter = (_, index) => {
+      setActiveIndex(index);
+   };
+
    const [salaryTotals, setSalaryTotals] = useState({
       execution: 0,
       leadManagement: 0,
@@ -325,27 +331,62 @@ const Dashboard = () => {
          ? ['#10B981', '#8B5CF6', '#EF4444', '#3B82F6']
          : ['#10B981', '#F59E0B'];
 
-   const salaryData = [{
-      type: 'pie',
-      labels: chartLabels,
-      values: chartValues,
-      marker: {
-         colors: chartColors
-      },
-      textinfo: 'label+percent',
-      textfont: { color: '#FFFFFF', size: 12 },
-      hoverinfo: 'label+value',
-      showlegend: false
-   }];
+   const renderActiveShape = (props) => {
+      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, percent } = props;
 
-   const salaryLayout = {
-      autosize: true,
-      margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      height: 250,
-      showlegend: false
+      return (
+         <g>
+            <text x={cx} y={cy} dy={8} textAnchor="middle" fill={theme === 'dark' ? '#FFF' : '#333'} className="text-2xl font-black">
+               {`${(percent * 100).toFixed(0)}%`}
+            </text>
+            <Sector
+               cx={cx}
+               cy={cy}
+               innerRadius={innerRadius}
+               outerRadius={outerRadius}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               fill={fill}
+            />
+            <Sector
+               cx={cx}
+               cy={cy}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               innerRadius={outerRadius + 6}
+               outerRadius={outerRadius + 10}
+               fill={fill}
+            />
+         </g>
+      );
    };
+
+   const RADIAN = Math.PI / 180;
+
+   // Transform data for Recharts Pie
+   const pieData = useMemo(() => {
+      let data = [];
+      if (isTeamLead) {
+         data = [
+            { name: t('execution_pool_label'), value: salaryTotals.execution, fill: '#10B981' },
+            { name: t('lead_management_label'), value: salaryTotals.leadManagement, fill: '#8B5CF6' }
+         ];
+      } else if (isAdmin) {
+         data = [
+            { name: t('execution_pool_label'), value: salaryTotals.execution, fill: '#10B981' },
+            { name: t('lead_management_label'), value: salaryTotals.leadManagement, fill: '#8B5CF6' },
+            { name: t('admin_label'), value: salaryTotals.admin, fill: '#EF4444' },
+            { name: t('company'), value: salaryTotals.company, fill: '#3B82F6' }
+         ];
+      } else {
+         data = [
+            { name: t('completed'), value: personalStats.completedWeight, fill: '#10B981' },
+            { name: t('pending'), value: personalStats.totalWeight - personalStats.completedWeight, fill: '#F59E0B' }
+         ];
+      }
+      // Sort for radial layout (largest outside)
+      return data.sort((a, b) => b.value - a.value);
+   }, [isTeamLead, isAdmin, salaryTotals, personalStats, t]);
 
    const filterPaymentsByPeriod = (payments, period) => {
       const now = new Date();
@@ -365,49 +406,42 @@ const Dashboard = () => {
       });
    };
 
-   const getMonthlyRevenue = (payments) => {
+   const revenueChart = useMemo(() => {
+      if (!filteredPayments) return [];
+      const filtered = filterPaymentsByPeriod(filteredPayments, period);
+
       const map = {};
-      payments.forEach(p => {
+      filtered.forEach(p => {
          const d = new Date(p.createdAt);
          const key = `${d.getFullYear()}-${d.getMonth()}`;
          map[key] = (map[key] || 0) + Number(p.totalAmount);
       });
-      const keys = Object.keys(map).sort((a, b) => new Date(a) - new Date(b));
-      return {
-         labels: keys.map(k => {
-            const [y, m] = k.split('-');
-            return new Date(y, m).toLocaleString(i18n.language || 'en', { month: 'short' });
-         }),
-         values: keys.map(k => map[k])
-      };
-   };
 
-   const revenueChart = useMemo(() => {
-      if (!filteredPayments) return { labels: [], values: [] };
-      const filtered = filterPaymentsByPeriod(filteredPayments, period);
-      return getMonthlyRevenue(filtered);
+      const keys = Object.keys(map).sort((a, b) => new Date(a) - new Date(b));
+      return keys.map(k => {
+         const [y, m] = k.split('-');
+         return {
+            name: new Date(y, m).toLocaleString(i18n.language || 'en', { month: 'short' }),
+            value: map[k]
+         };
+      });
    }, [filteredPayments, period]);
 
-   const revenueData = [{
-      type: 'scatter',
-      mode: 'lines+markers',
-      x: revenueChart.labels,
-      y: revenueChart.values,
-      line: { color: '#DC2626', width: 4, shape: 'spline' },
-      marker: { size: 6, color: '#DC2626', line: { color: 'white', width: 2 } },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(220, 38, 38, 0.1)'
-   }];
-
-   const revenueLayout = {
-      autosize: true,
-      margin: { t: 20, r: 20, b: 40, l: 40 },
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      xaxis: { color: theme === 'dark' ? '#9CA3AF' : '#6B7280', showgrid: false },
-      yaxis: { color: theme === 'dark' ? '#9CA3AF' : '#6B7280', gridcolor: theme === 'dark' ? '#374151' : '#E5E7EB' },
-      font: { family: 'Inter, sans-serif' },
-      showlegend: false
+   const CustomTooltip = ({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+         return (
+            <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-white/20 dark:border-zinc-700/50">
+               <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{label}</p>
+               <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <p className="text-lg font-black text-gray-900 dark:text-white">
+                     ${payload[0].value.toLocaleString()}
+                  </p>
+               </div>
+            </div>
+         );
+      }
+      return null;
    };
 
    useEffect(() => {
@@ -616,13 +650,44 @@ const Dashboard = () => {
                      </select>
                   </div>
                   <div className="w-full h-[350px]">
-                     <Plot
-                        data={revenueData}
-                        layout={revenueLayout}
-                        useResizeHandler={true}
-                        style={{ width: "100%", height: "100%" }}
-                        config={{ displayModeBar: false }}
-                     />
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                           data={revenueChart}
+                           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                           barSize={40}
+                        >
+                           <defs>
+                              <linearGradient id="colorRevenueBar" x1="0" y1="0" x2="0" y2="1">
+                                 <stop offset="0%" stopColor="#EF4444" stopOpacity={1} />
+                                 <stop offset="100%" stopColor="#B91C1C" stopOpacity={0.8} />
+                              </linearGradient>
+                           </defs>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#374151' : '#E5E7EB'} />
+                           <XAxis
+                              dataKey="name"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12, fontWeight: 600 }}
+                              dy={10}
+                           />
+                           <YAxis
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12, fontWeight: 600 }}
+                              tickFormatter={(value) => `$${value}`}
+                           />
+                           <Tooltip
+                              content={<CustomTooltip />}
+                              cursor={{ fill: theme === 'dark' ? '#3F3F46' : '#F3F4F6', opacity: 0.4, radius: 12 }}
+                           />
+                           <Bar
+                              dataKey="value"
+                              fill="url(#colorRevenueBar)"
+                              radius={[12, 12, 12, 12]}
+                              animationDuration={1500}
+                           />
+                        </BarChart>
+                     </ResponsiveContainer>
                   </div>
                </div>
 
@@ -635,14 +700,45 @@ const Dashboard = () => {
                         {isAdmin ? t('per_project_breakdown') : t('personal_earnings_breakdown')}
                      </p>
                   </div>
-                  <div className="flex-1 w-full min-h-[250px]">
-                     <Plot
-                        data={salaryData}
-                        layout={salaryLayout}
-                        useResizeHandler
-                        style={{ width: '100%', height: '100%' }}
-                        config={{ displayModeBar: false }}
-                     />
+                  <div className="flex-1 w-full min-h-[300px]">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                           <Pie
+                              activeIndex={activeIndex}
+                              activeShape={renderActiveShape}
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                              onMouseEnter={onPieEnter}
+                           >
+                              {pieData.map((entry, index) => (
+                                 <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                           </Pie>
+                           <Tooltip
+                              content={({ active, payload }) => {
+                                 if (active && payload && payload.length) {
+                                    return (
+                                       <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 dark:border-zinc-700/50 min-w-[150px]">
+                                          <div className="flex items-center gap-2 mb-2">
+                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }}></div>
+                                             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{payload[0].name}</p>
+                                          </div>
+                                          <p className="text-xl font-black text-gray-900 dark:text-white">
+                                             ${payload[0].value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                          </p>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                        </PieChart>
+                     </ResponsiveContainer>
                   </div>
                   <div className="mt-6 space-y-3">
                      {isAdmin ? (
@@ -759,51 +855,53 @@ const Dashboard = () => {
          </div>
 
          {/* Project Detail Modal */}
-         {selectedProject && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-               <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setSelectedProject(null)}></div>
-               <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800">
-                  <div className="flex justify-between items-start mb-8">
+         {
+            selectedProject && (
+               <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setSelectedProject(null)}></div>
+                  <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800">
+                     <div className="flex justify-between items-start mb-8">
+                        <div>
+                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${selectedProject.priority === 'urgent' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
+                              {selectedProject.priority} Project
+                           </span>
+                           <h2 className="text-3xl font-black text-gray-900 dark:text-white mt-3">{selectedProject.title}</h2>
+                        </div>
+                        <button onClick={() => setSelectedProject(null)} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
+                           <i className="fa-solid fa-times"></i>
+                        </button>
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-6 mb-8">
+                        <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                           <div className="text-xs font-bold text-gray-400 uppercase mb-1">Status</div>
+                           <div className={`font-bold capitalize ${selectedProject.status === 'completed' ? 'text-green-500' : 'text-gray-900 dark:text-white'}`}>{selectedProject.status.replace('_', ' ')}</div>
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                           <div className="text-xs font-bold text-gray-400 uppercase mb-1">Budget</div>
+                           <div className="font-mono font-bold text-gray-900 dark:text-white">${selectedProject.budget}</div>
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                           <div className="text-xs font-bold text-gray-400 uppercase mb-1">Deadline</div>
+                           <div className="font-bold text-gray-900 dark:text-white">{new Date(selectedProject.deadline).toLocaleDateString()}</div>
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                           <div className="text-xs font-bold text-gray-400 uppercase mb-1">Payment</div>
+                           <div className={`font-bold capitalize ${paymentStatus === 'paid' ? 'text-green-500' : 'text-yellow-500'}`}>{paymentStatus}</div>
+                        </div>
+                     </div>
+
                      <div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${selectedProject.priority === 'urgent' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-blue-600 border-blue-200'}`}>
-                           {selectedProject.priority} Project
-                        </span>
-                        <h2 className="text-3xl font-black text-gray-900 dark:text-white mt-3">{selectedProject.title}</h2>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">Description</h3>
+                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-zinc-800/50 p-6 rounded-2xl">
+                           {selectedProject.description}
+                        </p>
                      </div>
-                     <button onClick={() => setSelectedProject(null)} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
-                        <i className="fa-solid fa-times"></i>
-                     </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6 mb-8">
-                     <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-1">Status</div>
-                        <div className={`font-bold capitalize ${selectedProject.status === 'completed' ? 'text-green-500' : 'text-gray-900 dark:text-white'}`}>{selectedProject.status.replace('_', ' ')}</div>
-                     </div>
-                     <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-1">Budget</div>
-                        <div className="font-mono font-bold text-gray-900 dark:text-white">${selectedProject.budget}</div>
-                     </div>
-                     <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-1">Deadline</div>
-                        <div className="font-bold text-gray-900 dark:text-white">{new Date(selectedProject.deadline).toLocaleDateString()}</div>
-                     </div>
-                     <div className="p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-1">Payment</div>
-                        <div className={`font-bold capitalize ${paymentStatus === 'paid' ? 'text-green-500' : 'text-yellow-500'}`}>{paymentStatus}</div>
-                     </div>
-                  </div>
-
-                  <div>
-                     <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wide mb-3">Description</h3>
-                     <p className="text-gray-600 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-zinc-800/50 p-6 rounded-2xl">
-                        {selectedProject.description}
-                     </p>
                   </div>
                </div>
-            </div>
-         )}
-      </div>
+            )
+         }
+      </div >
    );
 };
 
