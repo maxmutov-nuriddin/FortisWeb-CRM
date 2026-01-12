@@ -870,7 +870,11 @@ const Tasks = () => {
                            toast.success(t('task_updated'));
                            loadPageData();
                         } else {
-                           await createTask(finalData);
+                           const created = await createTask(finalData);
+                           // FIX: Backend might ignore weight on create, so update it if needed
+                           if (created && Number(created.weight) !== finalData.weight && finalData.weight !== 1) {
+                              await updateTask(created._id || created.id, { weight: finalData.weight });
+                           }
                            toast.success(t('task_created'));
                            loadPageData();
                         }
