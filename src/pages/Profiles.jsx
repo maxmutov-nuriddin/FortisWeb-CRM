@@ -482,16 +482,16 @@ const Profiles = () => {
                            </div>
 
                            {/* Actions Dropdown Trigger (Simplified for this view) */}
-                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => openModal(user)} className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-blue-500 shadow-sm border border-gray-100 dark:border-zinc-700">
-                                 <i className="fa-solid fa-pen text-xs"></i>
-                              </button>
-                              {(isSuperAdmin || userData?.role === 'company_admin') && (
+                           {(isSuperAdmin || userData?.role === 'company_admin') && (
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <button onClick={() => openModal(user)} className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-blue-500 shadow-sm border border-gray-100 dark:border-zinc-700">
+                                    <i className="fa-solid fa-pen text-xs"></i>
+                                 </button>
                                  <button onClick={() => handleDelete(user._id)} className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm border border-gray-100 dark:border-zinc-700">
                                     <i className="fa-solid fa-trash text-xs"></i>
                                  </button>
-                              )}
-                           </div>
+                              </div>
+                           )}
                         </div>
 
                         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-zinc-800 grid grid-cols-2 gap-4 text-xs">
