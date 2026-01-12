@@ -116,6 +116,37 @@ const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
                      </div>
                   </div>
                )}
+
+               {/* Repository Section for Workers */}
+               {['worker', 'frontend', 'backend', 'marketer', 'designer', 'employee'].includes(useAuthStore.getState().user?.data?.user?.role || useAuthStore.getState().user?.role) && (
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                     <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                        <i className="fa-solid fa-code mr-2"></i>Repository
+                     </h4>
+                     {project.repository?.url ? (
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-dark-tertiary rounded-xl border border-gray-100 dark:border-gray-700">
+                           <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                 {project.repository.url}
+                              </p>
+                           </div>
+                           <button
+                              onClick={() => {
+                                 navigator.clipboard.writeText(project.repository.url);
+                              }}
+                              className="px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-bold border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
+                           >
+                              <i className="fa-solid fa-copy"></i>
+                              Copy
+                           </button>
+                        </div>
+                     ) : (
+                        <div className="p-3 bg-gray-50 dark:bg-dark-tertiary rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                           <p className="text-sm text-gray-500 italic">пока нет</p>
+                        </div>
+                     )}
+                  </div>
+               )}
             </div>
 
             <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-dark-tertiary flex justify-end">

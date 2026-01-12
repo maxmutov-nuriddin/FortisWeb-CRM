@@ -265,6 +265,34 @@ const Projects = () => {
                                  </button>
                               </div>
 
+                              {/* Repository Section for Workers */}
+                              {['worker', 'frontend', 'backend', 'marketer', 'designer', 'employee'].includes(userData?.role) && project.repository?.url && (
+                                 <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20">
+                                    <div className="flex items-center justify-between mb-2 text-[10px] font-bold text-red-500 uppercase tracking-wider">
+                                       <span>Repository Access</span>
+                                       <i className="fa-solid fa-code"></i>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                       <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                             {project.repository.url}
+                                          </p>
+                                       </div>
+                                       <button
+                                          onClick={(e) => {
+                                             e.stopPropagation();
+                                             navigator.clipboard.writeText(project.repository.url);
+                                             toast.success('Link copied!');
+                                          }}
+                                          className="px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
+                                       >
+                                          <i className="fa-solid fa-copy"></i>
+                                          Copy
+                                       </button>
+                                    </div>
+                                 </div>
+                              )}
+
                               {/* Info Grid */}
                               <div className="grid grid-cols-2 gap-4 mb-6">
                                  <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">
@@ -321,34 +349,6 @@ const Projects = () => {
                                     )}
                                  </div>
                               </div>
-
-                              {/* Repository Section for Workers */}
-                              {['worker', 'frontend', 'backend', 'marketer', 'designer', 'employee'].includes(userData?.role) && project.repository?.url && (
-                                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                    <div className="flex items-center justify-between mb-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                                       <span>Repository</span>
-                                       <i className="fa-solid fa-code"></i>
-                                    </div>
-                                    <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-zinc-800/50 rounded-xl border border-transparent hover:border-gray-200 dark:hover:border-zinc-700 transition-all group/repo">
-                                       <div className="flex-1 min-w-0">
-                                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
-                                             {project.repository.url}
-                                          </p>
-                                       </div>
-                                       <button
-                                          onClick={(e) => {
-                                             e.stopPropagation();
-                                             navigator.clipboard.writeText(project.repository.url);
-                                             toast.success('Link copied!');
-                                          }}
-                                          className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm transition-colors"
-                                          title="Copy Link"
-                                       >
-                                          <i className="fa-solid fa-copy text-xs"></i>
-                                       </button>
-                                    </div>
-                                 </div>
-                              )}
 
                               {/* Footer Action */}
                               {userData?.role === 'team_lead' && project.status === 'assigned' && (
