@@ -239,7 +239,7 @@ const Projects = () => {
                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-red-900/20 hover:shadow-red-900/40 hover:-translate-y-0.5 flex items-center gap-2"
                   >
                      <i className="fa-solid fa-cloud-arrow-up"></i>
-                     Upload File
+                     {t('upload_file_button')}
                   </button>
                </div>
             </div>
@@ -281,7 +281,7 @@ const Projects = () => {
                               {['worker', 'frontend', 'backend', 'marketer', 'designer', 'employee'].includes(userData?.role) && project.repository?.url && (
                                  <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-100 dark:border-red-900/20">
                                     <div className="flex items-center justify-between mb-2 text-[10px] font-bold text-red-500 uppercase tracking-wider">
-                                       <span>Repository Access</span>
+                                       <span>{t('repo_access_label')}</span>
                                        <i className="fa-solid fa-code"></i>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ const Projects = () => {
                                           className="px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 rounded-lg text-[10px] font-bold border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
                                        >
                                           <i className="fa-solid fa-copy"></i>
-                                          Copy
+                                          {t('copy_button')}
                                        </button>
                                        {(project.repository.addedBy === userData?._id || ['super_admin', 'company_admin'].includes(userData?.role)) && (
                                           <button
@@ -320,11 +320,11 @@ const Projects = () => {
                               {/* Info Grid */}
                               <div className="grid grid-cols-2 gap-4 mb-6">
                                  <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">
-                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Created</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">{t('created')}</div>
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white">{new Date(project.createdAt).toLocaleDateString()}</div>
                                  </div>
                                  <div className="p-3 bg-gray-50 dark:bg-zinc-800/50 rounded-2xl">
-                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Deadline</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">{t('deadline')}</div>
                                     <div className="text-sm font-semibold text-gray-900 dark:text-white">{new Date(project.deadline).toLocaleDateString()}</div>
                                  </div>
                               </div>
@@ -332,7 +332,7 @@ const Projects = () => {
                               {/* Files Section */}
                               <div className="flex-1 min-h-[100px]">
                                  <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                    <span>Files ({projectFiles.length})</span>
+                                    <span>{t('files_count_label')} ({projectFiles.length})</span>
                                     <i className="fa-solid fa-paperclip"></i>
                                  </div>
 
@@ -368,7 +368,7 @@ const Projects = () => {
                                        })
                                     ) : (
                                        <div className="text-center py-8 border-2 border-dashed border-gray-100 dark:border-zinc-800 rounded-xl">
-                                          <p className="text-xs text-gray-400 font-medium">No files attached</p>
+                                          <p className="text-xs text-gray-400 font-medium">{t('no_files_attached')}</p>
                                        </div>
                                     )}
                                  </div>
@@ -382,7 +382,7 @@ const Projects = () => {
                                        disabled={isSubmitting}
                                        className="w-full bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl text-sm font-bold shadow-green-500/20 shadow-lg transition-all active:scale-95"
                                     >
-                                       Accept Assignment
+                                       {t('accept_assignment_button')}
                                     </button>
                                  </div>
                               )}
@@ -396,9 +396,9 @@ const Projects = () => {
                   <div className="w-24 h-24 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-6">
                      <i className="fa-solid fa-folder-open text-3xl text-gray-300 dark:text-zinc-600"></i>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Projects Found</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{t('no_projects_found')}</h3>
                   <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm text-center">
-                     There are no projects matching your current filters. Try changing the status filter or checking back later.
+                     {t('no_projects_matching_filters')}
                   </p>
                </div>
             )}

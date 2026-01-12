@@ -606,7 +606,7 @@ const Tasks = () => {
                               </button>
                            )}
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">Quick Actions</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">{t('quick_actions')}</span>
                      </div>
                   </div>
                ))}

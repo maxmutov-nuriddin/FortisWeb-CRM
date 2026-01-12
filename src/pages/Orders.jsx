@@ -699,7 +699,7 @@ const Orders = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                <div>
                   <h1 className="text-4xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">{t('orders_management')}</h1>
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">Track and manage client orders</p>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">{t('orders_desc') || 'Track and manage client orders'}</p>
                </div>
 
                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
@@ -719,11 +719,11 @@ const Orders = () => {
                      onChange={(e) => setStatusFilter(e.target.value)}
                      className="px-4 py-3 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 cursor-pointer shadow-sm"
                   >
-                     <option>All Statuses</option>
-                     <option>Pending</option>
-                     <option>In Progress</option>
-                     <option>Completed</option>
-                     <option>Cancelled</option>
+                     <option value="All">{t('all_statuses')}</option>
+                     <option value="pending">{t('pending')}</option>
+                     <option value="in_progress">{t('in_progress')}</option>
+                     <option value="completed">{t('completed')}</option>
+                     <option value="cancelled">{t('cancelled')}</option>
                   </select>
 
                   {isAdmin && (
@@ -732,7 +732,7 @@ const Orders = () => {
                         className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-red-900/20 hover:shadow-red-900/40 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
                      >
                         <i className="fa-solid fa-plus"></i>
-                        New Order
+                        {t('create_new_order_button')}
                      </button>
                   )}
                </div>
@@ -744,13 +744,13 @@ const Orders = () => {
                   <table className="w-full whitespace-nowrap">
                      <thead>
                         <tr className="bg-gray-50/50 dark:bg-zinc-800/50 text-left border-b border-gray-100 dark:border-zinc-800">
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">ID</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">Client</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">Project Title</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">Budget</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">Deadline</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider">Status</th>
-                           <th className="px-8 py-5 text-xs font-extrabold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('order_id_th')}</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('client_th')}</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('project_title_th')}</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('budget_th')}</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('deadline_th')}</th>
+                           <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">{t('status_th')}</th>
+                           <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">{t('actions_th')}</th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
@@ -824,8 +824,8 @@ const Orders = () => {
                                     <div className="w-16 h-16 bg-gray-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
                                        <i className="fa-solid fa-inbox text-2xl text-gray-400"></i>
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">No Orders Found</h3>
-                                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Try adjusting your filters or create a new order.</p>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('no_orders_found')}</h3>
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('adjust_filters_hint')}</p>
                                  </div>
                               </td>
                            </tr>
@@ -842,7 +842,7 @@ const Orders = () => {
                <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setIsModalOpen(false)}></div>
                <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-4xl p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
-                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">Order Details</h2>
+                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">{t('order_details')}</h2>
                      <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
                         <i className="fa-solid fa-times"></i>
                      </button>
@@ -853,15 +853,15 @@ const Orders = () => {
                      <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                            <i className="fa-solid fa-info-circle text-red-500"></i>
-                           Order Information
+                           {t('order_info_title')}
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Order ID</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('order_id_label')}</p>
                               <p className="text-sm font-mono text-gray-900 dark:text-white">#{selectedOrder._id.slice(-8).toUpperCase()}</p>
                            </div>
                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Status</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('order_status_label')}</p>
                               <div className="flex items-center gap-2">
                                  <select
                                     value={selectedOrder.status}
@@ -869,31 +869,31 @@ const Orders = () => {
                                     disabled={!isAdmin}
                                     className="px-3 py-1 rounded-lg text-sm font-bold bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                  >
-                                    <option value="pending">Pending</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="review">Review</option>
-                                    <option value="revision">Revision</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="cancelled">Cancelled</option>
+                                    <option value="pending">{t('pending')}</option>
+                                    <option value="in_progress">{t('in_progress')}</option>
+                                    <option value="review">{t('review')}</option>
+                                    <option value="revision">{t('revision')}</option>
+                                    <option value="completed">{t('completed')}</option>
+                                    <option value="cancelled">{t('cancelled')}</option>
                                  </select>
                                  {/* Payment Confirmation Button - Only for admins when status is pending */}
 
                               </div>
                            </div>
                            <div className="col-span-2">
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Title</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('project_title_th')}</p>
                               <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedOrder.title}</p>
                            </div>
                            <div className="col-span-2">
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Description</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('description')}</p>
                               <p className="text-sm text-gray-700 dark:text-gray-300">{selectedOrder.description || 'No description'}</p>
                            </div>
                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Budget</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('budget')}</p>
                               <p className="text-sm font-bold text-gray-900 dark:text-white">${selectedOrder.budget?.toLocaleString()}</p>
                            </div>
                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Priority</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('priority')}</p>
                               <span className={`px-2 py-1 rounded-lg text-xs font-bold ${selectedOrder.priority === 'high' ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
                                  selectedOrder.priority === 'medium' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' :
                                     'bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400'
@@ -902,9 +902,9 @@ const Orders = () => {
                               </span>
                            </div>
                            <div>
-                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Deadline</p>
+                              <p className="text-xs font-bold text-gray-400 uppercase mb-1">{t('deadline')}</p>
                               <p className="text-sm text-gray-900 dark:text-white">
-                                 {selectedOrder.deadline ? new Date(selectedOrder.deadline).toLocaleDateString() : 'No deadline'}
+                                 {selectedOrder.deadline ? new Date(selectedOrder.deadline).toLocaleDateString() : t('no_deadline')}
                               </p>
                            </div>
                         </div>
@@ -914,7 +914,7 @@ const Orders = () => {
                      <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
                         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                            <i className="fa-solid fa-user text-red-500"></i>
-                           Client Information
+                           {t('client_information')}
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                            <div>
@@ -941,11 +941,11 @@ const Orders = () => {
                         <div className="bg-gray-50 dark:bg-zinc-800/50 rounded-2xl p-6">
                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                               <i className="fa-solid fa-file-alt text-red-500"></i>
-                              Technical Specification (ТЗ)
+                              {t('technical_spec_title')}
                               {isTeamLead && (
                                  <span className="ml-auto text-xs font-normal text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg">
                                     <i className="fa-solid fa-check-circle mr-1"></i>
-                                    Available for download
+                                    {t('available_download')}
                                  </span>
                               )}
                            </h3>
@@ -976,10 +976,10 @@ const Orders = () => {
                               <div className="text-center py-4">
                                  <i className="fa-solid fa-file-circle-exclamation text-3xl text-gray-400 mb-2"></i>
                                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {isAdmin ? 'No technical specification uploaded yet' : 'Technical specification not available'}
+                                    {isAdmin ? t('no_tech_spec') : 'Technical specification not available'}
                                  </p>
                                  {isAdmin && (
-                                    <p className="text-xs text-gray-400 mt-1">Upload files when creating or editing the order</p>
+                                    <p className="text-xs text-gray-400 mt-1">{t('upload_hint')}</p>
                                  )}
                               </div>
                            )}
@@ -1028,7 +1028,7 @@ const Orders = () => {
                         ) : (
                            <div className="text-center">
                               <i className="fa-brands fa-git-alt text-4xl text-gray-400 mb-3"></i>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">No repository connected</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('no_repo_connected')}</p>
                               {(isAdmin || isTeamLead) ? (
                                  <button
                                     onClick={() => {
@@ -1038,10 +1038,10 @@ const Orders = () => {
                                     className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition"
                                  >
                                     <i className="fa-solid fa-plus mr-2"></i>
-                                    Add Repository
+                                    {t('add_repo_button')}
                                  </button>
                               ) : (
-                                 <p className="text-xs text-gray-400">Only admins and team leads can add repositories</p>
+                                 <p className="text-xs text-gray-400">{t('repo_access_restricted')}</p>
                               )}
                            </div>
                         )}
@@ -1050,7 +1050,7 @@ const Orders = () => {
 
                   <div className="mt-8 flex justify-end gap-3">
                      <button onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">
-                        Close
+                        {t('close_button')}
                      </button>
                   </div>
                </div>
@@ -1063,7 +1063,7 @@ const Orders = () => {
                <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setIsModalOpen(false)}></div>
                <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-3xl p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
-                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">{isCreateMode ? 'Create New Order' : 'Edit Order'}</h2>
+                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">{isCreateMode ? t('create_order_title') : t('edit_order_title')}</h2>
                      <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
                         <i className="fa-solid fa-times"></i>
                      </button>
@@ -1120,7 +1120,7 @@ const Orders = () => {
                               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                               required
                               className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium"
-                              placeholder="Enter project title"
+                              placeholder={t('enter_project_title')}
                            />
                         </div>
 
@@ -1131,7 +1131,7 @@ const Orders = () => {
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                               rows="3"
                               className="w-full px-4 py-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium resize-none"
-                              placeholder="Project description"
+                              placeholder={t('enter_description')}
                            ></textarea>
                         </div>
 
@@ -1232,16 +1232,16 @@ const Orders = () => {
                      {/* Technical Specification Upload */}
                      <div className="border-t border-gray-200 dark:border-zinc-700 pt-6">
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                           Technical Specification (Optional)
+                           {t('technical_spec_title')} (Optional)
                         </label>
                         <div className="flex items-center gap-4">
                            <label className="flex-1 cursor-pointer">
                               <div className="border-2 border-dashed border-gray-300 dark:border-zinc-700 rounded-xl p-6 text-center hover:border-red-500 transition">
                                  <i className="fa-solid fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
                                  <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                    {uploadedFile ? uploadedFile.name : 'Click to upload PDF, DOCX, or ZIP'}
+                                    {uploadedFile ? uploadedFile.name : t('click_to_upload')}
                                  </p>
-                                 <p className="text-xs text-gray-500 mt-1">Max file size: 10MB</p>
+                                 <p className="text-xs text-gray-500 mt-1">{t('max_file_size')}</p>
                               </div>
                               <input
                                  type="file"
@@ -1259,7 +1259,7 @@ const Orders = () => {
                            onClick={() => setIsModalOpen(false)}
                            className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
                         >
-                           Cancel
+                           {t('cancel')}
                         </button>
                         <button
                            type="submit"
@@ -1269,12 +1269,12 @@ const Orders = () => {
                            {isSubmitting ? (
                               <>
                                  <i className="fa-solid fa-spinner fa-spin mr-2"></i>
-                                 {isCreateMode ? 'Creating...' : 'Saving...'}
+                                 {isCreateMode ? t('creating_status') : t('saving_status')}
                               </>
                            ) : (
                               <>
                                  <i className={`fa-solid ${isCreateMode ? 'fa-plus' : 'fa-save'} mr-2`}></i>
-                                 {isCreateMode ? 'Create Order' : 'Save Changes'}
+                                 {isCreateMode ? t('create_new_order_button') : t('save')}
                               </>
                            )}
                         </button>
@@ -1290,7 +1290,7 @@ const Orders = () => {
                <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md transition-opacity" onClick={() => setIsRepoModalOpen(false)}></div>
                <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-2xl p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800">
                   <div className="flex justify-between items-center mb-6">
-                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">Add Repository</h2>
+                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">{t('add_repo_button')}</h2>
                      <button onClick={() => setIsRepoModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
                         <i className="fa-solid fa-times"></i>
                      </button>
@@ -1437,7 +1437,7 @@ const Orders = () => {
                            onClick={() => setIsRepoModalOpen(false)}
                            className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
                         >
-                           Cancel
+                           {t('cancel')}
                         </button>
                         <button
                            type="submit"
@@ -1447,12 +1447,12 @@ const Orders = () => {
                            {isAddingRepo ? (
                               <>
                                  <i className="fa-solid fa-spinner fa-spin mr-2"></i>
-                                 Adding...
+                                 {t('adding_status')}
                               </>
                            ) : (
                               <>
                                  <i className="fa-solid fa-plus mr-2"></i>
-                                 Add Repository
+                                 {t('add_repo_button')}
                               </>
                            )}
                         </button>
@@ -1467,14 +1467,14 @@ const Orders = () => {
                <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-md" onClick={() => setIsPaymentModalOpen(false)}></div>
                <div className="bg-white dark:bg-zinc-900 rounded-3xl w-full max-w-md p-8 relative z-10 shadow-2xl border border-gray-100 dark:border-zinc-800">
                   <div className="flex justify-between items-center mb-6">
-                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">Confirm Payment</h2>
+                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">{t('confirm_payment')}</h2>
                      <button onClick={() => setIsPaymentModalOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-red-500 hover:text-white transition">
                         <i className="fa-solid fa-times"></i>
                      </button>
                   </div>
                   <div className="space-y-6">
                      <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Select Payment Method</label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">{t('select_payment_method') || 'Select Payment Method'}</label>
                         <div className="grid grid-cols-2 gap-3">
                            <button type="button" onClick={() => setSelectedPaymentMethod('bank_transfer')} className={`p-4 rounded-xl border-2 transition ${selectedPaymentMethod === 'bank_transfer' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-zinc-700'}`}>
                               <i className="fa-solid fa-building-columns text-2xl mb-2"></i>
@@ -1506,8 +1506,8 @@ const Orders = () => {
                         <div className="flex items-start gap-2">
                            <i className="fa-solid fa-info-circle text-blue-500 mt-0.5"></i>
                            <div className="text-xs text-gray-700 dark:text-gray-300">
-                              <p className="font-bold mb-1">Amount: ${selectedOrder?.budget?.toLocaleString() || 0}</p>
-                              <p>After confirmation, order status changes to "In Progress".</p>
+                              <p className="font-bold mb-1">{t('amount') || 'Amount'}: ${selectedOrder?.budget?.toLocaleString() || 0}</p>
+                              <p>{t('payment_confirmation_hint')}</p>
                            </div>
                         </div>
                      </div>
@@ -1517,7 +1517,7 @@ const Orders = () => {
                            disabled={isSubmitting}
                            className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 transition disabled:opacity-50"
                         >
-                           Cancel
+                           {t('cancel')}
                         </button>
                         <button
                            onClick={handleConfirmPayment}
@@ -1527,12 +1527,12 @@ const Orders = () => {
                            {isSubmitting ? (
                               <>
                                  <i className="fa-solid fa-spinner fa-spin mr-2"></i>
-                                 Processing...
+                                 {t('processing_status')}
                               </>
                            ) : (
                               <>
                                  <i className="fa-solid fa-check-circle mr-2"></i>
-                                 Confirm Payment
+                                 {t('confirm_payment')}
                               </>
                            )}
                         </button>

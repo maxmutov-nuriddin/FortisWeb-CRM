@@ -52,10 +52,10 @@ const NotFound = () => {
             </div>
 
             <h2 className="text-3xl md:text-4xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">
-               Page Not Found
+               {t('page_not_found')}
             </h2>
             <p className="text-gray-500 dark:text-gray-400 text-lg mb-10 max-w-md mx-auto font-medium leading-relaxed">
-               Oops! The page you are looking for seems to have vanished into the digital void.
+               {t('page_not_found_desc')}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -64,14 +64,14 @@ const NotFound = () => {
                   className="w-full sm:w-auto px-8 py-3.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl font-bold hover:scale-105 transition-all shadow-lg shadow-gray-900/20 dark:shadow-white/20 flex items-center justify-center gap-2"
                >
                   <i className="fa-solid fa-house"></i>
-                  <span>Go Home</span>
+                  <span>{t('go_home')}</span>
                </Link>
                <button
                   onClick={handleBack}
                   className="w-full sm:w-auto px-8 py-3.5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-800 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
                >
                   <i className="fa-solid fa-arrow-left"></i>
-                  <span>Go Back</span>
+                  <span>{t('go_back')}</span>
                </button>
             </div>
          </div>
