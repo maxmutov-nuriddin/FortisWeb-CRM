@@ -64,8 +64,8 @@ const SignIn = () => {
 
          <div className="w-full max-w-md bg-white/70 dark:bg-black/40 backdrop-blur-xl rounded-3xl shadow-xl dark:shadow-2xl p-8 mx-4 border border-white/50 dark:border-white/10 relative z-10 transition-all duration-500">
             <div className="flex flex-col items-center mb-8">
-               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-red-600/30 mb-4">
-                  F
+               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-600/30 mb-4">
+                  FWB
                </div>
                <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight text-center">Welcome Back</h2>
                <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 text-center font-medium">Sign in to continue to FortisWeb</p>

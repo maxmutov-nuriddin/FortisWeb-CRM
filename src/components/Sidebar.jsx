@@ -155,8 +155,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             {/* Logo Section */}
             <div id="logo-section" className="h-20 flex items-center px-8 border-b border-gray-100 dark:border-zinc-800/50">
                <Link to="/" className="flex items-center space-x-3 group">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:scale-105 transition-transform duration-300">
-                     <span className="font-bold text-xl">F</span>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:scale-105 transition-transform duration-300">
+                     <span className="font-bold text-md">FWB</span>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">FortisWeb</h2>
                </Link>
