@@ -533,7 +533,7 @@ const Dashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                {[
-                  { title: t('new_orders'), value: newOrder, icon: 'fa-folder-plus', color: 'text-blue-500', bg: 'bg-blue-500/10', sub: t('from_system') },
+                  { title: t('total_orders'), value: totalProjects, icon: 'fa-folder-plus', color: 'text-blue-500', bg: 'bg-blue-500/10', sub: t('from_system') },
                   { title: t('active_projects'), value: activeProjects, icon: 'fa-layer-group', color: 'text-indigo-500', bg: 'bg-indigo-500/10', sub: `${inProgress} ${t('in_progress_stat')}` },
                   { title: t('today_revenue'), value: `$${todayRevenue}`, icon: 'fa-dollar-sign', color: 'text-green-500', bg: 'bg-green-500/10', sub: `${revenuePercent > 0 ? '+' : ''}${revenuePercent}% ${t('growth')}` },
                   { title: t('team_members'), value: totalMembers, icon: 'fa-users', color: 'text-purple-500', bg: 'bg-purple-500/10', sub: `${onlineMembers} ${t('online')}` },
