@@ -1,9 +1,35 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../store/auth.store';
 
 const NotFound = () => {
    const { t } = useTranslation();
+   const navigate = useNavigate();
+   const { user } = useAuthStore();
+   const userData = user?.data?.user || user?.user || user;
+
+   const handleBack = () => {
+      const restrictedPaths = ['/orders', '/company', '/profiles'];
+      const referrer = document.referrer;
+
+      const isRestrictedForUser = (path) => {
+         if (path === '/company') return userData?.role !== 'super_admin';
+         if (path === '/orders' || path === '/profiles') {
+            return ['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(userData?.role);
+         }
+         return false;
+      };
+
+      // If we're coming from a path that is restricted for THIS user, go home
+      const comingFromRestricted = restrictedPaths.some(path => referrer.includes(path) && isRestrictedForUser(path));
+
+      if (comingFromRestricted || window.history.length <= 1) {
+         navigate('/');
+      } else {
+         window.history.back();
+      }
+   };
 
    return (
       <div className="w-full min-h-screen bg-gray-50/50 dark:bg-black flex items-center justify-center p-6 overflow-hidden relative">
@@ -41,7 +67,7 @@ const NotFound = () => {
                   <span>Go Home</span>
                </Link>
                <button
-                  onClick={() => window.history.back()}
+                  onClick={handleBack}
                   className="w-full sm:w-auto px-8 py-3.5 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white border border-gray-200 dark:border-zinc-800 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all flex items-center justify-center gap-2"
                >
                   <i className="fa-solid fa-arrow-left"></i>
