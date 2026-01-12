@@ -1,7 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-unsafe-optional-chaining */
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import Plot from 'react-plotly.js';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from 'recharts';
+import { useSettingsStore } from '../store/settings.store';
 import { toast } from 'react-toastify';
 import { useAuthStore } from '../store/auth.store';
 import { usePaymentStore } from '../store/payment.store';
@@ -15,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 const Payments = () => {
    const { t } = useTranslation();
+   const { theme } = useSettingsStore();
    const [projectAmount, setProjectAmount] = useState(10000);
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [statusFilter, setStatusFilter] = useState('all');
@@ -529,27 +531,50 @@ const Payments = () => {
       };
    }, [filteredPayments, calculateMyShare, userData, projects, isSuperAdmin, getCompanyRates, companies, selectedCompany]);
 
-   const distributionData = [{
-      type: 'pie',
-      labels: [t('execution_pool_label'), t('lead_management_label'), t('company'), t('admin_label')],
-      values: [stats.executionPool, stats.leadManagementPool, stats.companyPool, stats.adminPool],
-      marker: {
-         colors: ['#10B981', '#8B5CF6', '#3B82F6', '#EF4444']
-      },
-      textinfo: 'label+value',
-      textfont: {
-         color: '#FFFFFF',
-         size: 10
-      },
-      hovertemplate: '%{label}: $%{value}<extra></extra>'
-   }];
+   const distributionChartData = useMemo(() => [
+      { name: t('execution_pool_label'), value: stats.executionPool, fill: '#10B981' },
+      { name: t('lead_management_label'), value: stats.leadManagementPool, fill: '#8B5CF6' },
+      { name: t('company'), value: stats.companyPool, fill: '#3B82F6' },
+      { name: t('admin_label'), value: stats.adminPool, fill: '#EF4444' }
+   ].filter(i => i.value > 0), [stats, t]);
 
-   const distributionLayout = {
-      autosize: true,
-      margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      showlegend: false
+   const [activeIndex, setActiveIndex] = useState(0);
+
+   const onPieEnter = (_, index) => {
+      setActiveIndex(index);
+   };
+
+   const renderActiveShape = (props) => {
+      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+
+      return (
+         <g>
+            <text x={cx} y={cy} dy={-10} textAnchor="middle" fill={theme === 'dark' ? '#FFF' : '#111827'} className="text-3xl font-black">
+               {`${(percent * 100).toFixed(0)}%`}
+            </text>
+            <text x={cx} y={cy} dy={20} textAnchor="middle" fill={theme === 'dark' ? '#9CA3AF' : '#6B7280'} className="text-sm font-bold uppercase tracking-wider">
+               {payload.name}
+            </text>
+            <Sector
+               cx={cx}
+               cy={cy}
+               innerRadius={innerRadius}
+               outerRadius={outerRadius}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               fill={fill}
+            />
+            <Sector
+               cx={cx}
+               cy={cy}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               innerRadius={outerRadius + 6}
+               outerRadius={outerRadius + 10}
+               fill={fill}
+            />
+         </g>
+      );
    };
 
    const handleConfirm = async (id) => {
@@ -753,7 +778,45 @@ const Payments = () => {
                      {t('distribution_chart')}
                   </h3>
                   <div className="w-full h-[300px]">
-                     <Plot data={distributionData} layout={distributionLayout} useResizeHandler={true} style={{ width: "100%", height: "100%" }} config={{ displayModeBar: false }} />
+                     <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                           <Pie
+                              activeIndex={activeIndex}
+                              activeShape={renderActiveShape}
+                              data={distributionChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={80}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                              onMouseEnter={onPieEnter}
+                              paddingAngle={2}
+                           >
+                              {distributionChartData.map((entry, index) => (
+                                 <Cell key={`cell-${index}`} fill={entry.fill} stroke={theme === 'dark' ? '#18181B' : '#fff'} strokeWidth={2} />
+                              ))}
+                           </Pie>
+                           <Tooltip
+                              content={({ active, payload }) => {
+                                 if (active && payload && payload.length) {
+                                    return (
+                                       <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 dark:border-zinc-700/50 min-w-[150px]">
+                                          <div className="flex items-center gap-2 mb-2">
+                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }}></div>
+                                             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{payload[0].name}</p>
+                                          </div>
+                                          <p className="text-xl font-black text-gray-900 dark:text-white">
+                                             ${payload[0].value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                          </p>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                        </PieChart>
+                     </ResponsiveContainer>
                   </div>
                </div>
             </div>

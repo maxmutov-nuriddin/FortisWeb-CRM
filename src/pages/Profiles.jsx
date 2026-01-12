@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useMemo } from 'react';
-import Plot from 'react-plotly.js';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { useUserStore } from '../store/user.store';
 import { useAuthStore } from '../store/auth.store';
 import { useCompanyStore } from '../store/company.store';
@@ -190,18 +190,21 @@ const Profiles = () => {
       };
    }, [rawUserList]);
 
-   const roleData = useMemo(() => {
+   const roleChartData = useMemo(() => {
       const all = rawUserList;
-      const roles = ['backend', 'frontend', 'team_lead', 'company_admin', 'marketer'];
-      const values = roles.map(r => all.filter(u => u.role === r).length);
-      return [{
-         type: 'doughnut',
-         values,
-         labels: ['Backend', 'Frontend', 'Leads', 'Admins', 'Marketing'],
-         marker: { colors: ['#10B981', '#3B82F6', '#8B5CF6', '#EF4444', '#F59E0B'] },
-         textinfo: 'none',
-         hole: 0.6
-      }];
+      const roles = [
+         { id: 'backend', label: 'Backend', color: '#10B981' },
+         { id: 'frontend', label: 'Frontend', color: '#3B82F6' },
+         { id: 'team_lead', label: 'Leads', color: '#8B5CF6' },
+         { id: 'company_admin', label: 'Admins', color: '#EF4444' },
+         { id: 'marketer', label: 'Marketing', color: '#F59E0B' }
+      ];
+
+      return roles.map(r => ({
+         name: r.label,
+         value: all.filter(u => u.role === r.id).length,
+         fill: r.color
+      })).filter(item => item.value > 0);
    }, [rawUserList]);
 
    const roleLayout = {
@@ -423,11 +426,37 @@ const Profiles = () => {
 
                   {/* Mini Role Chart */}
                   <div className="w-16 h-16">
-                     <Plot
-                        data={[{ ...roleData[0], type: 'pie', textinfo: 'none' }]}
-                        layout={{ ...roleLayout, height: 60, width: 60, margin: { t: 0, b: 0, l: 0, r: 0 } }}
-                        config={{ displayModeBar: false }}
-                     />
+                     <div className="w-[60px] h-[60px]">
+                        <PieChart width={60} height={60}>
+                           <Pie
+                              data={roleChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={18}
+                              outerRadius={30}
+                              paddingAngle={4}
+                              dataKey="value"
+                              stroke="none"
+                           >
+                              {roleChartData.map((entry, index) => (
+                                 <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                           </Pie>
+                           <Tooltip
+                              content={({ active, payload }) => {
+                                 if (active && payload && payload.length) {
+                                    return (
+                                       <div className="bg-white/90 dark:bg-black/90 backdrop-blur text-xs rounded-lg p-2 shadow-lg border border-gray-100 dark:border-zinc-800 z-50">
+                                          <span className="font-bold block" style={{ color: payload[0].payload.fill }}>{payload[0].name}</span>
+                                          <span className="font-black text-gray-900 dark:text-white">{payload[0].value}</span>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                        </PieChart>
+                     </div>
                   </div>
                </div>
             </div>

@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useState } from 'react';
-import Plot from 'react-plotly.js';
+import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Sector, BarChart, Bar } from 'recharts';
 import { useCompanyStore } from '../store/company.store';
 import PageLoader from '../components/loader/PageLoader';
 import { useAuthStore } from '../store/auth.store';
@@ -66,65 +66,63 @@ const Company = () => {
 
    const companiesList = useMemo(() => companies?.data?.companies || [], [companies]);
 
-   const statusData = useMemo(() => ([{
-      type: 'pie',
-      labels: [t('active'), t('inactive')],
-      values: [
-         companiesList.filter(c => c.isActive === true).length,
-         companiesList.filter(c => c.isActive === false).length
-      ],
-      marker: {
-         colors: ['#10B981', '#EF4444']
-      },
-      textinfo: 'label+percent',
-      textfont: { color: '#FFFFFF', size: 11 },
-      hovertemplate: `%{label}: %{value} ${t('companies')}<extra></extra>`
-   }]), [companiesList, t]);
+   // Data for Companies by Status (Donut Chart)
+   const statusChartData = useMemo(() => [
+      { name: t('active'), value: companiesList.filter(c => c.isActive === true).length, fill: '#10B981' },
+      { name: t('inactive'), value: companiesList.filter(c => c.isActive === false).length, fill: '#EF4444' }
+   ], [companiesList, t]);
 
+   const [activeIndex, setActiveIndex] = useState(0);
 
-   const statusLayout = {
-      autosize: true,
-      margin: { t: 0, r: 0, b: 0, l: 0 },
-      plot_bgcolor: 'transparent',
-      paper_bgcolor: 'transparent',
-      showlegend: false,
-      font: { color: theme === 'dark' ? '#fff' : '#111827' }
+   const onPieEnter = (_, index) => {
+      setActiveIndex(index);
    };
 
+   const renderActiveShape = (props) => {
+      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, percent } = props;
+
+      return (
+         <g>
+            <text x={cx} y={cy} dy={8} textAnchor="middle" fill={theme === 'dark' ? '#FFF' : '#333'} className="text-2xl font-black">
+               {`${(percent * 100).toFixed(0)}%`}
+            </text>
+            <Sector
+               cx={cx}
+               cy={cy}
+               innerRadius={innerRadius}
+               outerRadius={outerRadius}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               fill={fill}
+            />
+            <Sector
+               cx={cx}
+               cy={cy}
+               startAngle={startAngle}
+               endAngle={endAngle}
+               innerRadius={outerRadius + 6}
+               outerRadius={outerRadius + 10}
+               fill={fill}
+            />
+         </g>
+      );
+   };
+
+   // Data for Companies Growth Trend (Area Chart)
    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
    const currentMonthIndex = new Date().getMonth();
    const months = monthOrder.slice(0, currentMonthIndex + 1);
 
-   const yValues = months.map(month =>
-      companiesList.filter(c => {
-         if (!c.createdAt) return false;
-         const monthStr = new Date(c.createdAt).toLocaleString(i18n.language || 'en-US', { month: 'short' });
-         return monthStr === month;
-      }).length
-   );
-
-   const trendData = [{
-      type: 'scatter',
-      mode: 'lines',
-      name: t('companies'),
-      x: months,
-      y: yValues,
-      line: { color: '#ef4444', width: 3 },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(239, 68, 68, 0.1)'
-   }];
-
-   const trendLayout = {
-      autosize: true,
-      title: { text: '', font: { size: 0 } },
-      xaxis: { title: '', gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB', color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
-      yaxis: { title: t('companies'), gridcolor: theme === 'dark' ? '#2A2A2A' : '#E5E7EB', color: theme === 'dark' ? '#9CA3AF' : '#4B5563' },
-      margin: { t: 20, r: 20, b: 40, l: 60 },
-      plot_bgcolor: 'transparent',
-      paper_bgcolor: 'transparent',
-      showlegend: false,
-      hovermode: 'x unified'
-   };
+   const growthChartData = useMemo(() => {
+      return months.map(month => {
+         const count = companiesList.filter(c => {
+            if (!c.createdAt) return false;
+            const monthStr = new Date(c.createdAt).toLocaleString(i18n.language || 'en-US', { month: 'short' });
+            return monthStr === month;
+         }).length;
+         return { name: month, value: count };
+      });
+   }, [companiesList, months, i18n.language]);
 
    const filteredCompanies = useMemo(() => {
       let result = [...companiesList];
@@ -541,14 +539,44 @@ const Company = () => {
                      <i className="fa-solid fa-chart-pie text-gray-400"></i>
                      {t('companies_by_status')}
                   </h3>
-                  <div className="h-[300px]">
-                     <Plot
-                        data={statusData}
-                        layout={statusLayout}
-                        useResizeHandler={true}
-                        style={{ width: "100%", height: "100%" }}
-                        config={{ displayModeBar: false }}
-                     />
+                  <div className="h-[300px] w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                           <Pie
+                              activeIndex={activeIndex}
+                              activeShape={renderActiveShape}
+                              data={statusChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={80}
+                              outerRadius={100}
+                              dataKey="value"
+                              onMouseEnter={onPieEnter}
+                           >
+                              {statusChartData.map((entry, index) => (
+                                 <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                           </Pie>
+                           <Tooltip
+                              content={({ active, payload }) => {
+                                 if (active && payload && payload.length) {
+                                    return (
+                                       <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-4 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 dark:border-zinc-700/50 min-w-[150px]">
+                                          <div className="flex items-center gap-2 mb-2">
+                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.fill }}></div>
+                                             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{payload[0].name}</p>
+                                          </div>
+                                          <p className="text-xl font-black text-gray-900 dark:text-white">
+                                             {payload[0].value} {t('companies')}
+                                          </p>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                        </PieChart>
+                     </ResponsiveContainer>
                   </div>
                </div>
                <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl p-6 shadow-sm">
@@ -556,14 +584,51 @@ const Company = () => {
                      <i className="fa-solid fa-chart-line text-gray-400"></i>
                      {t('companies_growth_trend')}
                   </h3>
-                  <div className="h-[300px]">
-                     <Plot
-                        data={trendData}
-                        layout={trendLayout}
-                        useResizeHandler={true}
-                        style={{ width: "100%", height: "100%" }}
-                        config={{ displayModeBar: false }}
-                     />
+                  <div className="h-[300px] w-full">
+                     <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                           data={growthChartData}
+                           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                           barSize={40}
+                        >
+                           <defs>
+                              <linearGradient id="colorGrowthBar" x1="0" y1="0" x2="0" y2="1">
+                                 <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
+                                 <stop offset="95%" stopColor="#B91C1C" stopOpacity={0.8} />
+                              </linearGradient>
+                           </defs>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme === 'dark' ? '#374151' : '#E5E7EB'} />
+                           <XAxis
+                              dataKey="name"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12, fontWeight: 600 }}
+                              dy={10}
+                           />
+                           <YAxis
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fill: theme === 'dark' ? '#9CA3AF' : '#6B7280', fontSize: 12, fontWeight: 600 }}
+                           />
+                           <Tooltip
+                              cursor={{ fill: theme === 'dark' ? '#3F3F46' : '#F3F4F6', opacity: 0.4, radius: 4 }}
+                              content={({ active, payload, label }) => {
+                                 if (active && payload && payload.length) {
+                                    return (
+                                       <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 rounded-xl shadow-xl border border-white/20 dark:border-zinc-700/50">
+                                          <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+                                          <p className="text-lg font-bold text-red-500">
+                                             {payload[0].value} {t('companies')}
+                                          </p>
+                                       </div>
+                                    );
+                                 }
+                                 return null;
+                              }}
+                           />
+                           <Bar dataKey="value" fill="url(#colorGrowthBar)" radius={[12, 12, 12, 12]} animationDuration={1500} />
+                        </BarChart>
+                     </ResponsiveContainer>
                   </div>
                </div>
             </div>
