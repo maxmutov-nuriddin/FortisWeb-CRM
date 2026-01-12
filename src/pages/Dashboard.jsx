@@ -158,22 +158,13 @@ const Dashboard = () => {
 
    const filteredProjects = useMemo(() => {
       const all = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
-      console.log('🔍 [Dashboard] All projects:', all.length, all);
-      console.log('🔍 [Dashboard] User role:', userData?.role);
-
       // Backend already filters projects based on user permissions
-      // No need for frontend filtering - just show all returned projects
-      console.log('✅ [Dashboard] Showing all projects from backend:', all.length);
       return all;
    }, [projects, userData]);
 
    const filteredPayments = useMemo(() => {
       const all = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-      console.log('💰 [Dashboard] All payments:', all.length, all);
-
       // Backend already filters payments based on user permissions
-      // No need for additional frontend filtering
-      console.log('✅ [Dashboard] Showing all payments from backend:', all.length);
       return all;
    }, [payments, userData]);
 
@@ -480,10 +471,7 @@ const Dashboard = () => {
          const companyId = userData.company?._id || userData.company;
          const role = userData.role;
 
-         console.log('🚀 [Dashboard] Initializing dashboard for role:', role, 'companyId:', companyId);
-
          if (role === 'super_admin') {
-            console.log('👑 [Dashboard] Super admin - fetching all companies');
             const res = await getCompanies();
             const companiesList = res?.data?.companies || res?.companies || (Array.isArray(res) ? res : []);
             const finalCompanies = companiesList.length > 0 ? companiesList : (companies?.data?.companies || []);
@@ -500,16 +488,12 @@ const Dashboard = () => {
             // All non-super-admin users use company-wide endpoints
             // Backend filters data based on user permissions
             if (role === 'company_admin' || role === 'team_lead' || role === 'employee' || role === 'frontend' || role === 'backend') {
-               console.log('👔 [Dashboard] Fetching company data (backend will filter by permissions)');
                await getProjectsByCompany(companyId);
                await getPaymentsByCompany(companyId);
-               console.log('✅ [Dashboard] Company data fetched');
             } else {
                // Fallback for unknown roles
-               console.log('👷 [Dashboard] Unknown role - fetching user-specific data');
                await getAllProjects([companyId]);
                await getPaymentsByUser(userData._id);
-               console.log('✅ [Dashboard] User data fetched');
             }
 
             if (role !== 'company_admin' && role !== 'team_lead') {
@@ -527,10 +511,8 @@ const Dashboard = () => {
 
    useEffect(() => {
       const projectsData = filteredProjects;
-      console.log('📊 [Dashboard] Calculating stats from projects:', projectsData.length);
 
       if (!Array.isArray(projectsData) || projectsData.length === 0) {
-         console.log('⚠️ [Dashboard] No projects found - setting stats to 0');
          setTodayProjects([]);
          setNewOrder(0);
          setActiveProjects(0);
@@ -543,14 +525,6 @@ const Dashboard = () => {
       const newOrders = projectsData.filter(p => p.status === 'pending').length;
       const activeProjs = projectsData.filter(p => ['in_progress', 'review', 'revision'].includes(p.status)).length;
       const inProgressProjs = projectsData.filter(p => p.status === 'in_progress').length;
-
-      console.log('📊 [Dashboard] Stats calculated:', {
-         total: projectsData.length,
-         today: todayProjs.length,
-         newOrders,
-         active: activeProjs,
-         inProgress: inProgressProjs
-      });
 
       setTodayProjects(todayProjs);
       setNewOrder(newOrders);
@@ -649,7 +623,7 @@ const Dashboard = () => {
                         <option value="1y">{t('last_year')}</option>
                      </select>
                   </div>
-                  <div className="w-full h-[350px]">
+                  <div className="w-full h-[350px] min-w-0">
                      <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                            data={revenueChart}
@@ -700,7 +674,7 @@ const Dashboard = () => {
                         {isAdmin ? t('per_project_breakdown') : t('personal_earnings_breakdown')}
                      </p>
                   </div>
-                  <div className="flex-1 w-full min-h-[300px]">
+                  <div className="w-full h-[350px] min-w-0">
                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                            <Pie
