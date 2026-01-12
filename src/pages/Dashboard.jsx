@@ -390,10 +390,11 @@ const Dashboard = () => {
 
    const revenueData = [{
       type: 'scatter',
-      mode: 'lines',
+      mode: 'lines+markers',
       x: revenueChart.labels,
       y: revenueChart.values,
       line: { color: '#DC2626', width: 4, shape: 'spline' },
+      marker: { size: 6, color: '#DC2626', line: { color: 'white', width: 2 } },
       fill: 'tozeroy',
       fillcolor: 'rgba(220, 38, 38, 0.1)'
    }];
@@ -603,7 +604,7 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between mb-8">
                      <div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('revenue_overview')}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('monthly_revenue_desc')}</p>
+                        <p className="text-base font-medium text-gray-600 dark:text-gray-300 mt-1">{t('monthly_revenue_desc')}</p>
                      </div>
                      <select
                         value={period}
