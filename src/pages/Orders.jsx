@@ -62,7 +62,7 @@ const Orders = () => {
    const isAdmin = isSuperAdmin || isCompanyAdmin;
 
    const { companies, getCompanies, getCompanyById, selectedCompany } = useCompanyStore();
-   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, addRepository, assignProject, isLoading: projectsLoading } = useProjectStore();
+   const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, addRepository, deleteRepository, assignProject, isLoading: projectsLoading } = useProjectStore();
    const { getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { tasks, getTasksByUser } = useTaskStore();
    const { uploadFile, getFiles, uploads } = useProjectUploadStore();
@@ -556,6 +556,39 @@ const Orders = () => {
       }
    };
 
+   const handleDeleteRepository = async () => {
+      if (!selectedOrder) return;
+      if (!window.confirm('Are you sure you want to remove this repository link?')) return;
+
+      try {
+         await deleteRepository(selectedOrder._id);
+         toast.success('Repository removed successfully');
+
+         // Update local state
+         const updatedOrder = {
+            ...selectedOrder,
+            repository: null,
+            repositoryUrl: ''
+         };
+         setSelectedOrder(updatedOrder);
+
+         // Refresh projects list
+         if (isSuperAdmin && viewCompanyId === 'all') {
+            const res = await getCompanies();
+            const list = res?.data?.companies || res || [];
+            const ids = list.map(c => c._id);
+            if (ids.length) {
+               await getAllProjects(ids);
+            }
+         } else if (activeCompanyId && activeCompanyId !== 'all') {
+            await getProjectsByCompany(activeCompanyId);
+         }
+      } catch (err) {
+         console.error('Delete repository error:', err);
+         toast.error(err.response?.data?.message || 'Failed to remove repository');
+      }
+   };
+
    const copyToClipboard = (text) => {
       navigator.clipboard.writeText(text);
       toast.success('Copied to clipboard');
@@ -981,6 +1014,15 @@ const Orders = () => {
                                  >
                                     <i className="fa-solid fa-copy"></i>
                                  </button>
+                                 {(selectedOrder.repository?.addedBy === userData?._id || isAdmin) && (
+                                    <button
+                                       onClick={handleDeleteRepository}
+                                       className="px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 rounded-lg text-sm font-bold transition"
+                                       title="Remove Repository"
+                                    >
+                                       <i className="fa-solid fa-trash-can"></i>
+                                    </button>
+                                 )}
                               </div>
                            </div>
                         ) : (

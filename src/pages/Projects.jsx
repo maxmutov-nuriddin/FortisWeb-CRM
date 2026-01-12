@@ -21,6 +21,7 @@ const Projects = () => {
       getProjectsByCompany,
       acceptProject,
       deleteProject,
+      deleteRepository,
       isLoading: projectsLoading
    } = useProjectStore();
 
@@ -186,6 +187,17 @@ const Projects = () => {
       }
    };
 
+   const handleDeleteRepo = async (projectId) => {
+      if (!window.confirm('Are you sure you want to remove this repository link?')) return;
+      try {
+         await deleteRepository(projectId);
+         toast.success('Repository link removed');
+      } catch (error) {
+         console.error(error);
+         toast.error('Failed to remove repository');
+      }
+   };
+
    const statusBadge = (status) => {
       switch (status) {
          case 'assigned': return 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30';
@@ -289,6 +301,18 @@ const Projects = () => {
                                           <i className="fa-solid fa-copy"></i>
                                           Copy
                                        </button>
+                                       {(project.repository.addedBy === userData?._id || ['super_admin', 'company_admin'].includes(userData?.role)) && (
+                                          <button
+                                             onClick={async (e) => {
+                                                e.stopPropagation();
+                                                handleDeleteRepo(project._id);
+                                             }}
+                                             className="w-8 h-8 rounded-lg bg-white dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 border border-gray-200 dark:border-zinc-700 transition-colors flex items-center justify-center shadow-sm"
+                                             title="Delete"
+                                          >
+                                             <i className="fa-solid fa-trash-can text-[10px]"></i>
+                                          </button>
+                                       )}
                                     </div>
                                  </div>
                               )}

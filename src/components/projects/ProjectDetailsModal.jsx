@@ -1,9 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/auth.store';
+import { useProjectStore } from '../../store/project.store';
+import { toast } from 'react-toastify';
 
 const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
    const { t } = useTranslation();
+
+   const { deleteRepository } = useProjectStore();
+   const userData = useAuthStore.getState().user?.data?.user || useAuthStore.getState().user?.role;
+   const currentUserId = useAuthStore.getState().user?.data?.user?._id || useAuthStore.getState().user?._id;
 
    if (!isOpen || !project) return null;
 
@@ -133,12 +139,31 @@ const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
                            <button
                               onClick={() => {
                                  navigator.clipboard.writeText(project.repository.url);
+                                 toast.success('Link copied!');
                               }}
                               className="px-3 py-1.5 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-bold border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-2 shadow-sm"
                            >
                               <i className="fa-solid fa-copy"></i>
                               Copy
                            </button>
+                           {(project.repository.addedBy === currentUserId || ['super_admin', 'company_admin'].includes(userData?.role)) && (
+                              <button
+                                 onClick={async () => {
+                                    if (window.confirm('Remove repository link?')) {
+                                       try {
+                                          await deleteRepository(project._id);
+                                          toast.success('Repository removed');
+                                       } catch (err) {
+                                          toast.error('Failed to remove repository');
+                                       }
+                                    }
+                                 }}
+                                 className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                                 title="Delete"
+                              >
+                                 <i className="fa-solid fa-trash-can"></i>
+                              </button>
+                           )}
                         </div>
                      ) : (
                         <div className="p-3 bg-gray-50 dark:bg-dark-tertiary rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
