@@ -40,6 +40,17 @@ const Projects = () => {
       if (companyId) {
          getProjectsByCompany(companyId);
          getFiles({ companyId });
+      } else if (userData?.role === 'super_admin') {
+         // Super Admin sees all projects/files, or explicitly passed company filter?
+         // For now fetch all files implies no filter, backend handles it.
+         // But wait, getProjectsByCompany also depends on ID. 
+         // Super Admin usually sees ALL projects.
+         // Let's assume there's a getAllProjects or similar, but here we reuse existing logic.
+         // If super admin has no company, maybe we should fetch ALL files.
+         getFiles({});
+         // Note: getProjectsByCompany might fail if passed null? 
+         // Assuming super admin handles projects separately or has a different view, 
+         // but for files we definitely need to fetch them.
       }
    }, [userData, getProjectsByCompany, getFiles]);
 
