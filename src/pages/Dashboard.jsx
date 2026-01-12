@@ -21,7 +21,7 @@ const Dashboard = () => {
    const { user, isLoading: authLoading, error: authError } = useAuthStore();
    const { users, getUsersByCompany, getAllUsers, isLoading: usersLoading } = useUserStore();
    const { projects, getProjectsByCompany, getAllProjects, isLoading: projectsLoading, error: projectsError } = useProjectStore();
-   const { payments, getPaymentsByCompany, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
+   const { payments, getPaymentsByCompany, getPaymentsByUser, getAllPayments, isLoading: paymentsLoading, error: paymentsError } = usePaymentStore();
    const { companies, selectedCompany, getCompanies, getCompanyById, isLoading: companiesLoading } = useCompanyStore();
    const { tasks, getTasksByUser, getTasksByProjects } = useTaskStore();
 
@@ -152,32 +152,24 @@ const Dashboard = () => {
 
    const filteredProjects = useMemo(() => {
       const all = projects?.data?.projects || (Array.isArray(projects) ? projects : []);
-      if (isSuperAdmin || userData?.role === 'company_admin') return all;
+      console.log('🔍 [Dashboard] All projects:', all.length, all);
+      console.log('🔍 [Dashboard] User role:', userData?.role);
 
-      const currentUserId = String(userData?._id || '');
-      const myTeamIds = new Set(allTeams.map(t => String(t._id)));
-
-      return all.filter(p => {
-         const isAssigned = p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === currentUserId);
-         if (isAssigned) return true;
-
-         const projectTeamId = String(p.team?._id || p.team || '');
-         if (myTeamIds.has(projectTeamId)) return true;
-
-         return false;
-      });
-   }, [projects, isSuperAdmin, userData, allTeams]);
+      // Backend already filters projects based on user permissions
+      // No need for frontend filtering - just show all returned projects
+      console.log('✅ [Dashboard] Showing all projects from backend:', all.length);
+      return all;
+   }, [projects, userData]);
 
    const filteredPayments = useMemo(() => {
       const all = payments?.data?.payments || (Array.isArray(payments) ? payments : []);
-      if (isSuperAdmin || userData?.role === 'company_admin') return all;
+      console.log('💰 [Dashboard] All payments:', all.length, all);
 
-      const visibleProjectIds = new Set(filteredProjects.map(p => String(p._id)));
-      return all.filter(p => {
-         const pId = String(p.project?._id || p.project || '');
-         return visibleProjectIds.has(pId);
-      });
-   }, [payments, isSuperAdmin, userData, filteredProjects]);
+      // Backend already filters payments based on user permissions
+      // No need for additional frontend filtering
+      console.log('✅ [Dashboard] Showing all payments from backend:', all.length);
+      return all;
+   }, [payments, userData]);
 
    const filteredUsers = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
@@ -438,7 +430,10 @@ const Dashboard = () => {
          const companyId = userData.company?._id || userData.company;
          const role = userData.role;
 
+         console.log('🚀 [Dashboard] Initializing dashboard for role:', role, 'companyId:', companyId);
+
          if (role === 'super_admin') {
+            console.log('👑 [Dashboard] Super admin - fetching all companies');
             const res = await getCompanies();
             const companiesList = res?.data?.companies || res?.companies || (Array.isArray(res) ? res : []);
             const finalCompanies = companiesList.length > 0 ? companiesList : (companies?.data?.companies || []);
@@ -450,9 +445,23 @@ const Dashboard = () => {
             }
          } else if (companyId) {
             getCompanyById(companyId);
-            getProjectsByCompany(companyId);
-            getPaymentsByCompany(companyId);
             getUsersByCompany(companyId);
+
+            // All non-super-admin users use company-wide endpoints
+            // Backend filters data based on user permissions
+            if (role === 'company_admin' || role === 'team_lead' || role === 'employee' || role === 'frontend' || role === 'backend') {
+               console.log('👔 [Dashboard] Fetching company data (backend will filter by permissions)');
+               await getProjectsByCompany(companyId);
+               await getPaymentsByCompany(companyId);
+               console.log('✅ [Dashboard] Company data fetched');
+            } else {
+               // Fallback for unknown roles
+               console.log('👷 [Dashboard] Unknown role - fetching user-specific data');
+               await getAllProjects([companyId]);
+               await getPaymentsByUser(userData._id);
+               console.log('✅ [Dashboard] User data fetched');
+            }
+
             if (role !== 'company_admin' && role !== 'team_lead') {
                const myProjects = filteredProjects.map(p => p._id);
                if (myProjects.length > 0) {
@@ -468,7 +477,10 @@ const Dashboard = () => {
 
    useEffect(() => {
       const projectsData = filteredProjects;
+      console.log('📊 [Dashboard] Calculating stats from projects:', projectsData.length);
+
       if (!Array.isArray(projectsData) || projectsData.length === 0) {
+         console.log('⚠️ [Dashboard] No projects found - setting stats to 0');
          setTodayProjects([]);
          setNewOrder(0);
          setActiveProjects(0);
@@ -476,10 +488,24 @@ const Dashboard = () => {
          setTotalProjects(0);
          return;
       }
-      setTodayProjects(projectsData.filter(p => isToday(p.createdAt)));
-      setNewOrder(projectsData.filter(p => p.status === 'pending').length);
-      setActiveProjects(projectsData.filter(p => ['in_progress', 'review', 'revision'].includes(p.status)).length);
-      setInProgress(projectsData.filter(p => p.status === 'in_progress').length);
+
+      const todayProjs = projectsData.filter(p => isToday(p.createdAt));
+      const newOrders = projectsData.filter(p => p.status === 'pending').length;
+      const activeProjs = projectsData.filter(p => ['in_progress', 'review', 'revision'].includes(p.status)).length;
+      const inProgressProjs = projectsData.filter(p => p.status === 'in_progress').length;
+
+      console.log('📊 [Dashboard] Stats calculated:', {
+         total: projectsData.length,
+         today: todayProjs.length,
+         newOrders,
+         active: activeProjs,
+         inProgress: inProgressProjs
+      });
+
+      setTodayProjects(todayProjs);
+      setNewOrder(newOrders);
+      setActiveProjects(activeProjs);
+      setInProgress(inProgressProjs);
       setTotalProjects(projectsData.length);
    }, [filteredProjects]);
 
