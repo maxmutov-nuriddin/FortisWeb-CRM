@@ -56,11 +56,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             if (!isPending) return false;
 
             const role = userData?.role;
-            if (role === 'super_admin' || role === 'company_admin') return true;
+            if (role === 'super_admin' || role === 'company_admin' || role === 'team_lead') return true;
 
-            if (role === 'team_lead') {
-               return String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
-            }
+            // if (role === 'team_lead') {
+            //    const directMatch = String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
+            //    const teamMatch = String(project.assignedTeam?.teamLead?._id || project.assignedTeam?.teamLead || '') === String(currentUserId);
+            //    return directMatch || teamMatch;
+            // }
 
             const isAssigned = project.assignedMembers?.some(m => String(m.user?._id || m.user || m) === String(currentUserId));
             if (isAssigned) {
