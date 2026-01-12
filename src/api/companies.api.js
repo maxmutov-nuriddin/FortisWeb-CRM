@@ -3,6 +3,7 @@ import api from './axios.api';
 export const companiesApi = {
    create: (data) => api.post('/api/companies', data),
    getAll: () => api.get('/api/companies'),
+   getMy: () => api.get('/api/companies/my'),
    getById: (id) => api.get(`/api/companies/${id}`),
    delete: (id) => api.delete(`/api/companies/${id}`),
    update: (id, data) => api.put(`/api/companies/${id}`, data),

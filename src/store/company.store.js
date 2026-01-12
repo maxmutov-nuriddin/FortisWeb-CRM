@@ -43,6 +43,30 @@ export const useCompanyStore = create((set) => ({
       }
    },
 
+   getMyCompany: async () => {
+      set({ isLoading: true, error: null });
+      try {
+         const response = await companiesApi.getMy();
+         // Set as selectedCompany since it's the user's own company
+         const companyData = response.data.data?.company || response.data.company || response.data.data || response.data;
+         set({
+            selectedCompany: companyData,
+            companies: {
+               success: true,
+               data: {
+                  companies: [companyData],
+                  count: 1
+               }
+            },
+            isLoading: false
+         });
+         return response.data;
+      } catch (error) {
+         set({ error: error.response?.data?.message || 'Failed to fetch your company', isLoading: false });
+         throw error;
+      }
+   },
+
    getCompanyById: async (id) => {
       set({ isLoading: true, error: null });
       try {

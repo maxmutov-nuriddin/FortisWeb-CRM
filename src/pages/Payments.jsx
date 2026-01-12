@@ -24,7 +24,7 @@ const Payments = () => {
    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
    const { user } = useAuthStore();
-   const { companies, selectedCompany, getCompanies, getCompanyById } = useCompanyStore();
+   const { companies, selectedCompany, getCompanies, getMyCompany, getCompanyById } = useCompanyStore();
    const { users, getAllUsers, getUsersByCompany } = useUserStore();
    const {
       payments,
@@ -116,8 +116,12 @@ const Payments = () => {
 
    // Load companies once on mount
    useEffect(() => {
-      getCompanies();
-   }, []);
+      if (isSuperAdmin) {
+         getCompanies();
+      } else {
+         getMyCompany();
+      }
+   }, [isSuperAdmin]);
 
    // Optimized data fetching with parallel requests
    const fetchData = useCallback(async () => {
@@ -140,14 +144,15 @@ const Payments = () => {
                   getAllTasks()
                );
             }
-         } else if (activeCompanyId && activeCompanyId !== 'all') {
-            // Fetch company-specific data in parallel
+         } else if (isSuperAdmin && activeCompanyId && activeCompanyId !== 'all') {
+            // Super admin viewing specific company
             requests.push(
                getPaymentsByCompany(activeCompanyId),
                getUsersByCompany(activeCompanyId),
                getProjectsByCompany(activeCompanyId)
             );
          } else if (userData?._id) {
+            // Regular users (company_admin, team_lead, employees)
             const companyId = userData.company?._id || userData.company || '';
 
             if (companyId) {
@@ -157,11 +162,13 @@ const Payments = () => {
                );
             }
 
+            // Role-based payment fetching
             if (userData.role === 'team_lead' || userData.role === 'company_admin') {
                if (companyId) {
                   requests.push(getPaymentsByCompany(companyId));
                }
             } else {
+               // All employee roles: employee, backend, frontend, designer, marketer
                requests.push(getPaymentsByUser(userData._id));
             }
          }
