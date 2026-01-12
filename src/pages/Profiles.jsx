@@ -95,18 +95,73 @@ const Profiles = () => {
       }
    }, [isTeamModalOpen, isSuperAdmin, userData]);
 
+   // Get user's teams (same logic as Dashboard)
+   const allTeams = useMemo(() => {
+      if (!userData) return [];
+      const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
+      const userCompanyId = String(userData.company?._id || userData.company || '');
+
+      let relevantCompanies = [...companyList];
+      const selComp = selectedCompany?.company || selectedCompany?.data?.company || selectedCompany;
+
+      if (selComp && String(selComp._id) === userCompanyId) {
+         if (!relevantCompanies.some(c => String(c._id) === userCompanyId)) {
+            relevantCompanies.push(selComp);
+         } else {
+            relevantCompanies = relevantCompanies.map(c => String(c._id) === userCompanyId ? selComp : c);
+         }
+      }
+
+      if (isSuperAdmin) {
+         let teams = [];
+         relevantCompanies.forEach(c => {
+            if (c.teams) teams = [...teams, ...c.teams.map(t => ({ ...t, companyName: c.name, companyId: String(c._id) }))];
+         });
+         return teams;
+      } else {
+         const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
+         const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
+
+         if (userData?.role === 'company_admin') {
+            return companyTeams;
+         }
+
+         const currentUserId = String(userData?._id || '');
+         return companyTeams.filter(t =>
+            String(t.teamLead?._id || t.teamLead || '') === currentUserId ||
+            t.members?.some(m => String(m?._id || m.user?._id || m.user || m) === currentUserId)
+         );
+      }
+   }, [companies, selectedCompany, userData, isSuperAdmin]);
+
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
-      let filtered = isSuperAdmin ? all : all.filter(u => u.role !== 'super_admin');
+      if (isSuperAdmin || userData?.role === 'company_admin') return all.filter(u => u.role !== 'super_admin' || isSuperAdmin);
 
-      if (!isSuperAdmin && userData?.role !== 'company_admin') {
-         // Filter logic for lower roles - usually only see their team or company depending on strictness
-         // For now, simplify to company users
-         const userCompanyId = String(userData.company?._id || userData.company || '');
-         filtered = filtered.filter(u => String(u.company?._id || u.company || '') === userCompanyId);
-      }
-      return filtered;
-   }, [users, isSuperAdmin, userData]);
+      const memberIds = new Set();
+
+      // Add team members and team leads
+      allTeams.forEach(t => {
+         if (t.members) t.members.forEach(m => memberIds.add(String(m?._id || m.user?._id || m.user || m)));
+         memberIds.add(String(t.teamLead?._id || t.teamLead || ''));
+      });
+
+      // Add current user
+      memberIds.add(String(userData?._id));
+
+      // Add company admin(s) of the user's company
+      const userCompanyId = String(userData?.company?._id || userData?.company || '');
+      all.forEach(u => {
+         if (u.role === 'company_admin') {
+            const uCompanyId = String(u.company?._id || u.company || '');
+            if (uCompanyId === userCompanyId) {
+               memberIds.add(String(u._id));
+            }
+         }
+      });
+
+      return all.filter(u => memberIds.has(String(u._id)));
+   }, [users, isSuperAdmin, userData, allTeams]);
 
    const userList = useMemo(() => {
       let result = rawUserList;

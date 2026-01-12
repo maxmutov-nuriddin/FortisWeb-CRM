@@ -176,11 +176,26 @@ const Dashboard = () => {
       if (isSuperAdmin || userData?.role === 'company_admin') return all;
 
       const memberIds = new Set();
+
+      // Add team members and team leads
       allTeams.forEach(t => {
          if (t.members) t.members.forEach(m => memberIds.add(String(m?._id || m.user?._id || m.user || m)));
          memberIds.add(String(t.teamLead?._id || t.teamLead || ''));
       });
+
+      // Add current user
       memberIds.add(String(userData?._id));
+
+      // Add company admin(s) of the user's company
+      const userCompanyId = String(userData?.company?._id || userData?.company || '');
+      all.forEach(u => {
+         if (u.role === 'company_admin') {
+            const uCompanyId = String(u.company?._id || u.company || '');
+            if (uCompanyId === userCompanyId) {
+               memberIds.add(String(u._id));
+            }
+         }
+      });
 
       return all.filter(u => memberIds.has(String(u._id)));
    }, [users, isSuperAdmin, userData, allTeams]);
