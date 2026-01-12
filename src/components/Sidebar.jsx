@@ -171,14 +171,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                   // Company: Super Admin or Company Admin (view own)
                   ...(['super_admin',].includes(userData?.role) ? [{ path: '/company', icon: 'fa-building', label: 'company' }] : []),
                   // Orders: Not for employees
-                  ...(!['employee', 'worker'].includes(userData?.role) ? [{ path: '/orders', icon: 'fa-file-invoice', label: 'orders', count: newOrdersCount, color: 'bg-red-500' }] : []),
+                  ...(!['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(userData?.role) ? [{ path: '/orders', icon: 'fa-file-invoice', label: 'orders', count: newOrdersCount, color: 'bg-red-500' }] : []),
                   // Profiles: Not for employees (only leads/admins)
-                  ...(!['employee', 'worker'].includes(userData?.role) ? [{ path: '/profiles', icon: 'fa-users', label: 'profiles' }] : []),
+                  ...(!['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(userData?.role) ? [{ path: '/profiles', icon: 'fa-users', label: 'profiles' }] : []),
                   { path: '/tasks', icon: 'fa-list-check', label: 'tasks', count: newTasksCount, color: 'bg-red-500' },
                   { path: '/team-chats', icon: 'fa-comments', label: 'team_chats', count: newChatsCount, color: 'bg-green-500' },
                   { path: '/payments', icon: 'fa-wallet', label: 'payments' },
                   // Projects: Not for employees (Same as Orders mostly)
-                  ...(!['employee', 'worker'].includes(userData?.role) ? [{ path: '/projects', icon: 'fa-layer-group', label: 'projects' }] : []),
+                  { path: '/projects', icon: 'fa-layer-group', label: 'projects' },
                   { path: '/settings', icon: 'fa-gear', label: 'settings' },
                ].map((item, index) => (
                   <Link

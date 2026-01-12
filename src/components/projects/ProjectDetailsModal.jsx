@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../../store/auth.store';
 
 const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
    const { t } = useTranslation();

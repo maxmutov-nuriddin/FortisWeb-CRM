@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
@@ -143,8 +143,22 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
-              <Route path="company" element={<Company />} />
-              <Route path="orders" element={<Orders />} />
+              <Route
+                path="company"
+                element={
+                  user?.data?.user?.role === 'super_admin'
+                    ? <Company />
+                    : <Navigate to="/notfound" replace />
+                }
+              />
+              <Route
+                path="orders"
+                element={
+                  !['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(user?.data?.user?.role)
+                    ? <Orders />
+                    : <Navigate to="/notfound" replace />
+                }
+              />
               <Route path="profiles" element={<Profiles />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="settings" element={<Settings />} />
