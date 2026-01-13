@@ -73,3 +73,75 @@
     animation: modalEnter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 }
+
+/* ============================================ */
+/* TABLET RESPONSIVE STYLES (768px - 1024px) */
+/* ============================================ */
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Container adjustments */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Reduce padding on cards */
+  .glass-card {
+    @apply p-4;
+  }
+
+  /* Typography adjustments */
+  h1 {
+    @apply text-2xl;
+  }
+
+  h2 {
+    @apply text-xl;
+  }
+
+  h3 {
+    @apply text-lg;
+  }
+
+  /* Button adjustments */
+  button {
+    @apply text-sm px-3 py-2;
+  }
+
+  /* Table responsiveness */
+  table {
+    @apply text-sm;
+  }
+
+  /* Grid adjustments */
+  .grid {
+    @apply gap-4;
+  }
+
+  /* Modal adjustments */
+  .modal-content {
+    @apply max-w-2xl;
+  }
+
+  /* Sidebar adjustments for tablets */
+  aside {
+    @apply w-16;
+  }
+
+  /* Form inputs */
+  input, select, textarea {
+    @apply text-sm;
+  }
+}
+
+/* Additional tablet-specific utilities */
+@media (max-width: 1024px) {
+  .hide-on-tablet {
+    display: none !important;
+  }
+
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+

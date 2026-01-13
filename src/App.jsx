@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
@@ -11,6 +11,7 @@ import Projects from './pages/Projects';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import NotFound from './pages/NotFound';
+import MobileDownload from './pages/MobileDownload';
 import TestApi from './TestApi';
 
 import { ToastContainer } from 'react-toastify'
@@ -36,6 +37,17 @@ function App() {
   const { user, isAuthenticated, isLoading: authLoading, error: authError, getMe } = useAuthStore();
   const { updateUserStatus } = useUserStore();
   const { language, theme } = useSettingsStore();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle Mobile Detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Handle Theme and Language Change
   useEffect(() => {
@@ -129,6 +141,20 @@ function App() {
   if (authLoading && !isAuthenticated) {
     return (
       <PageLoader />
+    );
+  }
+
+  // Show mobile download page for mobile devices
+  if (isMobile) {
+    return (
+      <>
+        <ToastContainer />
+        <Router>
+          <Routes>
+            <Route path="*" element={<MobileDownload />} />
+          </Routes>
+        </Router>
+      </>
     );
   }
 
