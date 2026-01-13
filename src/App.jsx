@@ -172,7 +172,8 @@ function App() {
               <Route
                 path="company"
                 element={
-                  user?.data?.user?.role === 'super_admin'
+                  // ✅ ADDITIVE: Added company_owner to existing super_admin check
+                  ['super_admin', 'company_owner'].includes(user?.data?.user?.role)
                     ? <Company />
                     : <Navigate to="/" replace />
                 }
@@ -180,6 +181,7 @@ function App() {
               <Route
                 path="orders"
                 element={
+                  // ✅ UNCHANGED: company_owner can access (not in excluded list)
                   !['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(user?.data?.user?.role)
                     ? <Orders />
                     : <Navigate to="/" replace />

@@ -58,7 +58,7 @@ const Tasks = () => {
    const role = user?.role;
    const userId = user?._id;
    const companyId = user?.company?._id || user?.company;
-   const canManageTasks = ['super_admin', 'company_admin', 'team_lead'].includes(role);
+   const canManageTasks = ['super_admin', 'company_admin', 'company_owner', 'team_lead'].includes(role);
 
    useEffect(() => {
       if (userId) {
@@ -107,7 +107,7 @@ const Tasks = () => {
             } else {
                useTaskStore.setState({ tasks: [] });
             }
-         } else if (role === 'company_admin' || role === 'team_lead') {
+         } else if (role === 'company_admin' || role === 'company_owner' || role === 'team_lead') {
             if (companyId) {
                const [projResult, , companyResult] = await Promise.all([
                   getProjectsByCompany(companyId),
@@ -454,7 +454,7 @@ const Tasks = () => {
             const isAssignedMember = p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId);
             return isAssignedMember;
          });
-      } else if (role !== 'super_admin' && role !== 'company_admin') {
+      } else if (role !== 'super_admin' && role !== 'company_admin' && role !== 'company_owner') {
          const currentUserId = String(userId);
          list = list.filter(p =>
             (p.assignedMembers && p.assignedMembers.some(m => String(m.user?._id || m.user || m) === currentUserId))

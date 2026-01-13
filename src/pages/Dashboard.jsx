@@ -48,7 +48,8 @@ const Dashboard = () => {
       execution: 0,
       leadManagement: 0,
       admin: 0,
-      company: 0
+      company: 0,
+      owner: 0 // ✅ NEW: Owner Share
    });
    const [personalStats, setPersonalStats] = useState({
       totalWeight: 0,
@@ -64,7 +65,7 @@ const Dashboard = () => {
 
    const userData = useMemo(() => user?.data?.user || user?.user || user, [user]);
    const isSuperAdmin = useMemo(() => userData?.role === 'super_admin', [userData]);
-   const isAdmin = useMemo(() => isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'team_lead', [userData, isSuperAdmin]);
+   const isAdmin = useMemo(() => isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'company_owner' || userData?.role === 'team_lead', [userData, isSuperAdmin]);
 
    const getCompanyRates = useMemo(() => (comp) => {
       const realComp = comp?.company || comp?.data?.company || comp || {};
@@ -72,14 +73,16 @@ const Dashboard = () => {
       return {
          admin: Number(rates.customAdminRate || rates.adminRate || 10) / 100,
          team: Number(rates.customTeamRate || rates.teamRate || 70) / 100,
-         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100
+         company: Number(rates.customCommissionRate || rates.companyRate || 20) / 100,
+         companyOwner: Number(rates.companyOwnerRate || 0) / 100 // ✅ NEW
       };
    }, []);
 
    const calculateShare = React.useCallback((payment) => {
       if (!userData) return 0;
       const amount = Number(payment.totalAmount) || Number(payment.amount) || 0;
-      if (isSuperAdmin || userData.role === 'company_admin') return amount;
+      // Admin and Owner see full amount
+      if (isSuperAdmin || userData.role === 'company_admin' || userData.role === 'company_owner') return amount;
 
       const pCompId = String(payment.company?._id || payment.company || '');
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
@@ -205,6 +208,7 @@ const Dashboard = () => {
       let leadManagement = 0;
       let admin = 0;
       let company = 0;
+      let owner = 0;
 
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
 
@@ -223,18 +227,22 @@ const Dashboard = () => {
 
          const settings = pComp?.settings || pComp?.data?.company?.settings || {};
          const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+         // ✅ NEW: Owner Calculation
+         const ownerRateVal = Number(settings.companyOwnerRate || 0) / 100;
 
          const leadShare = amount * teamLeadRateVal;
          const teamShareTotal = amount * rates.team;
          const executionShare = Math.max(0, teamShareTotal - leadShare);
+         const ownerShare = amount * ownerRateVal;
 
          execution += executionShare;
          leadManagement += leadShare;
          admin += amount * rates.admin;
          company += amount * rates.company;
+         owner += ownerShare;
       });
 
-      setSalaryTotals({ execution, leadManagement, admin, company });
+      setSalaryTotals({ execution, leadManagement, admin, company, owner });
    }, [filteredPayments, distributionRates, companies, selectedCompany, getCompanyRates]);
 
 
@@ -307,19 +315,19 @@ const Dashboard = () => {
    const chartLabels = isTeamLead
       ? [t('execution_pool_label'), t('lead_management_label')]
       : isAdmin
-         ? [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company')]
+         ? [t('execution_pool_label'), t('lead_management_label'), t('admin_label'), t('company'), ...(salaryTotals.owner > 0 ? [t('owner_label') || 'Owner'] : [])]
          : [t('completed'), t('pending')];
 
    const chartValues = isTeamLead
       ? [salaryTotals.execution, salaryTotals.leadManagement]
       : isAdmin
-         ? [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company]
+         ? [salaryTotals.execution, salaryTotals.leadManagement, salaryTotals.admin, salaryTotals.company, ...(salaryTotals.owner > 0 ? [salaryTotals.owner] : [])]
          : [personalStats.completedWeight, personalStats.totalWeight - personalStats.completedWeight];
 
    const chartColors = isTeamLead
       ? ['#10B981', '#8B5CF6']
       : isAdmin
-         ? ['#10B981', '#8B5CF6', '#EF4444', '#3B82F6']
+         ? ['#10B981', '#8B5CF6', '#EF4444', '#3B82F6', ...(salaryTotals.owner > 0 ? ['#F59E0B'] : [])]
          : ['#10B981', '#F59E0B'];
 
    const renderActiveShape = (props) => {
@@ -369,6 +377,10 @@ const Dashboard = () => {
             { name: t('admin_label'), value: salaryTotals.admin, fill: '#EF4444' },
             { name: t('company'), value: salaryTotals.company, fill: '#3B82F6' }
          ];
+         // ✅ NEW: Add Owner slice if exists
+         if (salaryTotals.owner > 0) {
+            data.push({ name: t('owner_label') || 'Owner', value: salaryTotals.owner, fill: '#F59E0B' });
+         }
       } else {
          data = [
             { name: t('completed'), value: personalStats.completedWeight, fill: '#10B981' },
@@ -487,7 +499,7 @@ const Dashboard = () => {
 
             // All non-super-admin users use company-wide endpoints
             // Backend filters data based on user permissions
-            if (role === 'company_admin' || role === 'team_lead' || role === 'employee' || role === 'frontend' || role === 'backend') {
+            if (role === 'company_admin' || role === 'company_owner' || role === 'team_lead' || role === 'employee' || role === 'frontend' || role === 'backend') {
                await getProjectsByCompany(companyId);
                await getPaymentsByCompany(companyId);
             } else {

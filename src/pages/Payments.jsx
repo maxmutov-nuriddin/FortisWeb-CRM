@@ -58,7 +58,8 @@ const Payments = () => {
          admin: Number(settings.customAdminRate || settings.adminRate || distributionRates.customAdminRate || distributionRates.adminRate || 10) / 100,
          team: Number(settings.customTeamRate || settings.teamRate || distributionRates.customTeamRate || distributionRates.teamRate || 70) / 100,
          company: Number(settings.customCommissionRate || settings.companyRate || distributionRates.customCommissionRate || distributionRates.companyRate || 20) / 100,
-         teamLead: Number(settings.teamLeadCommissionRate || distributionRates.teamLeadCommissionRate || 10) / 100
+         teamLead: Number(settings.teamLeadCommissionRate || distributionRates.teamLeadCommissionRate || 10) / 100,
+         companyOwner: Number(settings.companyOwnerRate || distributionRates.companyOwnerRate || 0) / 100 // ✅ NEW
       };
    }, []);
 
@@ -165,7 +166,7 @@ const Payments = () => {
             }
 
             // Role-based payment fetching
-            if (userData.role === 'team_lead' || userData.role === 'company_admin') {
+            if (userData.role === 'team_lead' || userData.role === 'company_admin' || userData.role === 'company_owner') {
                if (companyId) {
                   requests.push(getPaymentsByCompany(companyId));
                }
@@ -223,7 +224,7 @@ const Payments = () => {
          }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
-      if (userData?.role === 'company_admin') {
+      if (userData?.role === 'company_admin' || userData?.role === 'company_owner') {
          const userCompanyId = String(userData.company?._id || userData.company || '');
          return list.filter(p => {
             const pCompId = String(p.company?._id || p.company || '');
@@ -341,8 +342,8 @@ const Payments = () => {
       });
 
       // If user is not involved in this project AT ALL, return 0
-      // Exception: Company Admins get commission on all projects
-      if (!isLead && !isAssigned && myTasks.length === 0 && userData.role !== 'company_admin') {
+      // Exception: Company Admins & Owners get commission on all projects
+      if (!isLead && !isAssigned && myTasks.length === 0 && userData.role !== 'company_admin' && userData.role !== 'company_owner') {
          return 0;
       }
 
@@ -389,6 +390,12 @@ const Payments = () => {
       if (userData.role === 'company_admin') {
          const adminShare = totalAmount * rates.admin;
          share += adminShare;
+      }
+
+      // ✅ NEW: Company Owner commission
+      if (userData.role === 'company_owner') {
+         const ownerShare = totalAmount * rates.companyOwner;
+         share += ownerShare;
       }
 
       return share;
@@ -488,10 +495,13 @@ const Payments = () => {
          }), 0
       ) : 0;
 
-      let teamPayouts = 0, leadManagementPool = 0, executionPool = 0, adminPool = 0, companyPool = 0;
+      let teamPayouts = 0, leadManagementPool = 0, executionPool = 0, adminPool = 0, companyPool = 0, ownerPool = 0; // ✅ NEW: Owner Pool
       const companyList = companies?.data?.companies || (Array.isArray(companies) ? companies : []);
 
       activeList.forEach(p => {
+         // FIX: Ignore pending or canceled payments for stats
+         if (p.status === 'pending' || p.status === 'canceled' || p.status === 'failed') return;
+
          const amount = Number(p.totalAmount) || Number(p.amount) || 0;
          const pCompId = String(p.company?._id || p.company || p.project?.company?._id || p.project?.company || '');
          // Prefer populated company from payment, then lookup, then fallback
@@ -502,18 +512,22 @@ const Payments = () => {
 
          const settings = pComp?.settings || pComp?.data?.company?.settings || {};
          const teamLeadRateVal = Number(settings.teamLeadCommissionRate || 10) / 100;
+         // ✅ NEW: Owner Calculation
+         const ownerRateVal = Number(settings.companyOwnerRate || 0) / 100;
 
          const leadShare = amount * teamLeadRateVal;
          const teamShareTotal = amount * rates.team;
 
          // Execution pool is the remaining team share after deducting lead commission
          const executionShare = teamShareTotal - leadShare;
+         const ownerShare = amount * ownerRateVal; // ✅ NEW
 
          teamPayouts += teamShareTotal;
          leadManagementPool += leadShare;
          executionPool += Math.max(0, executionShare);
          adminPool += amount * rates.admin;
          companyPool += amount * rates.company;
+         ownerPool += ownerShare; // ✅ NEW
       });
 
       return {
@@ -527,7 +541,8 @@ const Payments = () => {
          leadManagementPool,
          executionPool,
          adminPool,
-         companyPool
+         companyPool,
+         ownerPool // ✅ NEW
       };
    }, [filteredPayments, calculateMyShare, userData, projects, isSuperAdmin, getCompanyRates, companies, selectedCompany]);
 
@@ -536,7 +551,8 @@ const Payments = () => {
       { name: t('lead_management_label'), value: stats.leadManagementPool, fill: '#8B5CF6' },
       { name: t('company'), value: stats.companyPool, fill: '#3B82F6' },
       { name: t('admin_label'), value: stats.adminPool, fill: '#EF4444' }
-   ].filter(i => i.value > 0), [stats, t]);
+   ].concat(stats.ownerPool > 0 ? [{ name: t('owner_label') || 'Owner', value: stats.ownerPool, fill: '#F59E0B' }] : []) // ✅ NEW: Dynamic Owner Slice
+      .filter(i => i.value > 0), [stats, t]);
 
    const [activeIndex, setActiveIndex] = useState(0);
 
@@ -754,21 +770,25 @@ const Payments = () => {
                         label: t('team_lead'), val: rates => rates.teamLead, color: 'purple', icon: 'fa-crown'
                      }, {
                         label: t('execution_pool'), val: rates => Math.max(0, rates.team - rates.teamLead), color: 'green', icon: 'fa-microchip'
-                     }].map((row, idx) => (
-                        <div key={idx} className="bg-gray-50 dark:bg-black/20 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors">
-                           <div className="flex items-center space-x-3">
-                              <div className={`w-10 h-10 bg-${row.color}-50 dark:bg-${row.color}-900/20 rounded-xl flex items-center justify-center`}>
-                                 <i className={`fa-solid ${row.icon} text-${row.color}-500`}></i>
+                     }]
+                        .concat((distributionRates.companyOwner > 0) ? [{
+                           label: t('owner_label') || 'Owner', val: rates => rates.companyOwner, color: 'orange', icon: 'fa-user-shield'
+                        }] : []) // ✅ NEW: Dynamic Owner Calculator Row
+                        .map((row, idx) => (
+                           <div key={idx} className="bg-gray-50 dark:bg-black/20 rounded-2xl p-4 border border-gray-100 dark:border-zinc-800 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-zinc-800/50 transition-colors">
+                              <div className="flex items-center space-x-3">
+                                 <div className={`w-10 h-10 bg-${row.color}-50 dark:bg-${row.color}-900/20 rounded-xl flex items-center justify-center`}>
+                                    <i className={`fa-solid ${row.icon} text-${row.color}-500`}></i>
+                                 </div>
+                                 <div>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">{row.label}</p>
+                                 </div>
                               </div>
-                              <div>
-                                 <p className="text-sm font-bold text-gray-900 dark:text-white">{row.label}</p>
+                              <div className="text-right">
+                                 <p className="text-lg font-black text-gray-900 dark:text-white">${(projectAmount * row.val(distributionRates)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                               </div>
                            </div>
-                           <div className="text-right">
-                              <p className="text-lg font-black text-gray-900 dark:text-white">${(projectAmount * row.val(distributionRates)).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                           </div>
-                        </div>
-                     ))}
+                        ))}
                   </div>
                </div>
 
@@ -959,11 +979,11 @@ const Payments = () => {
                                  </td>
                                  <td className="px-6 py-4 text-right">
                                     <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                       {(isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'pending' ? (
+                                       {(isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'company_owner') && payment.status === 'pending' ? (
                                           <button onClick={() => handleConfirm(payment._id)} disabled={isSubmitting} className="bg-green-50 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
                                              {t('confirm')}
                                           </button>
-                                       ) : (isSuperAdmin || userData?.role === 'company_admin') && payment.status === 'confirmed' ? (
+                                       ) : (isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'company_owner') && payment.status === 'confirmed' ? (
                                           <button onClick={() => handleComplete(payment._id)} disabled={isSubmitting} className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
                                              {t('complete')}
                                           </button>

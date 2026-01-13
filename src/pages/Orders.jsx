@@ -58,8 +58,9 @@ const Orders = () => {
    const userData = user?.data?.user || user?.user || user;
    const isSuperAdmin = userData?.role === 'super_admin';
    const isCompanyAdmin = userData?.role === 'company_admin';
+   const isCompanyOwner = userData?.role === 'company_owner'; // ✅ NEW
    const isTeamLead = userData?.role === 'team_lead';
-   const isAdmin = isSuperAdmin || isCompanyAdmin;
+   const isAdmin = isSuperAdmin || isCompanyAdmin || isCompanyOwner; // ✅ Updated
 
    const { companies, getCompanies, getCompanyById, selectedCompany } = useCompanyStore();
    const { projects, getProjectsByCompany, getAllProjects, createProject, updateProject, deleteProject, addRepository, deleteRepository, assignProject, isLoading: projectsLoading } = useProjectStore();
@@ -334,6 +335,7 @@ const Orders = () => {
 
    const handleSubmit = async (e) => {
       e.preventDefault();
+      if (isSubmitting) return; // Prevent double submission
       setIsSubmitting(true);
 
       try {

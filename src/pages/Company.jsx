@@ -39,6 +39,7 @@ const Company = () => {
 
    const [isRatesEditing, setIsRatesEditing] = useState(false);
    const [ratesData, setRatesData] = useState({
+      companyOwnerRate: undefined,  // ✅ NEW: undefined = legacy mode
       customAdminRate: 10,
       customTeamRate: 70,
       customCommissionRate: 20
@@ -49,9 +50,10 @@ const Company = () => {
          getUsersByCompany(selectedCompany._id);
          const rates = selectedCompany.distributionRates || selectedCompany.settings || selectedCompany || {};
          setRatesData({
+            companyOwnerRate: rates.companyOwner,  // ✅ undefined if not set (legacy mode)
             customAdminRate: rates.customAdminRate || rates.adminRate || 10,
             customTeamRate: rates.customTeamRate || rates.teamRate || 70,
-            customCommissionRate: rates.customCommissionRate || rates.companyRate || 20
+            customCommissionRate: rates.customCommissionRate || rates.companyRate || 20  // ✅ DYNAMIC: Always load actual value
          });
          setIsRatesEditing(false);
       }
@@ -233,74 +235,7 @@ const Company = () => {
             const response = await createCompany(finalData);
             toast.success(finalData.name + " Company created successfully");
 
-            // Auto-create Company Admin with Retry Logic
-            try {
-               const newCompany = response.data?.company || response.data || response;
-               const newCompanyId = newCompany._id || newCompany.id;
 
-               if (newCompanyId) {
-                  // Helper function to retry finding the user
-                  const findAdminUserWithRetry = async (companyId, email, retries = 5, delay = 1000) => {
-                     const targetEmail = email?.toLowerCase();
-                     for (let i = 0; i < retries; i++) {
-                        const usersResponse = await getUsersByCompany(companyId);
-                        const companyUsers = usersResponse?.data?.users || usersResponse?.data || [];
-                        const autoAdmin = companyUsers.find(u => u.email?.toLowerCase() === targetEmail);
-
-                        if (autoAdmin) return autoAdmin;
-
-                        // Wait before next attempt
-                        if (i < retries - 1) {
-                           await new Promise(resolve => setTimeout(resolve, delay));
-                        }
-                     }
-                     return null;
-                  };
-
-                  const autoAdmin = await findAdminUserWithRetry(newCompanyId, finalData.email);
-
-                  if (autoAdmin) {
-                     // SAFER REPLACEMENT STRATEGY:
-                     // 1. Rename the old user's email to free up the address (avoids unique index conflicts if delete is soft/slow)
-                     const tempEmail = `${autoAdmin.email}_old_${Date.now()}`;
-                     await updateUser(autoAdmin._id, { email: tempEmail });
-
-                     // 2. Create the new user explicitly with the correct password
-                     await createUser({
-                        name: finalData.name,
-                        email: finalData.email, // The original intended email
-                        password: finalData.password,
-                        role: 'company_admin',
-                        companyId: newCompanyId,
-                        isActive: true
-                     });
-
-                     // 3. Clean up the old user
-                     try {
-                        await deleteUser(autoAdmin._id);
-                     } catch (delErr) {
-                        console.warn("Could not delete temp renamed user", delErr);
-                     }
-
-                     toast.success("Company Admin configured successfully");
-                  } else {
-                     console.warn('Admin user not found in new company list after retries.');
-                     toast.warning("Company created, but could not automatically configure Admin password. Please check Profiles.");
-                  }
-               } else {
-                  console.warn('Could not extract new company ID for admin configuration');
-               }
-            } catch (userError) {
-               console.error('Failed to auto-create admin:', userError);
-
-               let errMsg = userError.response?.data?.message || userError.message || "Unknown error";
-
-               if (errMsg.includes('exists') || errMsg.includes('существует')) {
-                  toast.warning(`Admin creation skipped: User with email ${finalData.email} already exists.`);
-               } else {
-                  toast.warning(`Company created, but User Admin creation failed: ${errMsg}`);
-               }
-            }
          }
          closeCreateModal();
          await getCompanies();
@@ -327,7 +262,12 @@ const Company = () => {
    };
 
    const handleSaveRates = async () => {
-      const total = ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate;
+      // ✅ NEW: Calculate total based on mode
+      const total = (ratesData.companyOwnerRate !== undefined ? ratesData.companyOwnerRate : 0) +
+         ratesData.customAdminRate +
+         ratesData.customTeamRate +
+         ratesData.customCommissionRate;
+
       if (total !== 100) {
          toast.error(`The sum of percentages must be 100. Current total: ${total}%`);
          return;
@@ -699,7 +639,14 @@ const Company = () => {
                            <h3 className="text-sm font-bold text-gray-500 uppercase mb-4">Distribution Rates</h3>
                            {/* ... Rates editor logic ... */}
                            {!isRatesEditing ? (
-                              <div className="grid grid-cols-3 gap-4 text-center">
+                              <div className={`grid gap-4 text-center ${ratesData.companyOwnerRate !== undefined ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                 {/* ✅ NEW: Show owner rate only if set (owner mode) */}
+                                 {ratesData.companyOwnerRate !== undefined && (
+                                    <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl border border-purple-200 dark:border-purple-800/30">
+                                       <div className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">Owner</div>
+                                       <div className="text-xl font-black text-purple-700 dark:text-purple-300">{ratesData.companyOwnerRate}%</div>
+                                    </div>
+                                 )}
                                  <div className="p-3 bg-white dark:bg-zinc-800 rounded-xl">
                                     <div className="text-xs text-gray-400 font-bold uppercase">Admin</div>
                                     <div className="text-xl font-black text-gray-900 dark:text-white">{ratesData.customAdminRate}%</div>
@@ -714,11 +661,72 @@ const Company = () => {
                                  </div>
                               </div>
                            ) : (
-                              <div className="grid grid-cols-3 gap-4">
-                                 {/* Inputs for rates */}
-                                 <input type="number" value={ratesData.customAdminRate} onChange={e => setRatesData({ ...ratesData, customAdminRate: Number(e.target.value) })} className="p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700" />
-                                 <input type="number" value={ratesData.customTeamRate} onChange={e => setRatesData({ ...ratesData, customTeamRate: Number(e.target.value) })} className="p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700" />
-                                 <input type="number" value={ratesData.customCommissionRate} onChange={e => setRatesData({ ...ratesData, customCommissionRate: Number(e.target.value) })} className="p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700" />
+                              <div className="space-y-4">
+                                 {/* ✅ Mode toggle - ONLY adds/removes field, doesn't change values */}
+                                 <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-900/30">
+                                    <input
+                                       type="checkbox"
+                                       id="ownerMode"
+                                       checked={ratesData.companyOwnerRate !== undefined}
+                                       onChange={(e) => {
+                                          if (e.target.checked) {
+                                             // ✅ DYNAMIC: Just add field with default, user can change
+                                             setRatesData({
+                                                ...ratesData,
+                                                companyOwnerRate: 10  // Default, but editable
+                                             });
+                                          } else {
+                                             // ✅ DYNAMIC: Just remove field, don't touch other values
+                                             setRatesData({
+                                                ...ratesData,
+                                                companyOwnerRate: undefined
+                                             });
+                                          }
+                                       }}
+                                       className="w-4 h-4 text-red-600 rounded"
+                                    />
+                                    <label htmlFor="ownerMode" className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                                       Enable Company Owner (adds 10% owner field)
+                                    </label>
+                                 </div>
+
+                                 <div className={`grid gap-4 ${ratesData.companyOwnerRate !== undefined ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                    {/* ✅ Owner rate input (only in owner mode) */}
+                                    {ratesData.companyOwnerRate !== undefined && (
+                                       <div>
+                                          <label className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase block mb-1">Owner %</label>
+                                          <input
+                                             type="number"
+                                             value={ratesData.companyOwnerRate}
+                                             onChange={e => setRatesData({ ...ratesData, companyOwnerRate: Number(e.target.value) })}
+                                             className="w-full p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30 text-center font-bold"
+                                          />
+                                       </div>
+                                    )}
+                                    <div>
+                                       <label className="text-xs text-gray-400 font-bold uppercase block mb-1">Admin %</label>
+                                       <input type="number" value={ratesData.customAdminRate} onChange={e => setRatesData({ ...ratesData, customAdminRate: Number(e.target.value) })} className="w-full p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700 text-center font-bold" />
+                                    </div>
+                                    <div>
+                                       <label className="text-xs text-gray-400 font-bold uppercase block mb-1">Team %</label>
+                                       <input type="number" value={ratesData.customTeamRate} onChange={e => setRatesData({ ...ratesData, customTeamRate: Number(e.target.value) })} className="w-full p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700 text-center font-bold" />
+                                    </div>
+                                    <div>
+                                       <label className="text-xs text-gray-400 font-bold uppercase block mb-1">Company %</label>
+                                       <input type="number" value={ratesData.customCommissionRate} onChange={e => setRatesData({ ...ratesData, customCommissionRate: Number(e.target.value) })} className="w-full p-2 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-zinc-700 text-center font-bold" />
+                                    </div>
+                                 </div>
+
+                                 {/* ✅ Total validation display */}
+                                 <div className="text-center p-2 bg-gray-50 dark:bg-zinc-800/50 rounded-lg">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">Total: </span>
+                                    <span className={`text-sm font-black ${((ratesData.companyOwnerRate || 0) + ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate) === 100
+                                       ? 'text-green-600 dark:text-green-400'
+                                       : 'text-red-600 dark:text-red-400'
+                                       }`}>
+                                       {(ratesData.companyOwnerRate || 0) + ratesData.customAdminRate + ratesData.customTeamRate + ratesData.customCommissionRate}%
+                                    </span>
+                                 </div>
                               </div>
                            )}
                            <div className="mt-4 flex justify-end">

@@ -13,7 +13,7 @@ export const useAuthStore = create((set) => ({
       try {
          const response = await authApi.register(data);
          const { token, user } = response.data;
-         if (token) Cookies.set('token', token, { expires: 7 });
+         if (token) Cookies.set('token', token, { expires: 7, path: '/' });
          set({ user, isAuthenticated: true, isLoading: false });
          return response.data;
       } catch (error) {
@@ -27,7 +27,7 @@ export const useAuthStore = create((set) => ({
       try {
          const response = await authApi.login(data);
          const { token, user } = response.data;
-         if (token) Cookies.set('token', token, { expires: 7 });
+         if (token) Cookies.set('token', token, { expires: 7, path: '/' });
          set({ user, isAuthenticated: true, isLoading: false });
          return response.data;
       } catch (error) {

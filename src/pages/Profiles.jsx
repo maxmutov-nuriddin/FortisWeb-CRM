@@ -122,7 +122,7 @@ const Profiles = () => {
          const company = relevantCompanies.find(c => String(c._id) === userCompanyId);
          const companyTeams = company?.teams?.map(t => ({ ...t, companyName: company.name, companyId: String(company._id) })) || [];
 
-         if (userData?.role === 'company_admin') {
+         if (userData?.role === 'company_admin' || userData?.role === 'company_owner') {
             return companyTeams;
          }
 
@@ -136,7 +136,7 @@ const Profiles = () => {
 
    const rawUserList = useMemo(() => {
       const all = users?.data?.users || (Array.isArray(users) ? users : []);
-      if (isSuperAdmin || userData?.role === 'company_admin') return all.filter(u => u.role !== 'super_admin' || isSuperAdmin);
+      if (isSuperAdmin || userData?.role === 'company_admin' || userData?.role === 'company_owner') return all.filter(u => u.role !== 'super_admin' || isSuperAdmin);
 
       const memberIds = new Set();
 
@@ -379,7 +379,8 @@ const Profiles = () => {
                   <p className="text-gray-500 dark:text-gray-400 font-medium">{t('profiles_desc')}</p>
                </div>
 
-               {(userData?.role === 'super_admin' || userData?.role === 'company_admin') && (
+
+               {(userData?.role === 'super_admin' || userData?.role === 'company_admin' || userData?.role === 'company_owner') && (
                   <div className="flex gap-3">
                      <button
                         onClick={() => setIsTeamModalOpen(true)}
@@ -583,6 +584,10 @@ const Profiles = () => {
                         <option value="frontend">Frontend Developer</option>
                         <option value="team_lead">Team Lead</option>
                         <option value="company_admin">Admin</option>
+                        {/* ✅ ADDITIVE: company_owner only for super_admin */}
+                        {isSuperAdmin && (
+                           <option value="company_owner">Company Owner</option>
+                        )}
                      </select>
 
                      {isSuperAdmin && (
