@@ -37,6 +37,10 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
    // Reset state when modal opens
    useEffect(() => {
       if (isOpen) {
+         console.log('📂 Modal opened, userData:', userData);
+         console.log('📂 isSuperAdmin:', isSuperAdmin);
+         console.log('📂 userData.company:', userData?.company);
+
          setSelectedCompany('');
          setSelectedProject('');
          setSelectedTask('');
@@ -45,11 +49,15 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
          if (fileInputRef.current) fileInputRef.current.value = '';
 
          if (isSuperAdmin) {
+            console.log('📂 Fetching companies for super admin');
             getCompanies();
          } else if (userData?.company) {
             const companyId = userData.company._id || userData.company;
+            console.log('📂 Fetching projects for company:', companyId);
             setSelectedCompany(companyId);
             getProjectsByCompany(companyId);
+         } else {
+            console.log('⚠️ userData or userData.company is undefined, not fetching projects');
          }
       }
    }, [isOpen, isSuperAdmin, userData, getCompanies, getProjectsByCompany]);
@@ -62,19 +70,22 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
    // Helper to extract clean array of projects
    const projectList = useMemo(() => {
       const list = projects?.data?.projects || (Array.isArray(projects) ? projects : []) || [];
-      const myRole = userData?.role;
-      const myId = String(userData?._id || userData?.id || '');
 
-      if (isSuperAdmin || isCompanyAdmin || isCompanyOwner) return list;
+      console.log('🔍 Upload Modal - Projects loaded:', list.length, 'projects');
+      console.log('🔍 Upload Modal - User role:', userData?.role);
+      console.log('🔍 Upload Modal - Full projects object:', projects);
+      console.log('🔍 Upload Modal - Extracted list:', list);
 
-      return list.filter(p => {
-         if (isTeamLead) {
-            return String(p.teamLead?._id || p.teamLead || '') === myId;
-         }
-         // Employee/Worker
-         return p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === myId);
-      });
-   }, [projects, isSuperAdmin, isCompanyAdmin, isCompanyOwner, isTeamLead, userData]);
+      // Save to window for debugging
+      window.lastProjectList = list;
+      if (list.length > 0) {
+         console.log('🔍 First project sample:', list[0]);
+      }
+
+      // Backend already filters projects based on user permissions
+      // Just return the list as-is since getProjectsByCompany handles role-based filtering
+      return list;
+   }, [projects, userData]);
 
    // Helper to extract clean array of tasks
    const taskList = useMemo(() => {

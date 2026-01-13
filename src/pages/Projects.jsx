@@ -57,29 +57,15 @@ const Projects = () => {
 
    const myProjects = useMemo(() => {
       const allProjects = projects?.data?.projects || (Array.isArray(projects) ? projects : []) || [];
-      const myId = String(userData?._id || userData?.id || '');
-      const myRole = userData?.role;
 
-      if (!myId) return [];
+      console.log('📋 Projects Page - Full projects object:', projects);
+      console.log('📋 Projects Page - Extracted projects:', allProjects);
+      console.log('📋 Projects Page - Projects count:', allProjects.length);
 
-      return allProjects.filter(p => {
-         if (myRole === 'team_lead') {
-            const leadId = String(p.teamLead?._id || p.teamLead || '');
-            return leadId === myId;
-         }
-         if (['frontend', 'backend', 'marketer', 'designer', 'employee'].includes(myRole)) {
-            const isAssigned = p.assignedMembers?.some(m => {
-               const mId = String(m.user?._id || m.user || m || '');
-               return mId === myId;
-            });
-            return isAssigned;
-         }
-         if (['super_admin', 'company_admin', 'company_owner'].includes(myRole)) {
-            return true;
-         }
-         return false;
-      });
-   }, [projects, userData]);
+      // Backend already filters projects based on user role and permissions
+      // No need for additional frontend filtering
+      return allProjects;
+   }, [projects]);
 
    const filteredProjects = useMemo(() => {
       return statusFilter === 'All' ? myProjects : myProjects.filter(p => p.status === statusFilter.toLowerCase());
@@ -355,14 +341,18 @@ const Projects = () => {
                                                    <p className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">{file.originalName}</p>
                                                    <p className="text-[10px] text-gray-400 font-medium">{(file.size / 1024).toFixed(0)}KB</p>
                                                 </div>
-                                                <div className="flex gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
-                                                   <button onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-blue-500 shadow-sm transition-colors" title="Replace">
-                                                      <i className="fa-solid fa-pen text-[10px]"></i>
-                                                   </button>
-                                                   <button onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm transition-colors" title="Delete">
-                                                      <i className="fa-solid fa-trash text-[10px]"></i>
-                                                   </button>
-                                                </div>
+                                                {/* Show edit/delete buttons only for authorized users */}
+                                                {(['super_admin', 'company_admin', 'company_owner', 'team_lead'].includes(userData?.role) ||
+                                                   String(file.uploadedBy?._id || file.uploadedBy) === String(userData?._id)) && (
+                                                      <div className="flex gap-1 opacity-0 group-hover/file:opacity-100 transition-opacity">
+                                                         <button onClick={(e) => { e.stopPropagation(); handleStartReplace(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-blue-500 shadow-sm transition-colors" title="Replace">
+                                                            <i className="fa-solid fa-pen text-[10px]"></i>
+                                                         </button>
+                                                         <button onClick={(e) => { e.stopPropagation(); handleFileDelete(file._id); }} className="w-6 h-6 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-gray-500 hover:text-red-500 shadow-sm transition-colors" title="Delete">
+                                                            <i className="fa-solid fa-trash text-[10px]"></i>
+                                                         </button>
+                                                      </div>
+                                                   )}
                                              </div>
                                           );
                                        })
