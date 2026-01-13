@@ -56,7 +56,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             if (!isPending) return false;
 
             const role = userData?.role;
-            if (role === 'super_admin' || role === 'company_admin' || role === 'team_lead') return true;
+            if (role === 'super_admin' || role === 'company_admin' || role === 'team_lead' || role === 'company_owner') return true;
 
             // if (role === 'team_lead') {
             //    const directMatch = String(project.teamLead?._id || project.teamLead || '') === String(currentUserId);
