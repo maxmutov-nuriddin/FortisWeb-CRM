@@ -139,19 +139,39 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
    return (
       <>
-         {/* Mobile Overlay */}
+         {/* Overlay for screens ≤1280px */}
          {isOpen && (
             <div
-               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden transition-opacity"
+               className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 xl:hidden transition-opacity"
                onClick={toggleSidebar}
             ></div>
          )}
 
+         {/* Mini Collapsed Sidebar - Shows logo when closed on screens ≤1280px */}
+         <aside
+            className={`
+            fixed inset-y-0 left-0 z-30 w-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-gray-100 dark:border-zinc-800 flex flex-col h-full transition-all duration-300 ease-in-out
+            xl:hidden
+            ${isOpen ? 'hidden' : 'flex'}
+         `}>
+            {/* Logo Section - Clickable to open sidebar */}
+            <div
+               className="h-20 flex items-center justify-center border-b border-gray-100 dark:border-zinc-800/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-900 transition-colors"
+               onClick={toggleSidebar}
+               title="Открыть меню"
+            >
+               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center text-white shadow-lg shadow-red-600/20 hover:scale-105 transition-transform duration-300">
+                  <span className="font-bold text-md">FWB</span>
+               </div>
+            </div>
+         </aside>
+
+         {/* Full Sidebar */}
          <aside
             id="sidebar"
             className={`
-            fixed inset-y-0 left-0 z-30 w-72 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-gray-100 dark:border-zinc-800 flex flex-col h-full transform transition-all duration-300 ease-in-out
-            md:static md:translate-x-0
+            fixed inset-y-0 left-0 z-50 w-72 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-r border-gray-100 dark:border-zinc-800 flex flex-col h-full transform transition-all duration-300 ease-in-out
+            xl:static xl:translate-x-0
             ${isOpen ? 'translate-x-0' : '-translate-x-full'}
          `}>
             {/* Logo Section */}

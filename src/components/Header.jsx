@@ -76,13 +76,13 @@ const Header = ({ toggleSidebar }) => {
 
    return (
       <header id="header" className="sticky top-0 z-20 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-100 dark:border-zinc-800 transition-all duration-300">
-         <div className="flex items-center justify-between px-6 py-4">
+         <div className="flex items-center justify-between px-6 py-3">
 
-            {/* Left: Mobile Toggle */}
+            {/* Left: Toggle Button for screens ≤1280px */}
             <div className="flex items-center gap-4">
                <button
                   onClick={toggleSidebar}
-                  className="md:hidden w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="xl:hidden w-10 h-10 rounded-xl bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
                >
                   <i className="fa-solid fa-bars text-lg"></i>
                </button>
