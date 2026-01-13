@@ -74,7 +74,7 @@ const Projects = () => {
             });
             return isAssigned;
          }
-         if (['super_admin', 'company_admin'].includes(myRole)) {
+         if (['super_admin', 'company_admin', 'company_owner'].includes(myRole)) {
             return true;
          }
          return false;

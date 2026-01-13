@@ -14,9 +14,10 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
 
    const isSuperAdmin = userData?.role === 'super_admin';
    const isCompanyAdmin = userData?.role === 'company_admin';
+   const isCompanyOwner = userData?.role === 'company_owner';
    const isTeamLead = userData?.role === 'team_lead';
    // Others: frontend, backend, marketer, designer, employee
-   const isEmployee = !isSuperAdmin && !isCompanyAdmin && !isTeamLead;
+   const isEmployee = !isSuperAdmin && !isCompanyAdmin && !isCompanyOwner && !isTeamLead;
 
    const { companies, getCompanies } = useCompanyStore();
    // eslint-disable-next-line no-unused-vars
@@ -64,7 +65,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
       const myRole = userData?.role;
       const myId = String(userData?._id || userData?.id || '');
 
-      if (isSuperAdmin || isCompanyAdmin) return list;
+      if (isSuperAdmin || isCompanyAdmin || isCompanyOwner) return list;
 
       return list.filter(p => {
          if (isTeamLead) {
@@ -73,7 +74,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
          // Employee/Worker
          return p.assignedMembers?.some(m => String(m.user?._id || m.user || m) === myId);
       });
-   }, [projects, isSuperAdmin, isCompanyAdmin, isTeamLead, userData]);
+   }, [projects, isSuperAdmin, isCompanyAdmin, isCompanyOwner, isTeamLead, userData]);
 
    // Helper to extract clean array of tasks
    const taskList = useMemo(() => {
@@ -119,7 +120,7 @@ const UniversalUploadModal = ({ isOpen, onClose, onSuccess }) => {
          toast.error('Please select a company');
          return;
       }
-      if ((isSuperAdmin || isCompanyAdmin || isTeamLead) && !selectedProject) {
+      if ((isSuperAdmin || isCompanyAdmin || isCompanyOwner || isTeamLead) && !selectedProject) {
          toast.error('Please select a project (order)');
          return;
       }
