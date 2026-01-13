@@ -148,7 +148,7 @@ function App() {
                 element={
                   user?.data?.user?.role === 'super_admin'
                     ? <Company />
-                    : <Navigate to="/notfound" replace />
+                    : <Navigate to="/" replace />
                 }
               />
               <Route
@@ -156,7 +156,7 @@ function App() {
                 element={
                   !['employee', 'worker', 'frontend', 'backend', 'marketer', 'designer'].includes(user?.data?.user?.role)
                     ? <Orders />
-                    : <Navigate to="/notfound" replace />
+                    : <Navigate to="/" replace />
                 }
               />
               <Route path="profiles" element={<Profiles />} />
