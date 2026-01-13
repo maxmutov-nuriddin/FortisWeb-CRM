@@ -165,6 +165,13 @@ const Profiles = () => {
 
    const userList = useMemo(() => {
       let result = rawUserList;
+
+      // Exclude current user from the list
+      const currentUserId = String(userData?._id || userData?.id || '');
+      if (currentUserId) {
+         result = result.filter(u => String(u._id || u.id) !== currentUserId);
+      }
+
       if (filter !== 'All Members' && filter !== t('all_members')) {
          result = result.filter(u => {
             const r = u.role;
@@ -179,7 +186,7 @@ const Profiles = () => {
          result = result.filter(u => u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
       }
       return result;
-   }, [rawUserList, filter, searchQuery, t]);
+   }, [rawUserList, filter, searchQuery, t, userData]);
 
    const stats = useMemo(() => {
       const all = rawUserList;
