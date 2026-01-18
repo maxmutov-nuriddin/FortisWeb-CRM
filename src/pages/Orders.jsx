@@ -951,40 +951,69 @@ const Orders = () => {
                                  </span>
                               )}
                            </h3>
-                           {uploads && uploads.length > 0 ? (
-                              <div className="space-y-2">
-                                 {uploads.map((file) => (
-                                    <div key={file._id} className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-700">
-                                       <div className="flex items-center gap-3">
-                                          <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
-                                             <i className="fa-solid fa-file-pdf text-red-500"></i>
-                                          </div>
-                                          <div>
-                                             <p className="text-sm font-bold text-gray-900 dark:text-white">{file.filename || 'Document'}</p>
-                                             <p className="text-xs text-gray-500">{file.size ? `${(file.size / 1024).toFixed(2)} KB` : ''}</p>
-                                          </div>
+
+                           <div className="space-y-2">
+                              {/* 1. Initial Tech Spec File (from Bot or Manual Upload) */}
+                              {selectedOrder.techSpecFile && selectedOrder.techSpecFile.url && (
+                                 <div className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-700">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                                          <i className="fa-solid fa-file-contract text-blue-500"></i>
                                        </div>
-                                       <button
-                                          onClick={() => downloadFile(file._id, file.filename)}
-                                          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition"
-                                       >
-                                          <i className="fa-solid fa-download mr-2"></i>
-                                          Download
-                                       </button>
+                                       <div>
+                                          <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                             {selectedOrder.techSpecFile.filename || 'Initial Request (ТЗ)'}
+                                          </p>
+                                          <p className="text-xs text-gray-500">Initial Upload</p>
+                                       </div>
                                     </div>
-                                 ))}
-                              </div>
-                           ) : (
-                              <div className="text-center py-4">
-                                 <i className="fa-solid fa-file-circle-exclamation text-3xl text-gray-400 mb-2"></i>
-                                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {isAdmin ? t('no_tech_spec') : 'Technical specification not available'}
-                                 </p>
-                                 {isAdmin && (
-                                    <p className="text-xs text-gray-400 mt-1">{t('upload_hint')}</p>
-                                 )}
-                              </div>
-                           )}
+                                    <a
+                                       href={selectedOrder.techSpecFile.url}
+                                       target="_blank"
+                                       rel="noopener noreferrer"
+                                       className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition flex items-center"
+                                    >
+                                       <i className="fa-solid fa-download mr-2"></i>
+                                       Download
+                                    </a>
+                                 </div>
+                              )}
+
+                              {/* 2. Other Results/Uploads */}
+                              {uploads && uploads.length > 0 && uploads.map((file) => (
+                                 <div key={file._id} className="flex items-center justify-between bg-white dark:bg-zinc-900 rounded-lg p-3 border border-gray-200 dark:border-zinc-700">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+                                          <i className="fa-solid fa-file-pdf text-red-500"></i>
+                                       </div>
+                                       <div>
+                                          <p className="text-sm font-bold text-gray-900 dark:text-white">{file.filename || 'Document'}</p>
+                                          <p className="text-xs text-gray-500">{file.size ? `${(file.size / 1024).toFixed(2)} KB` : ''}</p>
+                                       </div>
+                                    </div>
+                                    <button
+                                       onClick={() => downloadFile(file._id, file.filename)}
+                                       className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold transition"
+                                    >
+                                       <i className="fa-solid fa-download mr-2"></i>
+                                       Download
+                                    </button>
+                                 </div>
+                              ))}
+
+                              {/* Empty State */}
+                              {(!selectedOrder.techSpecFile?.url && (!uploads || uploads.length === 0)) && (
+                                 <div className="text-center py-4">
+                                    <i className="fa-solid fa-file-circle-exclamation text-3xl text-gray-400 mb-2"></i>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                       {isAdmin ? t('no_tech_spec') : 'Technical specification not available'}
+                                    </p>
+                                    {isAdmin && (
+                                       <p className="text-xs text-gray-400 mt-1">{t('upload_hint')}</p>
+                                    )}
+                                 </div>
+                              )}
+                           </div>
                         </div>
                      )}
 

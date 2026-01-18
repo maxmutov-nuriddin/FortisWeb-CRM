@@ -66,6 +66,32 @@ const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
                   </div>
                </div>
 
+               {/* Expanded Client Details */}
+               {project.client && (project.client.email || project.client.phone || project.client.company) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-dark-tertiary p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                     {project.client.company && (
+                        <div>
+                           <p className="text-xs text-gray-500 uppercase">Company</p>
+                           <p className="text-sm font-medium text-gray-900 dark:text-white">{project.client.company}</p>
+                        </div>
+                     )}
+                     {project.client.email && (
+                        <div>
+                           <p className="text-xs text-gray-500 uppercase">Email</p>
+                           <a href={`mailto:${project.client.email}`} className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400">
+                              {project.client.email}
+                           </a>
+                        </div>
+                     )}
+                     {project.client.phone && (
+                        <div>
+                           <p className="text-xs text-gray-500 uppercase">Phone</p>
+                           <p className="text-sm font-medium text-gray-900 dark:text-white">{project.client.phone}</p>
+                        </div>
+                     )}
+                  </div>
+               )}
+
                {/* Title & Description */}
                <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
@@ -77,6 +103,33 @@ const ProjectDetailsModal = ({ isOpen, onClose, project }) => {
                      </p>
                   </div>
                </div>
+
+               {/* Technical Specification Section */}
+               {project.techSpecFile && project.techSpecFile.url && (
+                  <div className="pt-2">
+                     <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        <i className="fa-solid fa-file-contract mr-2"></i>Technical Request (ТЗ)
+                     </h4>
+                     <a
+                        href={project.techSpecFile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
+                     >
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 flex items-center justify-center text-xl">
+                           <i className="fa-solid fa-file-arrow-down"></i>
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold text-blue-700 dark:text-blue-300 group-hover:underline">
+                              {project.techSpecFile.filename || 'Download Specification'}
+                           </p>
+                           <p className="text-xs text-blue-500 dark:text-blue-400">
+                              Click to view document
+                           </p>
+                        </div>
+                     </a>
+                  </div>
+               )}
 
                {/* Additional Metadata Grid */}
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">

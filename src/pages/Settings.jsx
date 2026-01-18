@@ -6,6 +6,7 @@ import { useSettingsStore } from '../store/settings.store';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import PageLoader from '../components/loader/PageLoader';
+import BotSettingsParams from '../components/company/BotSettingsParams';
 
 const Settings = () => {
    const { t } = useTranslation();
@@ -35,12 +36,22 @@ const Settings = () => {
    const userData = user?.data?.user || user;
    const IsSuperAdmin = userData?.role === 'super_admin';
    const IsCompanyAdmin = userData?.role === 'company_admin';
+   const IsCompanyOwner = userData?.role === 'company_owner';
    const isAdmin = IsSuperAdmin || IsCompanyAdmin;
+   const canManageBot = IsCompanyOwner || IsCompanyAdmin || IsSuperAdmin;
 
    const lastInitedUserId = useRef(null);
    const lastInitedCompId = useRef(null);
 
    useEffect(() => {
+      // ... (omitting unchanged internal effect logic for brevity if possible, but replace_file_content needs contiguous block. 
+      // Actually I should just fix the constants and the end block separately if they are far apart.
+      // But replace_file_content works on a single block. 
+      // I will target the constants first, then the end block.
+      // Wait, I can do multi_replace again carefully.
+      // Or just replace the whole file content if I had it. 
+      // I'll do two replace calls. First: Constants.
+
       if (userData && lastInitedUserId.current !== userData._id) {
          let avatarPreview = null;
          if (userData.avatar) {
@@ -216,6 +227,17 @@ const Settings = () => {
                            <i className="fa-solid fa-building-user text-lg"></i>
                         </div>
                         <span className="text-sm font-bold">{t('company_profile')}</span>
+                     </button>
+                  )}
+                  {canManageBot && (
+                     <button
+                        onClick={() => setActiveTab('telegram')}
+                        className={`w-full text-left px-4 py-4 rounded-2xl transition-all duration-300 flex items-center space-x-4 border ${activeTab === 'telegram' ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white border-gray-100 dark:border-zinc-700 shadow-lg shadow-gray-200/50 dark:shadow-none' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800/50 border-transparent'}`}
+                     >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${activeTab === 'telegram' ? 'bg-sky-50 text-sky-600 dark:bg-sky-900/20 dark:text-sky-400' : 'bg-gray-100 text-gray-500 dark:bg-zinc-800 dark:text-gray-400'}`}>
+                           <i className="fa-brands fa-telegram text-lg"></i>
+                        </div>
+                        <span className="text-sm font-bold">Telegram Bot</span>
                      </button>
                   )}
                   <button
@@ -424,9 +446,13 @@ const Settings = () => {
                      </div>
                   </div>
                )}
+
+               {activeTab === 'telegram' && canManageBot && (
+                  <BotSettingsParams />
+               )}
             </div>
          </div>
-      </div>
+      </div >
    );
 };
 
